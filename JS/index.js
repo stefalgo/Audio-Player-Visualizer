@@ -31,6 +31,22 @@ const SAMPLE_BYTES = 64 * 1024;
 // Make sure this error stays at line 32
 console.error("Roses are Red, Violets are Blue \n Unexpected '{' on line 32");
 
+window.alert = async function (message, targetEl = document.body) {
+    await TooltipDialog.info(targetEl, message);
+};
+
+window.confirm = function (message, targetEl = document.body) {
+    return TooltipDialog.confirm(targetEl, message);
+};
+
+window.prompt = function (
+    message,
+    defaultValue = "",
+    targetEl = document.body
+) {
+    return TooltipDialog.prompt(targetEl, message, defaultValue);
+};
+
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)()
 // dont question it
 const pageOriginalTitle = document.title
@@ -290,7 +306,7 @@ function addFilesToSongList(filesSelected) {
         deleteButton.classList.add('button');
         deleteButton.style.cssText = 'margin: 5px;';
         deleteButton.addEventListener('click', async () => {
-            if (await tooltipConfirm(deleteButton, "この曲をプレイリストから外しますか？", 1)) removeFile(file);
+            if (await confirm("この曲をプレイリストから外しますか？", deleteButton, 1)) removeFile(file);
         });
 
         title.innerText = file.name;
@@ -341,7 +357,7 @@ function addSubtitleFilesToList(filesSelected) {
         deleteButton.style.cssText = 'margin: 5px;';
 
         deleteButton.addEventListener('click', async () => {
-            if (await tooltipConfirm(deleteButton, "この字幕トラックをリストから外しますか？", 1)) {
+            if (await confirm("この字幕トラックをリストから外しますか？", deleteButton, 1)) {
                 const index = subtitleList.findIndex(item => item._fingerprint === file._fingerprint);
                 if (index !== -1) subtitleList.splice(index, 1);
                 if (selectedSubtitle === file._fingerprint) selectedSubtitle = '';
@@ -1109,6 +1125,11 @@ function eqPresetsDropdown(preselectedName = null) {
 }
 
 function saveEQPreset(name, values) {
+    name = name
+        .trim()
+        .replace(/\s+/g, "_")
+        .replace(/[^\p{L}\p{N}_-]/gu, "")
+        .slice(0, 50);
     user_eq_presets[name] = values;
     localStorage.setItem("USER_EQ_PRESETS", JSON.stringify(user_eq_presets));
     eqPresetsDropdown(name);
@@ -1251,11 +1272,12 @@ document.getElementById("eqPresetSetBtn").addEventListener("click", () => {
 })
 
 document.getElementById("eqPresetSaveBtn").addEventListener("click", async () => {
-    const name = await tooltipConfirm(
-        eqPresetSaveBtn,
+    const selected = eqPresetSelect.options[eqPresetSelect.selectedIndex];
+    const name = await prompt(
         "プリセット名を入力してください",
-        0,
-        "prompt"
+        selected ? selected.textContent : "",
+        eqPresetSaveBtn,
+        0
     );
     if (!name || !name.trim()) return;
     const values = equalizer.getData().map(v => v.gain);
@@ -1268,13 +1290,13 @@ document.getElementById("eqPresetRemoveBtn").addEventListener("click", async () 
     if (!selected) return;
     const optGroup = selected.parentElement;
     if (!optGroup || optGroup.label !== "User presets") {
-        await tooltipConfirm(eqPresetRemoveBtn, "ユーザーが保存したプリセットのみ削除できます", 0, "info");
+        await alert("ユーザーが保存したプリセットのみ削除できます", eqPresetRemoveBtn, 0);
         return;
     }
     const name = selected.textContent;
-    const ok = await tooltipConfirm(
-        eqPresetRemoveBtn,
+    const ok = await confirm(
         "選択したプリセットを削除しますか？",
+        eqPresetRemoveBtn,
         1
     );
     if (!ok) return;
@@ -1306,7 +1328,7 @@ document.getElementById("play-next-random-button").addEventListener("click", () 
 })
 
 document.getElementById("removeAllSounds").addEventListener("click", async () => {
-    const ok = await tooltipConfirm(document.getElementById("removeAllSounds"), "プレイリストをクリアしますか？", 1);
+    const ok = await confirm("プレイリストをクリアしますか？", document.getElementById("removeAllSounds"), 1);
     if (!ok) return;
     while (files.length > 0) {
         removeFile(files[0]);

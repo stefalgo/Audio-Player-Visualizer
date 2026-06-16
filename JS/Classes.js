@@ -685,74 +685,125 @@ class CanvasEQ {
     }
 }
 
-function tooltipConfirm(targetEl, message = "よろしいですか？", btn = 0, type = "confirm") {
-    return new Promise((resolve) => {
-        const existing = document.getElementById("tc-confirm");
-        if (existing) existing.remove();
-        const box = document.createElement("div");
-        box.id = "tc-confirm";
-        let okBtn, cancelBtn, input;
+class TooltipDialog {
+    static confirm(targetEl, message = "よろしいですか？", btn = 0) {
+        return new TooltipDialog(targetEl, {
+            type: "confirm",
+            message,
+            btn
+        }).show();
+    }
+    static prompt(targetEl, message = "値を入力してください", defaultValue = "", btn = 0) {
+        return new TooltipDialog(targetEl, {
+            type: "prompt",
+            message,
+            defaultValue,
+            btn
+        }).show();
+    }
+    static info(targetEl, message = "") {
+        return new TooltipDialog(targetEl, {
+            type: "info",
+            message
+        }).show();
+    }
 
-        if (type === "confirm") {
-            box.innerHTML = `
-                <div id="tc-msg">${message}</div>
+    constructor(targetEl, {
+        type,
+        message,
+        btn = 0,
+        defaultValue = ""
+    }) {
+        this.targetEl = targetEl;
+        this.type = type;
+        this.message = message;
+        this.btn = btn;
+        this.defaultValue = defaultValue;
+        this.box = null;
+        this.resolve = null;
+    }
+
+    show() {
+        return new Promise((resolve) => {
+            this.resolve = resolve;
+            const existing = document.getElementById("tc-confirm");
+            if (existing) existing.remove();
+            this.box = document.createElement("div");
+            this.box.id = "tc-confirm";
+            this.render();
+            document.body.appendChild(this.box);
+            this.cache();
+            this.styleButtons();
+            this.position();
+            this.bindEvents();
+
+            setTimeout(() => {
+                if (this.type === "prompt") {
+                    this.input?.focus();
+                    this.input?.select();
+                } else {
+                    (this.btn === 0 ? this.okBtn : this.cancelBtn)?.focus();
+                }
+            }, 0);
+
+            setTimeout(() => {
+                document.addEventListener("mousedown", this.outsideHandler);
+            }, 0);
+        });
+    }
+
+    render() {
+        if (this.type === "confirm") {
+            this.box.innerHTML = `
+                <div id="tc-msg">${this.message}</div>
                 <div class="tc-btns">
-                    <button class="tc-btn ok button" id="tc-ok">はい</button>
-                    <button class="tc-btn cancel button" id="tc-cancel">いいえ</button>
+                    <button id="tc-ok" class="tc-btn ok button">はい</button>
+                    <button id="tc-cancel" class="tc-btn cancel button">いいえ</button>
                 </div>
             `;
         }
-        else if (type === "prompt") {
-            box.innerHTML = `
-                <div id="tc-msg">${message}</div>
+
+        else if (this.type === "prompt") {
+            this.box.innerHTML = `
+                <div id="tc-msg">${this.message}</div>
                 <div class="tc-btns">
-                    <input type="text" class="button" id="tc-input">
-                    <button class="tc-btn ok button" id="tc-ok">確定</button>
-                    <button class="tc-btn cancel button" id="tc-cancel">キャンセル</button>
-                </div>
-            `;
-        }
-        else if (type === "info") {
-            box.innerHTML = `
-                <div id="tc-msg">${message}</div>
-                <div class="tc-btns">
-                    <button class="tc-btn ok button" id="tc-ok">OK</button>
+                    <input id="tc-input" class="button" type="text" value="${this.defaultValue}">
+                    <button id="tc-ok" class="tc-btn ok button">確定</button>
+                    <button id="tc-cancel" class="tc-btn cancel button">キャンセル</button>
                 </div>
             `;
         }
 
-        document.body.appendChild(box);
+        else if (this.type === "info") {
+            this.box.innerHTML = `
+                <div id="tc-msg">${this.message}</div>
+                <div class="tc-btns">
+                    <button id="tc-ok" class="tc-btn ok button">OK</button>
+                </div>
+            `;
+        }
+    }
 
-        okBtn = box.querySelector("#tc-ok");
-        cancelBtn = box.querySelector("#tc-cancel");
-        input = box.querySelector("#tc-input");
+    cache() {
+        this.okBtn = this.box.querySelector("#tc-ok");
+        this.cancelBtn = this.box.querySelector("#tc-cancel");
+        this.input = this.box.querySelector("#tc-input");
+    }
 
-        const btnGreenColor = 'hsla(130, 100%, 50%, 0.2)';
-        const btnGreyColor = 'hsla(0, 0%, 40%, 0.2)';
+    styleButtons() {
+        const green = "hsla(130, 100%, 50%, 0.2)";
+        const grey = "hsla(0, 0%, 40%, 0.2)";
+        if (this.okBtn) this.okBtn.style.background = this.btn === 0 ? green : grey;
+        if (this.cancelBtn) this.cancelBtn.style.background = this.btn === 0 ? grey : green;
+    }
 
-        if (okBtn) okBtn.style.background = btn === 0 ? btnGreenColor : btnGreyColor;
-        if (cancelBtn) cancelBtn.style.background = btn === 0 ? btnGreyColor : btnGreenColor;
-
-        setTimeout(() => {
-            if (type === "prompt") {
-                input?.focus();
-                return;
-            }
-
-            if (btn === 0) {
-                okBtn?.focus();
-            } else {
-                cancelBtn?.focus();
-            }
-        }, 0);
-
-        const rect = targetEl.getBoundingClientRect();
+    position() {
+        const rect = this.targetEl.getBoundingClientRect();
         const margin = 10;
-        const width = box.offsetWidth;
-        const height = box.offsetHeight;
+        const width = this.box.offsetWidth;
+        const height = this.box.offsetHeight;
         const maxX = window.scrollX + window.innerWidth;
         const fitsBelow = rect.bottom + height + margin < window.innerHeight;
-
         let left = rect.left + window.scrollX;
         let top = rect.bottom + window.scrollY + margin;
 
@@ -760,57 +811,55 @@ function tooltipConfirm(targetEl, message = "よろしいですか？", btn = 0,
         if (left < window.scrollX + margin) left = window.scrollX + margin;
         if (!fitsBelow) top = rect.top + window.scrollY - height - margin;
 
-        box.style.left = `${left}px`;
-        box.style.top = `${top}px`;
+        this.box.style.left = `${left}px`;
+        this.box.style.top = `${top}px`;
+    }
 
+    bindEvents() {
         const cleanup = () => {
-            box.remove();
-            document.removeEventListener("mousedown", outside);
+            this.box.remove();
+            document.removeEventListener("mousedown", this.outsideHandler);
         };
 
-        if (okBtn) {
-            okBtn.onclick = () => {
+        if (this.okBtn) {
+            this.okBtn.onclick = () => {
                 cleanup();
-                if (type === "prompt") {
-                    const value = input.value.trim();
-                    resolve(value === "" ? false : value);
+                if (this.type === "prompt") {
+                    const val = this.input.value.trim();
+                    this.resolve(val === "" ? false : val);
                 } else {
-                    resolve(true);
+                    this.resolve(true);
                 }
             };
         }
 
-        if (cancelBtn) {
-            cancelBtn.onclick = () => {
+        if (this.cancelBtn) {
+            this.cancelBtn.onclick = () => {
                 cleanup();
-                resolve(type === "prompt" ? false : false);
+                this.resolve(false);
             };
         }
 
-        if (type === "prompt" && input) {
-            input.addEventListener("keydown", (e) => {
+        if (this.type === "prompt") {
+            this.input.addEventListener("keydown", (e) => {
                 if (e.key === "Enter") {
-                    const value = input.value.trim();
                     cleanup();
-                    resolve(value === "" ? false : value);
+                    const val = this.input.value.trim();
+                    this.resolve(val === "" ? false : val);
                 }
-
                 if (e.key === "Escape") {
                     cleanup();
-                    resolve(false);
+                    this.resolve(false);
                 }
             });
         }
 
-        const outside = (e) => {
-            if (!box.contains(e.target)) {
-                cleanup();
-                resolve(type === "prompt" ? false : false);
+        this.outsideHandler = (e) => {
+            if (!this.box.contains(e.target)) {
+                this.box.remove();
+                document.removeEventListener("mousedown", this.outsideHandler);
+                this.resolve(false);
             }
         };
-
-        setTimeout(() => {
-            document.addEventListener("mousedown", outside);
-        }, 0);
-    });
+    }
 }
