@@ -53,7 +53,7 @@ body {
 
 #controls {
     background-image: url("../Media/playerWallpaper.png");
-    background-image: url("../Media/691373.png");
+    /* background-image: url("../Media/691373.png"); */
     background-size: 1000px;
     background-position-y: -100px;
     z-index: 1;
