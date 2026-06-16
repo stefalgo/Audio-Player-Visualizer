@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Visualizer</title>
+    <link rel="icon" href="./Media/Icon2.png" type="image/png">
+    <link rel="stylesheet" href="./CSS/stylesheet.css" type="text/css">
+    <script src="./js/Classes.js" defer></script>
+    <script src="./js/RenderVis.js" defer></script>
+    <script src="./js/index.js" defer></script>
+</head>
+
+<body>
+    <div id="eq-sliders" class="movable-window" style="display: none;">
+        <div class="window-topbar">イコライザーエディター</div>
+        <div style="display: flex; flex-direction: row;">
+            <button class="button" id="eqResetBtn" style="margin-left: 10px;">Flat</button>
+            <select id="eqPresetSelect" data-tip="Presets" style="margin-left: 10px;"></select>
+            <button class="button" id="eqPresetSetBtn">Set preset</button>
+            <button class="button" id="eqPresetSaveBtn" style="margin-left: 10px;">Save preset</button>
+            <button class="button" id="eqPresetRemoveBtn">Delete preset</button>
+        </div>
+        <div style="padding: 3px;">
+            <canvas id="eq"></canvas>
+        </div>
+    </div>
+
+    <div id="SubtitlesList" class="movable-window" style="display: none;">
+        <div class="window-topbar">字幕トラック</div>
+        <div style="display: flex; flex-direction: row;">
+            <button class="button" id="subUnloadSubBtn" style="margin-left: 10px;">Unload current subtitle</button>
+            <button class="button" id="subAutoFindBtn" style="margin-left: 10px;">Auto select subtitle</button>
+            <input type="file" id="subtitleFile" multiple accept=".srt,.vtt">
+            <label for="subtitleFile" id="ChoosesubtitleFileLabel" class="button" data-tip="srt/vtt" style="margin-left: 10px;">Choose a subtitle file...</label>
+        </div>
+        <div style="padding: 3px; margin-top: 5px;" id="SubtitlesList-Container"></div>
+    </div>
+
+    <div id="SongList" class="movable-window" style="display: none;">
+        <div class="window-topbar">音声トラック</div>
+        <div style="display: flex; flex-direction: row; justify-content: space-between;">
+            <span style="padding: 3px;" id="songList-totalPlayTime">Total: 00:00:00 | Avg: 00:00:00</span>
+            <button id="removeAllSounds" class="button" style="margin-right: 10px;">クリア</button>
+        </div>
+        <div style="padding: 3px; margin-top: 5px;" id="SongList-Container"></div>
+    </div>
+
+    <div id="Subtitles" class="movable-window" style="display: none;">
+        <div class="window-topbar" id="subtitle-title">字幕</div>
+        <div style="padding: 3px;" class="subtitle-container">
+            <h3 id="subtitleText">Subtitle text will apear here</h3>
+        </div>
+    </div>
+
+    <div id="controls">
+        <div class="controls-container">
+            <div style="height: 25px; display: flex; flex-direction: row; align-items: center;">
+                <input type="file" id="audioFile" accept="audio/*,video/*" multiple>
+                <label for="audioFile" id="ChooseaudioFileLabel" data-tip="mp3/wav/m4a/ogg/flac/opus/wma/aiff/oga/midi/au">Choose a file...</label>
+            </div>
+            <div style="display: flex; margin-top: 5px;">
+                <button id="loopModeBtn" class="button"></button>
+                <button id="playModeBtn" class="button"></button>
+            </div>
+
+            <div class="Viz-Settings">
+                <label for="visualizerMF">Visualizer max frequency</label>
+                <input type="range" data-tip="Visualizer max frequency: x Hz" id="visualizerMF" class="slider" min="1000" max="16000" value="16000" step="100">
+                <br>
+                <label for="visualizerQL">Visualizer quality</label>
+                <input type="range" data-tip="Visualizer quality: x fftSize" id="visualizerQL" class="slider" min="1" max="4" value="2" step="1">
+                <br>
+                <label for="visualizerSL">Visualizer smoothing</label>
+                <input type="range" data-tip="Visualizer smoothing: x%" id="visualizerSL" class="slider" min="0" max="0.9" value="0.8" step="0.1">
+                <div style="display: flex; flex-direction: row;">
+                    <label for="vizPauseVizBtn">Pause render</label>
+                    <input data-tip="Pause Visualizer" type="checkbox" id="vizPauseVizBtn" class="checkbox">
+                </div>
+                <select id="visualizerType" data-tip="Visualizer type">
+                    <option value="bar">Bar</option>
+                    <option value="retro" selected>Retro</option>
+                    <option value="waterfall">Waterfall</option>
+                    <option value="waveform">Waveform</option>
+                    <option value="soundTrace">Draw Sound Trace</option>
+                </select>
+            </div>
+
+            <div class="playback-container">
+                <span id="audio-currentTime" class="segment14">00 : 00 : 00 . 000 / 00 : 00 : 00 . 000</span>
+                <div style="display: flex; flex-direction: row; align-items: center;">
+                    <button id="topListBtn" class="button"></button>
+                    <button id="play-previous-button" class="button"></button>
+                    <button id="pause-play-button" class="button" data-state="play"></button>
+                    <button id="play-next-button" class="button"></button>
+                    <button id="play-next-random-button" class="button"></button>
+                </div>
+                <input type="range" data-tip="Time" id="timeSlider" class="slider time" min="0" max="1" value="0" step="0.001">
+                <input type="number" data-tip="Playback speed" id="playback-speed" class="button" min="0.1" max="2" value="1" step="0.05" style="width: 100px;">
+            </div>
+
+            <span id="audio-volume">Volume: xx dB</span>
+            <input type="range" id="volumeSlider" data-tip="Volume" class="slider" min="0" max="2" value="0.5" step="0.01">
+            <div style="display: flex; flex-direction: row; align-items: center;">
+                <input type="button" id="songListBtn" class="button" value="音声トラック">
+                <input type="button" id="subListBtn" class="button" value="字幕トラック" style="margin-left: 5px;">
+                <input type="button" id="eqBtn" class="button" value="イコライザーエディター" style="margin-left: 5px;">
+                <input type="button" id="subBtn" class="button" value="字幕" style="margin-left: 5px;">
+            </div>
+        </div>
+    </div>
+
+    <div id="container">
+        <canvas id="visualizer"></canvas>
+    </div>
+</body>
+
+</html>
