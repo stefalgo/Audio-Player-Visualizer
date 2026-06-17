@@ -35,14 +35,14 @@ window.alert = async function (message, targetEl = document.body) {
     await TooltipDialog.info(targetEl, message);
 };
 
-window.confirm = function (message, targetEl = document.body) {
-    return TooltipDialog.confirm(targetEl, message);
+window.confirm = function (message, targetEl = document.body, btn=0) {
+    return TooltipDialog.confirm(targetEl, message, btn);
 };
 
 window.prompt = function (
     message,
     defaultValue = "",
-    targetEl = document.body
+    targetEl = document.body,
 ) {
     return TooltipDialog.prompt(targetEl, message, defaultValue);
 };
