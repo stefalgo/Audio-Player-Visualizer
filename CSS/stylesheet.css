@@ -15,6 +15,11 @@
     --success: #6aeb6a;
     --warning: #ebeb6a;
     --error: #eb6a6a;
+
+    --githubBG: hsla(216, 28%, 7%, 0.8);
+    --githubLink: #428eef;
+
+    --borderShadowColorEffect: inset 0 0 0 1px hsla(0, 0%, 90%, 0.3);
 }
 
 :focus-visible {
@@ -539,6 +544,34 @@ input[type="file"]+label:hover {
     outline: 1px solid var(--act-color);
     outline-offset: 2px;
 }
+
+/* ------------------------------------------------------------- */
+
+.githubProfile {
+    display: flex;
+    align-items: center;
+    background: hsla(0, 0%, 12%, 0.5);
+    backdrop-filter: blur(10px);
+    padding: 3px;
+    color: var(--text-Color);
+    text-decoration: none;
+    font-weight: 500;
+    margin: 4px 2px;
+    transition: 0.1s;
+}
+
+.githubProfile:hover {
+    color: var(--githubLink);
+    text-decoration: underline;
+    background: var(--githubBG);
+}
+
+.githubProfile img {
+    width: 20px;
+    border-radius: 100%;
+}
+
+/* ------------------------------------------------------------- */
 
 @keyframes tc-fade {
     from {
