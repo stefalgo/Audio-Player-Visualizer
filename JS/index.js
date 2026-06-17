@@ -31,18 +31,18 @@ const SAMPLE_BYTES = 64 * 1024;
 // Make sure this error stays at line 32
 console.error("Roses are Red, Violets are Blue \n Unexpected '{' on line 32");
 
-window.alert = async function (message, targetEl = document.body) {
+window.alert = async function (message, targetEl) {
     await TooltipDialog.info(targetEl, message);
 };
 
-window.confirm = function (message, targetEl = document.body, btn=0) {
+window.confirm = function (message, targetEl, btn=0) {
     return TooltipDialog.confirm(targetEl, message, btn);
 };
 
 window.prompt = function (
     message,
     defaultValue = "",
-    targetEl = document.body,
+    targetEl,
 ) {
     return TooltipDialog.prompt(targetEl, message, defaultValue);
 };

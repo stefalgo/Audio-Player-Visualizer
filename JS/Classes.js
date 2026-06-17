@@ -798,6 +798,12 @@ class TooltipDialog {
     }
 
     position() {
+        if (!this.targetEl) {
+            this.box.style.left = `50%`;
+            this.box.style.top = `5px`;
+            this.box.style.transform = `translateX(-50%)`;
+            return;
+        }
         const rect = this.targetEl.getBoundingClientRect();
         const margin = 10;
         const width = this.box.offsetWidth;
