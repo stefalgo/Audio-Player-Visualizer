@@ -791,7 +791,7 @@ function loadFile(file) {
             document.title = `${file.name} - ${pageOriginalTitle}`;
             console.log(`Loaded file: ${file.name}`);
         }, error => {
-            console.error('[ERROR 1] failed decoding audio data:', error);
+            console.error('Failed decoding audio data:', error);
         });
     };
 
@@ -835,7 +835,7 @@ function jumpAt(time = 5) {
     if (!audioCtx || !buffer) return;
     let t = getElapsedTime() + time;
     t = t >= 0 ? t : 0
-    if (t >= buffer.duration) playNext(1, true);
+    if (t >= buffer.duration && !playSoundList) playNext(1, true);
     else {
         if (audioCtx.state === 'running') playFrom(t);
         else {
@@ -873,7 +873,7 @@ async function addFiles(filesARG) {
 
     const file = uniqueNewFiles[0];
     if (!file) {
-        console.warn('[WARNING 1] This file does not exist in the array.');
+        console.warn('This file does not exist in the array.');
         return;
     }
 
@@ -890,31 +890,17 @@ async function addFiles(filesARG) {
 }
 
 function removeFile(file) {
-    if (!file) return; // 
-
+    if (!file) return;
     const index = files.findIndex(f => f._fingerprint === file._fingerprint);
-    if (index !== -1) {
-        files.splice(index, 1);
-    }
+    const el = document.querySelector(`[data-file-name="${file._fingerprint}"]`);
 
-    const selector = file._fingerprint ? `[data-file-name="${file._fingerprint}"]` : null;
-    if (selector) {
-        const songItem = document.querySelector(selector);
-        if (songItem) songItem.remove();
-    }
+    if (index !== -1) files.splice(index, 1);
+    if (el) el.remove();
 
-    try {
-        randomSongs.forget(file);
-    } catch (e) {
-        console.warn('[WARNING 2] Failed to remove file from history:', e);
-    }
+    randomSongs.forget(file);
 
     if (currentSelectedFile === file._fingerprint) {
-        try {
-            stopAudio(true, true);
-        } catch (e) {
-            console.warn('Failed to stop audio:', e);
-        }
+        stopAudio(false, true);
 
         buffer = null;
         startTime = 0;
@@ -924,14 +910,15 @@ function removeFile(file) {
         if (chooseAudioLabel) {
             chooseAudioLabel.textContent = 'No file selected';
         }
+
         document.title = pageOriginalTitle;
 
         if (source) {
             try {
                 source.stop();
-            } catch (e) {
-                console.warn('Failed to stop audio source:', e);
-            }
+                source.disconnect();
+            } catch {}
+
             source = null;
         }
     }
