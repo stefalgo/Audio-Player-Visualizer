@@ -125,6 +125,7 @@ let playSoundList = false;
 let playRandom = false;
 let loopMode = 0;
 let loopCounter = 0;
+let currentLoadToken = 0; // e
 
 // REMEMBER powers of 2 or something like that
 let analyserffsize = 1024 * (2 ** (visualizerQL.value - 1));//8192;//4096;//2048//1024;
@@ -766,6 +767,7 @@ function stopAudio(clearCanvas, pauseCtx) {
 function loadFile(file) {
     if (!file) return;
 
+    const loadToken = ++currentLoadToken;
     const allSongItems = document.querySelectorAll('.songItem');
 
     selectedSubtitle = getSubtitle(file);
@@ -784,15 +786,21 @@ function loadFile(file) {
     const reader = new FileReader();
 
     reader.onload = () => {
-        audioCtx.decodeAudioData(reader.result, buf => {
-            buffer = buf;
-            playFrom(0);
-            if (chooseAudioLabel) chooseAudioLabel.textContent = file.name;
-            document.title = `${file.name} - ${pageOriginalTitle}`;
-            console.log(`Loaded file: ${file.name}`);
-        }, error => {
-            console.error('Failed decoding audio data:', error);
-        });
+        audioCtx.decodeAudioData(
+            reader.result,
+            buf => {
+                if (loadToken !== currentLoadToken) return;
+                buffer = buf;
+                playFrom(0);
+                if (chooseAudioLabel) chooseAudioLabel.textContent = file.name;
+                document.title = `${file.name} - ${pageOriginalTitle}`;
+                console.log(`Loaded file: ${file.name}`);
+            },
+            error => {
+                if (loadToken !== currentLoadToken) return;
+                console.error('Failed decoding audio data:', error);
+            }
+        );
     };
 
     reader.readAsArrayBuffer(file);
@@ -900,7 +908,7 @@ function removeFile(file) {
     randomSongs.forget(file);
 
     if (currentSelectedFile === file._fingerprint) {
-        stopAudio(false, true);
+        stopAudio(true, true);
 
         buffer = null;
         startTime = 0;
