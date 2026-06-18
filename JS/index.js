@@ -1344,16 +1344,23 @@ pausePlayButton.addEventListener("click", (e) => {
 document.getElementById("songSearch").addEventListener("input", () => {
     const songItems = document.querySelectorAll(".songItem");
     const searchTerm = songSearch.value.toLowerCase().trim();
-
     const matchingFingerprints = files.filter(file => file.name.toLowerCase().includes(searchTerm)).map(file => file._fingerprint);
 
     songItems.forEach(item => {
         const fingerprint = item.dataset.fileName;
 
-        item.style.display =
-            matchingFingerprints.includes(fingerprint)
-                ? ""
-                : "none";
+        item.style.display = matchingFingerprints.includes(fingerprint) ? "" : "none";
+    });
+});
+
+document.getElementById("subSearch").addEventListener("input", () => {
+    const subItems = document.querySelectorAll(".SubtitleItem");
+    const searchTerm = subSearch.value.toLowerCase().trim();
+    const matchingFingerprints = subtitleList.filter(sub => sub.title.toLowerCase().includes(searchTerm)).map(sub => sub._fingerprint);
+
+    subItems.forEach(item => { const fingerprint = item.dataset.fileName;
+
+        item.style.display = matchingFingerprints.includes(fingerprint) ? "" : "none";
     });
 });
 
