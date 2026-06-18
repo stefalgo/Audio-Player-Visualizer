@@ -250,6 +250,16 @@ input[type="file"]+label {
     transition: 0.2s;
 }
 
+.searchBar {
+    width: 100px;
+    padding: 3px;
+    box-sizing: border-box;
+}
+
+.searchBar:focus {
+    width: calc(100% - 6px);
+}
+
 .checkbox {
     appearance: none;
     width: 20px;
