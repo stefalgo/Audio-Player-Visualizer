@@ -251,13 +251,17 @@ input[type="file"]+label {
 }
 
 .searchBar {
-    width: 100px;
+    width: 150px;
     padding: 3px;
     box-sizing: border-box;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: rgb(185, 185, 185);
 }
 
 .searchBar:focus {
     width: calc(100% - 6px);
+    color: var(--text-Color);
 }
 
 .checkbox {

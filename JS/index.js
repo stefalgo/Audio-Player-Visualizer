@@ -1364,6 +1364,14 @@ document.getElementById("subSearch").addEventListener("input", () => {
     });
 });
 
+document.querySelectorAll(".searchBar").forEach(searchBar => {
+    searchBar.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+            event.target.blur();
+        }
+    });
+});
+
 equalizer.onChange((data) => {
     data.forEach((band, i) => {
         eqState[i] = band.gain;
