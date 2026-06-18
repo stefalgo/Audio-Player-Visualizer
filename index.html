@@ -23,14 +23,14 @@
 
 <body>
     <div style="z-index: 5; position: fixed;">
-    <a href="https://github.com/stefalgo" target="_blank" class="githubProfile">
-        <img src="https://github.com/stefalgo.png">
-        Github Profile
-    </a>
-    <a href="https://github.com/stefalgo/Audio-Player-Visualizer" target="_blank" class="githubProfile">
-        <img src="./Media/GitHub_Invertocat_White.png">
-        Project Page
-    </a>
+        <a href="https://github.com/stefalgo" target="_blank" class="githubProfile">
+            <img src="https://github.com/stefalgo.png">
+            Github Profile
+        </a>
+        <a href="https://github.com/stefalgo/Audio-Player-Visualizer" target="_blank" class="githubProfile">
+            <img src="./Media/GitHub_Invertocat_White.png">
+            Project Page
+        </a>
     </div>
     <div id="eq-sliders" class="movable-window" style="display: none;">
         <div class="window-topbar">イコライザーエディター</div>
@@ -54,15 +54,17 @@
             <input type="file" id="subtitleFile" multiple accept=".srt,.vtt">
             <label for="subtitleFile" id="ChoosesubtitleFileLabel" class="button" data-tip="srt/vtt" style="margin-left: 10px;">Choose a subtitle file...</label>
         </div>
+        <input style="margin: 3px;" type="text" id="subSearch" class="button searchBar" placeholder="字幕検索">
         <div style="padding: 3px; margin-top: 5px;" id="SubtitlesList-Container"></div>
     </div>
 
     <div id="SongList" class="movable-window" style="display: none;">
-        <div class="window-topbar">音声トラック</div>
+        <div class="window-topbar">オーディオトラック</div>
         <div style="display: flex; flex-direction: row; justify-content: space-between;">
             <span style="padding: 3px;" id="songList-totalPlayTime">Total: 00:00:00 | Avg: 00:00:00</span>
             <button id="removeAllSounds" class="button" style="margin-right: 10px;">クリア</button>
         </div>
+        <input style="margin: 3px;" type="text" id="songSearch" class="button searchBar" placeholder="オーディオ検索">
         <div style="padding: 3px; margin-top: 5px;" id="SongList-Container"></div>
     </div>
 
@@ -122,7 +124,7 @@
             <span id="audio-volume">Volume: xx dB</span>
             <input type="range" id="volumeSlider" data-tip="Volume" class="slider" min="0" max="2" value="0.5" step="0.01">
             <div style="display: flex; flex-direction: row; align-items: center;">
-                <input type="button" id="songListBtn" class="button" value="音声トラック">
+                <input type="button" id="songListBtn" class="button" value="オーディオトラック">
                 <input type="button" id="subListBtn" class="button" value="字幕トラック" style="margin-left: 5px;">
                 <input type="button" id="eqBtn" class="button" value="イコライザーエディター" style="margin-left: 5px;">
                 <input type="button" id="subBtn" class="button" value="字幕" style="margin-left: 5px;">

@@ -1224,7 +1224,7 @@ timeSlider.addEventListener('input', () => {
 
 playbackSpeedInput.addEventListener('input', () => {
     setPlaybackRate(Number(playbackSpeedInput.value) || 1);
-})
+});
 
 //----------------------------------------------------------------------------------------------------------------------
 
@@ -1244,27 +1244,27 @@ document.addEventListener("keydown", (e) => {
 
 document.getElementById("songListBtn").addEventListener("click", () => {
     document.getElementById('SongList').style.display = document.getElementById('SongList').style.display === 'none' ? 'block' : 'none';
-})
+});
 
 document.getElementById("subListBtn").addEventListener("click", () => {
     document.getElementById('SubtitlesList').style.display = document.getElementById('SubtitlesList').style.display === 'none' ? 'block' : 'none';
-})
+});
 
 document.getElementById("eqBtn").addEventListener("click", () => {
     eqSlidersContainer.style.display = eqSlidersContainer.style.display === 'none' ? 'block' : 'none';
-})
+});
 
 document.getElementById("subBtn").addEventListener("click", () => {
     subtitlesDiv.style.display = subtitlesDiv.style.display === 'none' ? 'block' : 'none';
-})
+});
 
 document.getElementById("eqResetBtn").addEventListener("click", () => {
     equalizer.reset();
-})
+});
 
 document.getElementById("eqPresetSetBtn").addEventListener("click", () => {
     equalizer.loadPreset(JSON.parse(eqPresetSelect.value))
-})
+});
 
 document.getElementById("eqPresetSaveBtn").addEventListener("click", async () => {
     const selected = eqPresetSelect.options[eqPresetSelect.selectedIndex];
@@ -1300,27 +1300,27 @@ document.getElementById("eqPresetRemoveBtn").addEventListener("click", async () 
 
 document.getElementById("subUnloadSubBtn").addEventListener("click", () => {
     selectedSubtitle = '';
-})
+});
 
 document.getElementById("subAutoFindBtn").addEventListener("click", () => {
     forceFindSub();
-})
+});
 
 document.getElementById("vizPauseVizBtn").addEventListener("click", () => {
     pauseViz = !pauseViz;
-})
+});
 
 document.getElementById("play-previous-button").addEventListener("click", () => {
     playNext(-1);
-})
+});
 
 document.getElementById("play-next-button").addEventListener("click", () => {
     playNext(1);
-})
+});
 
 document.getElementById("play-next-random-button").addEventListener("click", () => {
     loadRandom();
-})
+});
 
 document.getElementById("removeAllSounds").addEventListener("click", async () => {
     const ok = await confirm("プレイリストをクリアしますか？", document.getElementById("removeAllSounds"), 1);
@@ -1335,11 +1335,34 @@ document.getElementById("topListBtn").addEventListener("click", () => {
         currentSelectedFile = files[0]._fingerprint;
         loadFile(files[0]);
     }
-})
+});
 
 pausePlayButton.addEventListener("click", (e) => {
     togglePlayPause();
-})
+});
+
+document.getElementById("songSearch").addEventListener("input", () => {
+    const songItems = document.querySelectorAll(".songItem");
+    const searchTerm = songSearch.value.toLowerCase().trim();
+    const matchingFingerprints = files.filter(file => file.name.toLowerCase().includes(searchTerm)).map(file => file._fingerprint);
+
+    songItems.forEach(item => {
+        const fingerprint = item.dataset.fileName;
+
+        item.style.display = matchingFingerprints.includes(fingerprint) ? "" : "none";
+    });
+});
+
+document.getElementById("subSearch").addEventListener("input", () => {
+    const subItems = document.querySelectorAll(".SubtitleItem");
+    const searchTerm = subSearch.value.toLowerCase().trim();
+    const matchingFingerprints = subtitleList.filter(sub => sub.title.toLowerCase().includes(searchTerm)).map(sub => sub._fingerprint);
+
+    subItems.forEach(item => { const fingerprint = item.dataset.fileName;
+
+        item.style.display = matchingFingerprints.includes(fingerprint) ? "" : "none";
+    });
+});
 
 equalizer.onChange((data) => {
     data.forEach((band, i) => {
