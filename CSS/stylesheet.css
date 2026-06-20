@@ -330,7 +330,7 @@ input[type="file"]+label {
 
 /*------------------------------------------------*/
 
-#Subtitles {
+#Subtitles, #SubtitlesOptions {
     position: fixed;
     right: 0;
     width: 500px;

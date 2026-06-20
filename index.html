@@ -68,10 +68,51 @@
         <div style="padding: 3px; margin-top: 5px;" id="SongList-Container"></div>
     </div>
 
+    <div id="SubtitlesOptions" class="movable-window" style="display: none;">
+        <div class="window-topbar">字幕設定</div>
+        <div style="padding: 10px;">
+            <div style="margin-bottom: 12px;">
+                <label for="subtitleOffset">字幕オフセット (ms)</label><br>
+                <input class="button" type="number" id="subtitleOffset" value="0" step="100" style="width: 120px;">
+                <div style="font-size: 12px;">
+                    Positive values delay subtitles, negative values show them earlier.
+                </div>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label for="subtitleFont">フォント</label><br>
+                <select id="subtitleFont">
+                    <option value="default" selected>Default</option>
+                    <option value="Arial, sans-serif">Arial</option>
+                    <option value="Verdana, sans-serif">Verdana</option>
+                    <option value="Tahoma, sans-serif">Tahoma</option>
+                    <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
+                    <option value="'Times New Roman', serif">Times New Roman</option>
+                    <option value="Georgia, serif">Georgia</option>
+                    <option value="'Courier New', monospace">Courier New</option>
+
+                    <option value="system-ui, 'Noto Sans JP', sans-serif">System UI Noto Sans JP</option>
+                    <option value="'Noto Sans JP', sans-serif">Noto Sans JP</option>
+                    <option value="'Hiragino Sans', 'Noto Sans JP', sans-serif">Hiragino Sans</option>
+                </select>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label for="subtitleFontSize">フォントサイズ</label><br>
+                <input class="button" type="number" id="subtitleFontSize" value="18" min="8" max="100">
+                px
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label style="display: flex;">
+                    <input class="checkbox" type="checkbox" id="subtitlePlainStyle">
+                    標準スタイルを使用（HTMLタグを無効化）
+                </label>
+            </div>
+        </div>
+    </div>
+
     <div id="Subtitles" class="movable-window" style="display: none;">
         <div class="window-topbar" id="subtitle-title">字幕</div>
         <div style="padding: 3px;" class="subtitle-container">
-            <h3 id="subtitleText">Subtitle text will apear here</h3>
+            <h3 id="subtitleText" style="font-size: 18px;">Subtitle text will apear here</h3>
         </div>
     </div>
 
@@ -128,6 +169,7 @@
                 <input type="button" id="subListBtn" class="button" value="字幕トラック" style="margin-left: 5px;">
                 <input type="button" id="eqBtn" class="button" value="イコライザーエディター" style="margin-left: 5px;">
                 <input type="button" id="subBtn" class="button" value="字幕" style="margin-left: 5px;">
+                <input type="button" id="subOptionsBtn" class="button" value="字幕設定" style="margin-left: 5px;">
             </div>
         </div>
     </div>

@@ -10,6 +10,7 @@ const songListContainer = document.getElementById('SongList-Container');
 const subListContainer = document.getElementById('SubtitlesList-Container');
 const eqSlidersContainer = document.getElementById('eq-sliders');
 const subtitlesDiv = document.getElementById('Subtitles');
+const subtitlesOptionsDiv = document.getElementById('SubtitlesOptions');
 const audioTimeText = document.getElementById('audio-currentTime');
 const dropdownVizType = document.getElementById('visualizerType');
 const eqPresetSelect = document.getElementById("eqPresetSelect");
@@ -17,17 +18,16 @@ const visualizerMF = document.getElementById('visualizerMF');
 const visualizerQL = document.getElementById('visualizerQL');
 const visualizerSL = document.getElementById('visualizerSL');
 const playbackSpeedInput = document.getElementById('playback-speed');
+const subtitleOffsetInput = document.getElementById("subtitleOffset");
 const chooseAudioLabel = document.getElementById('ChooseaudioFileLabel');
 const controlsEl = document.getElementById('controls');
 const subtitleTextEl = document.getElementById('subtitleText');
+const subtitleStyleCheckbox = document.getElementById('subtitlePlainStyle');
 const songListTotalPlayTimeText = document.getElementById('songList-totalPlayTime');
 const SAMPLE_BYTES = 64 * 1024;
-
 // It is a total mess :) pls prepare mentally before proceeding
 // at least i tried my best
 // pls dont judge me
-
-
 // Make sure this error stays at line 32
 console.error("Roses are Red, Violets are Blue \n Unexpected '{' on line 32");
 
@@ -105,27 +105,28 @@ let user_eq_presets = JSON.parse(localStorage.getItem("USER_EQ_PRESETS") || "{}"
 
 let analyser, analyserL, analyserR, dataL, dataR;
 let source, gainNode, buffer, startTime;
-let playbackRate = 1.0;
-let volume = volumeSlider.value;
 let eqFilters = [];
 let eqState = EQ_BANDS.map(() => 0);
-let playbackLowFreq = 0;
-let playbackHighFreq = 0;
-let playbackHPFilter = null;
-let playbackLPFilter = null;
 let files = [];
 let subtitleList = []; // {_fingerprint, title, subs}
 let selectedSubtitle = ''; // _fingerprint
 let currentSelectedFile = ''; // _fingerprint
-let currentViz = dropdownVizType.value;
 let freqData, freqDataFloat, timeData;
+let currentLoadToken = 0; // e
+
+let playbackRate = 1.0;
+let volume = volumeSlider.value;
+let playbackLowFreq = 0;
+let playbackHighFreq = 0;
+let playbackHPFilter = null;
+let playbackLPFilter = null;
+let currentViz = dropdownVizType.value;
 let pauseViz = false;
 let soundEnded = false;
 let playSoundList = false;
 let playRandom = false;
 let loopMode = 0;
 let loopCounter = 0;
-let currentLoadToken = 0; // e
 
 // REMEMBER powers of 2 or something like that
 let analyserffsize = 1024 * (2 ** (visualizerQL.value - 1));//8192;//4096;//2048//1024;
@@ -382,10 +383,10 @@ function addSubtitleFilesToList(filesSelected) {
 //----------------------------------------------------------------------------------------------------------------------
 // Subtitle stuff
 
-function decodeHtml(str) {
-    const txt = document.createElement("textarea");
-    txt.innerHTML = str;
-    return txt.value;
+function removeHtmlTags(str) {
+    const div = document.createElement("div");
+    div.innerHTML = str;
+    return div.textContent || div.innerText || "";
 }
 
 function parseYoutubeTags(text) {
@@ -585,6 +586,8 @@ function showSubtitle(timeSeconds, selectedSubtitle) {
     let subKey = null;
     let subTitle = null;
 
+    timeSeconds += subtitleOffsetInput.value/1000;
+
     const entry = subtitleList.find(e => e._fingerprint === selectedSubtitle);
     if (entry) {
         subKey = entry._fingerprint;
@@ -625,7 +628,7 @@ function showSubtitle(timeSeconds, selectedSubtitle) {
         const s = subs[i];
         if (timeSeconds >= s.start && timeSeconds <= s.end) {
             subtitleLastIndex = i;
-            const parsed = parseYoutubeTags(s.text) || "";
+            const parsed = String(subtitleStyleCheckbox.checked ? removeHtmlTags(s.text) : parseYoutubeTags(s.text) || "");
             if (h3.innerHTML !== parsed) {
                 h3.innerHTML = parsed;
             }
@@ -1258,6 +1261,10 @@ document.getElementById("subBtn").addEventListener("click", () => {
     subtitlesDiv.style.display = subtitlesDiv.style.display === 'none' ? 'block' : 'none';
 });
 
+document.getElementById("subOptionsBtn").addEventListener("click", () => {
+    subtitlesOptionsDiv.style.display = subtitlesOptionsDiv.style.display === 'none' ? 'block' : 'none';
+});
+
 document.getElementById("eqResetBtn").addEventListener("click", () => {
     equalizer.reset();
 });
@@ -1321,6 +1328,22 @@ document.getElementById("play-next-button").addEventListener("click", () => {
 document.getElementById("play-next-random-button").addEventListener("click", () => {
     loadRandom();
 });
+
+//---------------------------------------------
+// subtitle settings
+document.getElementById("subtitleFontSize").addEventListener("input", () => {
+    subtitleTextEl.style.fontSize = `${subtitleFontSize.value}px`;
+});
+
+document.getElementById("subtitleFont").addEventListener("change", (e) => {
+    const value = e.target.value;
+    if (value === "default") {
+        subtitleTextEl.style.removeProperty("font-family");
+    } else {
+        subtitleTextEl.style.fontFamily = value;
+    }
+});
+//---------------------------------------------
 
 document.getElementById("removeAllSounds").addEventListener("click", async () => {
     const ok = await confirm("プレイリストをクリアしますか？", document.getElementById("removeAllSounds"), 1);
