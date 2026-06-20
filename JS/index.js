@@ -35,7 +35,7 @@ window.alert = async function (message, targetEl) {
     await TooltipDialog.info(targetEl, message);
 };
 
-window.confirm = function (message, targetEl, btn=0) {
+window.confirm = function (message, targetEl, btn = 0) {
     return TooltipDialog.confirm(targetEl, message, btn);
 };
 
@@ -586,7 +586,7 @@ function showSubtitle(timeSeconds, selectedSubtitle) {
     let subKey = null;
     let subTitle = null;
 
-    timeSeconds += subtitleOffsetInput.value/1000;
+    timeSeconds += subtitleOffsetInput.value / 1000;
 
     const entry = subtitleList.find(e => e._fingerprint === selectedSubtitle);
     if (entry) {
@@ -928,7 +928,7 @@ function removeFile(file) {
             try {
                 source.stop();
                 source.disconnect();
-            } catch {}
+            } catch { }
 
             source = null;
         }
@@ -1383,7 +1383,8 @@ document.getElementById("subSearch").addEventListener("input", () => {
     const searchTerm = subSearch.value.toLowerCase().trim();
     const matchingFingerprints = subtitleList.filter(sub => sub.title.toLowerCase().includes(searchTerm)).map(sub => sub._fingerprint);
 
-    subItems.forEach(item => { const fingerprint = item.dataset.fileName;
+    subItems.forEach(item => {
+        const fingerprint = item.dataset.fileName;
 
         item.style.display = matchingFingerprints.includes(fingerprint) ? "" : "none";
     });
@@ -1468,12 +1469,25 @@ document.addEventListener('DOMContentLoaded', () => {
     visualizerQL.setAttribute('data-tip', `Visualizer quality: ${analyserffsize} fftSize`);
     visualizerSL.setAttribute('data-tip', `Visualizer smoothing: ${analyserSmoothing * 100}%`);
 
-    eqPresetsDropdown();
+    const wallpapers = [
+        "./Media/playerWallpaper.png",
+        "./Media/playerWallpaper2.png",
+    ];
 
+    const wallpaperswitch = new WallpaperSwitcher(
+        document.getElementById("wallpaper"),
+        wallpapers
+    );
+
+    eqPresetsDropdown();
     resizeCanvas();
     volumeChanged();
 
     window.addEventListener('resize', () => { clearTimeout(resizeTimeout); resizeTimeout = setTimeout(resizeCanvas, 100); });
+
+    setInterval(() => {
+        wallpaperswitch.nextRandom();
+    }, 63000);
 
     setInterval(commonLoop, 16);
     renderLoop();

@@ -869,3 +869,43 @@ class TooltipDialog {
         };
     }
 }
+
+class WallpaperSwitcher {
+    constructor(container, wallpapers) {
+        this.container = container;
+        this.wallpapers = wallpapers;
+        this.current = this.random();
+        this.topActive = false;
+        this.w1 = this.container.querySelector(".wallpaper1");
+        this.w2 = this.container.querySelector(".wallpaper2");
+        this.w1.style.backgroundImage = `url("${this.current}")`;
+    }
+
+    random() {
+        return this.wallpapers[Math.random() * this.wallpapers.length | 0];
+    }
+
+    nextRandom() {
+        let next;
+        do next = this.random();
+        while (next === this.current && this.wallpapers.length > 1);
+        this.apply(next);
+    }
+
+    nextIndex(i) {
+        if (i < 0 || i >= this.wallpapers.length) return;
+        this.apply(this.wallpapers[i]);
+    }
+
+    apply(url) {
+        const top = this.topActive ? this.w1 : this.w2;
+        const bottom = this.topActive ? this.w2 : this.w1;
+        top.style.backgroundImage = `url("${url}")`;
+        requestAnimationFrame(() => {
+            top.style.opacity = 1;
+            bottom.style.opacity = 0;
+        });
+        this.current = url;
+        this.topActive = !this.topActive;
+    }
+}
