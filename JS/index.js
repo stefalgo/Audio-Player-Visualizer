@@ -1325,8 +1325,10 @@ document.getElementById("play-next-random-button").addEventListener("click", () 
 document.getElementById("removeAllSounds").addEventListener("click", async () => {
     const ok = await confirm("プレイリストをクリアしますか？", document.getElementById("removeAllSounds"), 1);
     if (!ok) return;
-    while (files.length > 0) {
-        removeFile(files[0]);
+    if (files.length > 1) {
+        files.filter(file => file._fingerprint !== currentSelectedFile).forEach(removeFile);
+    } else {
+        files.forEach(removeFile);
     }
 });
 
