@@ -1498,6 +1498,8 @@ document.addEventListener('DOMContentLoaded', () => {
     resizeCanvas();
     volumeChanged();
 
+    audioCtx?.suspend();
+
     window.addEventListener('resize', () => { clearTimeout(resizeTimeout); resizeTimeout = setTimeout(resizeCanvas, 100); });
 
     setInterval(() => {
