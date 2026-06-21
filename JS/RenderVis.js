@@ -564,6 +564,53 @@ class RetroRenderer extends Renderer {
     }
 }
 
+// Testing some stuff
+class VideoRender extends Renderer {
+    constructor(canvas, ctx, audioCtx, config = {}) {
+        super(canvas, ctx, audioCtx, config);
+        this.lastHardSync = 0;
+    }
+
+    render(videoEl) {
+        if (!videoEl || !buffer) return;
+        const elapsed = getElapsedTime();
+        const drift = videoEl.currentTime - elapsed;
+
+        this.ctx.fillStyle = "black";
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        if (
+            Math.abs(drift) > 0.25 && // 0.10
+            performance.now() - this.lastHardSync > 500 // 300
+        ) {
+            videoEl.currentTime = elapsed;
+            this.lastHardSync = performance.now();
+        }
+
+        if (audioCtx.state === "running") {
+            if (videoEl.paused) {
+                videoEl.play().catch(() => { });
+            }
+        } else {
+            if (!videoEl.paused) {
+                videoEl.pause();
+            }
+        }
+
+        if (videoEl.readyState < 2) return;
+
+        const canvasW = this.canvas.width;
+        const canvasH = this.canvas.height;
+        const videoW = videoEl.videoWidth;
+        const videoH = videoEl.videoHeight;
+        const scale = canvasH / videoH;
+        const drawW = videoW * scale;
+        const offsetX = (canvasW - drawW) / 2;
+
+        this.ctx.drawImage(videoEl, offsetX, 0, drawW, canvasH);
+    }
+}
+
 // Render handler
 class RenderHandler {
     constructor(canvas, ctx, audioCtx, config = {}) {
@@ -579,6 +626,7 @@ class RenderHandler {
             soundTrace: new SoundTraceRenderer(canvas, ctx, audioCtx, config),
             fullWaveform: new FullWaveformRenderer(canvas, ctx, audioCtx, config),
             retro: new RetroRenderer(canvas, ctx, audioCtx, config),
+            video: new VideoRender(canvas, ctx, audioCtx, config),
         };
 
         this.bar = this.renderers.bar;
@@ -587,6 +635,7 @@ class RenderHandler {
         this.soundTrace = this.renderers.soundTrace;
         this.fullWaveform = this.renderers.fullWaveform;
         this.retro = this.renderers.retro;
+        this.video = this.renderers.video;
     }
 
     /**

@@ -48,6 +48,13 @@ window.prompt = function (
 };
 
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+
+const videoEl = document.createElement("video");
+videoEl.muted = true;
+videoEl.playsInline = true;
+videoEl.style.display = "none";
+document.body.appendChild(videoEl);
+
 // dont question it
 const pageOriginalTitle = document.title
 
@@ -182,7 +189,7 @@ function setPlaybackRate(rate) {
     const cur = getElapsedTime();
     playbackRate = rate;
     if (source && source.playbackRate) {
-        try { source.playbackRate.value = playbackRate; } catch (e) { }
+        try { source.playbackRate.value = playbackRate; videoEl.playbackRate = playbackRate; } catch (e) { }
         if (audioCtx) startTime = audioCtx.currentTime - cur / playbackRate;
     }
     return playbackRate;
@@ -289,6 +296,8 @@ function addFilesToSongList(filesSelected) {
         const deleteButton = document.createElement('button');
         const title = document.createElement('span');
         const metadata = document.createElement('span');
+        const fileName = file.name.replace(/\.[^/.]+$/, "");
+        const fileExt = file.name.replace(/^.*\./, "");
 
         songDiv.classList.add('songItem');
         songDiv.setAttribute('data-file-name', file._fingerprint);
@@ -311,10 +320,10 @@ function addFilesToSongList(filesSelected) {
             if (await confirm("この曲をプレイリストから外しますか？", deleteButton, 1)) removeFile(file);
         });
 
-        title.innerText = file.name;
-        title.dataset.tip = file.name;
+        title.innerHTML = `<span>${fileName}</span><span class='songMetadata' style='user-select: none;'>.${fileExt}</span>`;
+        title.dataset.tip = fileName;
 
-        metadata.innerText = `${formatTime(file._duration, '{hh}:{mm}:{ss}')} | UID=${file._fingerprint}`;
+        metadata.innerText = `${formatTime(file._duration, '{hh}:{mm}:{ss}')} | UID=${file._fingerprint} | Type="${file.type}"`;
 
         left.classList.add('songLeft');
         right.classList.add('songRight');
@@ -709,12 +718,12 @@ function updateAnalyser() {
 
 function playFrom(offset) {
     cleanupGraph();
-    stopAudio(false, false);
+    source?.stop();
     audioCtx.resume();
     source = audioCtx.createBufferSource();
     source.buffer = buffer;
 
-    try { source.playbackRate.value = playbackRate; } catch (e) { }; // Im evil
+    setPlaybackRate(playbackRate);
 
     gainNode = audioCtx.createGain();
     gainNode.gain.value = volume;
@@ -752,6 +761,8 @@ function playFrom(offset) {
 
     startTime = audioCtx.currentTime - (offset / Math.max(0.0001, playbackRate));
     source.start(0, offset);
+    videoEl.currentTime = offset;
+    videoEl.play().catch(() => { });
     pausePlayButton.dataset.state = 'pause';
 }
 
@@ -759,6 +770,7 @@ function playFrom(offset) {
 function stopAudio(clearCanvas, pauseCtx) {
     if (source) {
         source.stop();
+        videoEl.pause();
         if (pauseCtx) {
             audioCtx.suspend();
             pausePlayButton.dataset.state = 'play';
@@ -769,6 +781,11 @@ function stopAudio(clearCanvas, pauseCtx) {
 
 function loadFile(file) {
     if (!file) return;
+    videoEl.src = URL.createObjectURL(file);
+    videoEl.load();
+    videoEl.addEventListener("loadeddata", () => {
+        videoEl.currentTime = 0;
+    }, { once: true });
 
     const loadToken = ++currentLoadToken;
     const allSongItems = document.querySelectorAll('.songItem');
@@ -1056,6 +1073,10 @@ function renderLoop() {
                 renderHandler.retro.render(freqDataFloat, analyser);
                 break;
 
+            case 'video':
+                renderHandler.video.render(videoEl);
+                break;
+
             default:
                 console.warn(`Unknown visualizer: ${currentViz}`);
         }
@@ -1065,7 +1086,7 @@ function renderLoop() {
 //----------------------------------------------------------------------------------------------------------------------
 
 function volumeChanged() {
-    const linearValue = volumeSlider.value; // 0 to 1.25
+    const linearValue = volumeSlider.value; // 0 to 2
 
     if (gainNode) {
         gainNode.gain.value = linearValue;
@@ -1233,12 +1254,6 @@ playbackSpeedInput.addEventListener('input', () => {
 
 document.addEventListener("keydown", (e) => {
     if (isTypingOrEditing()) return;
-
-    // if (e.code === "Space") {
-    //     e.preventDefault();
-    //     togglePlayPause();
-    // }
-
     if (e.code === "ArrowRight") jumpAt(5);
     if (e.code === "ArrowLeft") jumpAt(-5);
 });
