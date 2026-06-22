@@ -575,39 +575,50 @@ class VideoRender extends Renderer {
         if (!videoEl || !buffer) return;
         const elapsed = getElapsedTime();
         const drift = videoEl.currentTime - elapsed;
-
-        this.ctx.fillStyle = "black";
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        const canvasW = this.canvas.width;
+        const canvasH = this.canvas.height;
+        const videoW = videoEl.videoWidth;
+        const videoH = videoEl.videoHeight;
 
         if (
-            Math.abs(drift) > 0.25 && // 0.10
-            performance.now() - this.lastHardSync > 500 // 300
+            Math.abs(drift) > 0.25 &&
+            performance.now() - this.lastHardSync > 500
         ) {
             videoEl.currentTime = elapsed;
             this.lastHardSync = performance.now();
         }
 
         if (audioCtx.state === "running") {
-            if (videoEl.paused) {
-                videoEl.play().catch(() => { });
-            }
+            if (videoEl.paused) videoEl.play().catch(() => { });
         } else {
-            if (!videoEl.paused) {
-                videoEl.pause();
-            }
+            if (!videoEl.paused) videoEl.pause();
         }
 
         if (videoEl.readyState < 2) return;
 
-        const canvasW = this.canvas.width;
-        const canvasH = this.canvas.height;
-        const videoW = videoEl.videoWidth;
-        const videoH = videoEl.videoHeight;
-        const scale = canvasH / videoH;
-        const drawW = videoW * scale;
-        const offsetX = (canvasW - drawW) / 2;
+        this.bgCanvas ??= document.createElement("canvas");
+        this.bgCtx ??= this.bgCanvas.getContext("2d");
 
-        this.ctx.drawImage(videoEl, offsetX, 0, drawW, canvasH);
+        const bw = this.bgCanvas.width = canvasW * 0.3;
+        const bh = this.bgCanvas.height = canvasH * 0.3;
+        const bgScale = Math.max(bw / videoW, bh / videoH);
+        const drawW = videoW * bgScale;
+        const drawH = videoH * bgScale;
+        const bx = (bw - drawW) / 2;
+        const by = (bh - drawH) / 2;
+
+        this.bgCtx.clearRect(0, 0, bw, bh);
+        this.bgCtx.drawImage(videoEl, bx, by, drawW, drawH);
+
+        this.ctx.globalAlpha = 0.4;
+        this.ctx.drawImage(this.bgCanvas, 0, 0, canvasW, canvasH);
+        this.ctx.globalAlpha = 1;
+
+        const fgScale = canvasH / videoH;
+        const fgW = videoW * fgScale;
+        const fgX = (canvasW - fgW) / 2;
+
+        this.ctx.drawImage(videoEl, fgX, 0, fgW, canvasH);
     }
 }
 

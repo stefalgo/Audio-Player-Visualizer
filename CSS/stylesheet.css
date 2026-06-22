@@ -261,6 +261,14 @@ body:has(#pause-play-button[data-state="pause"]) .songItem.active .songItemPlayB
 
 }
 
+.songItem.error .songItemPlayButton::before {
+    background-image: url(data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%2224%22%20height=%2224%22%20viewBox=%220%200%2024%2024%22%20fill=%22none%22%20stroke=%22currentColor%22%20stroke-width=%222%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%20class=%22icon%20icon-tabler%20icons-tabler-outline%20icon-tabler-x%22%3E%3Cpath%20stroke=%22none%22%20d=%22M0%200h24v24H0z%22%20fill=%22none%22%20/%3E%3Cpath%20d=%22M18%206l-12%2012%22%20/%3E%3Cpath%20d=%22M6%206l12%2012%22%20/%3E%3C/svg%3E);
+}
+
+.songItem.loading .songItemPlayButton::before {
+    background-image: url(data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%2224%22%20height=%2224%22%20viewBox=%220%200%2024%2024%22%20fill=%22none%22%20stroke=%22currentColor%22%20stroke-width=%222%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%20class=%22icon%20icon-tabler%20icons-tabler-outline%20icon-tabler-dots%22%3E%3Cpath%20stroke=%22none%22%20d=%22M0%200h24v24H0z%22%20fill=%22none%22%20/%3E%3Cpath%20d=%22M4%2012a1%201%200%201%200%202%200a1%201%200%201%200%20-2%200%22%20/%3E%3Cpath%20d=%22M11%2012a1%201%200%201%200%202%200a1%201%200%201%200%20-2%200%22%20/%3E%3Cpath%20d=%22M18%2012a1%201%200%201%200%202%200a1%201%200%201%200%20-2%200%22%20/%3E%3C/svg%3E);
+}
+
 .button,
 input[type="file"]+label {
     color: var(--text-Color);
@@ -486,6 +494,16 @@ input[type="file"]+label {
 .songItem.active,
 .SubtitleItem.active {
     background: rgba(33, 175, 64, 0.33);
+}
+
+.songItem.error,
+.SubtitleItem.error {
+    background: rgba(175, 33, 64, 0.33);
+}
+
+.songItem.loading,
+.SubtitleItem.loading {
+    background: rgba(175, 175, 33, 0.33);
 }
 
 /*------------------------------------------------*/

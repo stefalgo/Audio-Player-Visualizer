@@ -308,7 +308,6 @@ function addFilesToSongList(filesSelected) {
             if (currentSelectedFile === file._fingerprint) {
                 togglePlayPause();
             } else {
-                currentSelectedFile = file._fingerprint;
                 loadFile(file);
             }
         });
@@ -781,48 +780,60 @@ function stopAudio(clearCanvas, pauseCtx) {
 
 function loadFile(file) {
     if (!file) return;
-    videoEl.src = URL.createObjectURL(file);
-    videoEl.load();
-    videoEl.addEventListener("loadeddata", () => {
-        videoEl.currentTime = 0;
-    }, { once: true });
-
     const loadToken = ++currentLoadToken;
-    const allSongItems = document.querySelectorAll('.songItem');
+    const reader = new FileReader();
+    const songElement = document.querySelector(`.songItem[data-file-name="${file._fingerprint}"]`);
 
-    selectedSubtitle = getSubtitle(file);
-    subtitleLastIndex = 0;
-    loopCounter = 0;
-
-    allSongItems.forEach(el => {
-        el.classList.toggle(
-            'active',
-            el.dataset.fileName === file?._fingerprint
-        );
+    document.querySelectorAll('.songItem').forEach(el => {
+        el.classList.remove('loading');
     });
 
-    randomSongs.remember(file);
+    songElement?.classList.add('loading');
+    songElement?.classList.remove('error');
+    chooseAudioLabel.textContent = `Loading ${file.name}...`;
 
-    const reader = new FileReader();
+    reader.onerror = () => {
+        if (loadToken !== currentLoadToken) return;
+        songElement?.classList.remove('active', 'loading');
+        songElement?.classList.add('error');
+        console.error(`Failed to read ${file.name}`, reader.error);
+    };
 
     reader.onload = () => {
         audioCtx.decodeAudioData(
             reader.result,
             buf => {
                 if (loadToken !== currentLoadToken) return;
+                videoEl.src = URL.createObjectURL(file);
+                videoEl.load();
+                videoEl.addEventListener("loadeddata", () => {
+                    videoEl.currentTime = 0;
+                }, { once: true });
+
+                document.querySelectorAll('.songItem').forEach(el => {
+                    el.classList.remove('active', 'loading');
+                });
+
+                songElement?.classList.add('active');
+
                 buffer = buf;
-                playFrom(0);
-                if (chooseAudioLabel) chooseAudioLabel.textContent = file.name;
+                currentSelectedFile = file._fingerprint;
+                selectedSubtitle = getSubtitle(file);
+                subtitleLastIndex = 0;
+                loopCounter = 0;
+                randomSongs.remember(file);
+                chooseAudioLabel.textContent = file.name;
                 document.title = `${file.name} - ${pageOriginalTitle}`;
-                console.log(`Loaded file: ${file.name}`);
+                playFrom(0);
             },
-            error => {
+            err => {
                 if (loadToken !== currentLoadToken) return;
-                console.error('Failed decoding audio data:', error);
+                songElement?.classList.remove('active', 'loading');
+                songElement?.classList.add('error');
+                console.error(`Failed decoding ${file.name}`, err);
             }
         );
     };
-
     reader.readAsArrayBuffer(file);
 }
 
@@ -847,14 +858,12 @@ function playNext(jump = 1, loop = true) {
     const nextIdx = idx + jump;
     if (!loop && (nextIdx < 0 || nextIdx >= files.length)) return;
     idx = loop ? (nextIdx + files.length) % files.length : nextIdx;
-    currentSelectedFile = files[idx]._fingerprint;
     loadFile(files[idx]);
 }
 
 function loadRandom() {
     const randomSong = randomSongs.pick(files);
     if (randomSong) {
-        currentSelectedFile = randomSong._fingerprint;
         loadFile(randomSong);
     }
 }
@@ -906,7 +915,6 @@ async function addFiles(filesARG) {
     }
 
     if (!audioCtx || audioCtx.state !== 'running') {
-        currentSelectedFile = file._fingerprint;
         loadFile(file);
     }
 
@@ -1372,7 +1380,6 @@ document.getElementById("removeAllSounds").addEventListener("click", async () =>
 
 document.getElementById("topListBtn").addEventListener("click", () => {
     if (files.length > 0) {
-        currentSelectedFile = files[0]._fingerprint;
         loadFile(files[0]);
     }
 });

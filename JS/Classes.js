@@ -386,6 +386,7 @@ class SpaceController {
         if (this.spaceHeld) {
             this.onHoldEnd?.();
         } else {
+            if (isTypingOrEditing()) return;
             this.onTap?.();
         }
     };
