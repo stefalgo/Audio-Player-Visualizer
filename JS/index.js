@@ -528,6 +528,8 @@ async function loadSubtitles(files) {
         addedSubtitles.push(subtitleData);
     }
     addSubtitleFilesToList(addedSubtitles);
+
+    forceFindSub();
     return subtitleList;
 }
 
