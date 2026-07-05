@@ -205,21 +205,20 @@ class MovableWindow {
         this.win.style.position = "absolute";
         this.bar.style.cursor = "grab";
 
-        this.bar.addEventListener("mousedown", this.onMouseDown);
-        window.addEventListener("mousemove", this.onMouseMove);
-        window.addEventListener("mouseup", this.onMouseUp);
+        this.bar.addEventListener("pointerdown", this.onPointerDown);
+        window.addEventListener("pointermove", this.onPointerMove);
+        window.addEventListener("pointerup", this.onPointerUp);
+        window.addEventListener("pointercancel", this.onPointerUp);
     }
 
-    onMouseDown = (e) => {
+    onPointerDown = (e) => {
+        e.preventDefault();
         this.dragging = true;
-
         const rect = this.win.getBoundingClientRect();
-
         this.offsetX = e.clientX - rect.left;
         this.offsetY = e.clientY - rect.top;
-
         this.bar.style.cursor = "grabbing";
-
+        this.bar.setPointerCapture(e.pointerId);
         const computed = window.getComputedStyle(this.win);
         const right = computed.right !== "auto";
         const bottom = computed.bottom !== "auto";
@@ -234,28 +233,20 @@ class MovableWindow {
         document.body.style.userSelect = "none";
     };
 
-    onMouseMove = (e) => {
+    onPointerMove = (e) => {
         if (!this.dragging) return;
-
         const w = this.win.offsetWidth;
         const h = this.win.offsetHeight;
-
-        const maxX = window.innerWidth - w;
-        const maxY = window.innerHeight - h;
-
         let x = e.clientX - this.offsetX;
         let y = e.clientY - this.offsetY;
-
-        x = Math.max(0, Math.min(maxX, x));
-        y = Math.max(0, Math.min(maxY, y));
-
+        x = Math.max(0, Math.min(window.innerWidth - w, x));
+        y = Math.max(0, Math.min(window.innerHeight - h, y));
         this.win.style.left = `${x}px`;
         this.win.style.top = `${y}px`;
     };
 
-    onMouseUp = () => {
+    onPointerUp = () => {
         if (!this.dragging) return;
-
         this.dragging = false;
         this.bar.style.cursor = "grab";
         document.body.style.userSelect = "";
