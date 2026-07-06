@@ -384,44 +384,8 @@ function removeHtmlTags(str) {
     return div.textContent || div.innerText || "";
 }
 
-function parseYoutubeTags(text) {
-    if (!text) return text;
-    const tagStyles = {
-        'b': 'font-weight: bold;',
-        'i': 'font-style: italic;',
-        'u': 'text-decoration: underline;',
-        'c': 'color: #FFFFFF;',
-        's': 'text-decoration: line-through;',
-        'font': 'font-family: Arial;',
-    };
-    const colorMap = {
-        'yellow': '#FFFF00',
-        'blue': '#0000FF',
-        'cyan': '#00FFFF',
-        'green': '#00FF00',
-        'magenta': '#FF00FF',
-        'red': '#FF0000',
-        'white': '#FFFFFF',
-        'black': '#000000',
-    };
-
-    let result = text;
-
-    result = result.replace(/<c#([0-9A-Fa-f]{6})>(.*?)<\/c>/g, (match, hex, content) => {
-        return `<span style="color: #${hex};">${content}</span>`;
-    });
-
-    result = result.replace(/<b>(.*?)<\/b>/gi, '<span style="font-weight: bold;">$1</span>');
-    result = result.replace(/<i>(.*?)<\/i>/gi, '<span style="font-style: italic;">$1</span>');
-    result = result.replace(/<u>(.*?)<\/u>/gi, '<span style="text-decoration: underline;">$1</span>');
-    result = result.replace(/<s>(.*?)<\/s>/gi, '<span style="text-decoration: line-through;">$1</span>');
-    result = result.replace(/<font\s+name=['"]([^'"]+)['"](.*?)<\/font>/gi, (match, fontName, content) => {
-        return `<span style="font-family: '${fontName}';">${content}</span>`;
-    });
-
-    result = result.replace(/<c>(.*?)<\/c>/gi, '<span>$1</span>');
-
-    return result;
+function stripTags(str) {
+    return (str || "").replace(/<[^>]*>/g, "");
 }
 
 function parseSRT(text) {
@@ -450,39 +414,50 @@ function parseSRT(text) {
 }
 
 function parseWebVTT(text) {
-    const styleMatch = text.match(/Style:\s*([\s\S]*?)(?=\n##|\n\d{2}:\d{2})/);
-    const styleBlock = styleMatch ? styleMatch[1] : '';
+    const lines = text.replace(/\r/g, "").split("\n");
     const styleMap = {};
-    const cssRegex = /::cue\(([^)]+)\)\s*\{\s*([^}]+)\}/g;
-    let match;
+    let i = 0;
 
-    while ((match = cssRegex.exec(styleBlock)) !== null) {
-        const selector = match[1].trim();
-        const cssRules = match[2].trim();
-        styleMap[selector] = cssRules;
+    while (i < lines.length) {
+        const l = lines[i].trim();
+        if (!l || l === "WEBVTT" || l.startsWith("NOTE")) {
+            i++;
+            continue;
+        }
+        break;
     }
 
-    const subtitleRegex = /(\d{2}:\d{2}:\d{2}\.\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2}\.\d{3})\s*([\s\S]*?)(?=\n\d{2}:\d{2}:\d{2}\.\d{3}\s*-->|$)/g;
-    const subtitles = [];
+    const out = [];
+    while (i < lines.length) {
+        let line = lines[i].trim();
 
-    while ((match = subtitleRegex.exec(text)) !== null) {
-        const start = match[1];
-        const end = match[2];
-        let content = match[3].trim();
-
-        content = content.replace(/<c\.(\w+)>(.*?)<\/c>/gi, (tagMatch, className, tagContent) => {
-            const selector = `c.${className}`;
-            const style = styleMap[selector] || '';
-            return `<span style="${style}">${tagContent}</span>`;
-        });
-
-        subtitles.push({
+        if (!line) {
+            i++;
+            continue;
+        }
+        if (!line.includes("-->")) {
+            i++;
+            continue;
+        }
+        let [start, end] = line.split("-->").map(x =>
+            x.trim().split(" ")[0]
+        );
+        i++;
+        let txt = [];
+        while (i < lines.length && lines[i].trim() !== "") {
+            txt.push(lines[i]);
+            i++;
+        }
+        let content = txt.join("\n");
+        out.push({
             start: timeToSeconds(start),
             end: timeToSeconds(end),
             text: content
         });
+
+        i++;
     }
-    return subtitles;
+    return out;
 }
 
 async function loadSubtitles(files) {
@@ -592,61 +567,38 @@ function getSubtitle(file) {
 //selectedSubtitle = _fingerprint
 function showSubtitle(timeSeconds, selectedSubtitle) {
     const h3 = subtitleTextEl;
-    const title = document.getElementById("subtitle-title");
-
-    let subs = null;
-    let subKey = null;
-    let subTitle = null;
-
-    timeSeconds += subtitleOffsetInput.value / 1000;
-
+    timeSeconds += Number(subtitleOffsetInput.value || 0) / 1000;
     const entry = subtitleList.find(e => e._fingerprint === selectedSubtitle);
-    if (entry) {
-        subKey = entry._fingerprint;
-        subTitle = entry.title;
-        subs = entry.subs;
-    }
-
-    const allSubItems = document.querySelectorAll('.SubtitleItem');
-
-    allSubItems.forEach(el => {
-        el.classList.toggle(
-            'active',
-            el.dataset.fileName === entry?._fingerprint
-        );
-    });
-
-    if (!subs || subs.length === 0) {
-        const noSubText = "字幕 - No subtitles";
-        if (h3.innerHTML !== "No subtitles") h3.innerHTML = "No subtitles";
-        if (title.innerText !== noSubText) {
-            title.innerText = noSubText;
-            title.dataset.tip = '';
-        }
+    if (!entry || !entry.subs?.length) {
+        h3.innerHTML = "No subtitles";
+        document.getElementById("subtitle-title").innerText = "字幕 - No subtitles";
         return null;
     }
-
-    const titleText = `字幕 - ${subTitle || subKey}`;
-    if (title.innerText !== titleText) {
-        title.innerText = titleText;
-        title.dataset.tip = titleText;
+    const subs = entry.subs;
+    const titleText = `字幕 - ${entry.title || entry._fingerprint}`;
+    const titleEl = document.getElementById("subtitle-title");
+    if (h3.textContent !== stripTags(titleText)) {
+        titleEl.innerText = titleText;
+        titleEl.dataset.tip = titleText;
     }
 
-    let startIdx = subtitleLastIndex || 0;
-    if (startIdx >= subs.length) startIdx = 0;
+    let i = subtitleLastIndex || 0;
 
-    for (let offset = 0; offset < subs.length; offset++) {
-        const i = (startIdx + offset) % subs.length;
+    if (i >= subs.length) i = 0;
+
+    for (let j = 0; j < subs.length; j++) {
         const s = subs[i];
         if (timeSeconds >= s.start && timeSeconds <= s.end) {
             subtitleLastIndex = i;
-            const parsed = String(subtitleStyleCheckbox.checked ? removeHtmlTags(s.text) : parseYoutubeTags(s.text) || "");
-            if (h3.innerHTML !== parsed) {
-                h3.innerHTML = parsed;
+            const text = subtitleStyleCheckbox.checked ? removeHtmlTags(s.text || "") : (s.text || "");
+            if (h3.textContent !== stripTags(text)) {
+                h3.innerHTML = text;
             }
-            if (h3.style.display !== 'block') h3.style.display = 'block';
+            h3.style.display = "block";
+
             return s.text;
         }
+        i = (i + 1) % subs.length;
     }
 
     h3.innerHTML = "";
@@ -1022,7 +974,7 @@ function renderLoop() {
     const elapsed = getElapsedTime();
 
     if (!window._lastSubtitleCheck) window._lastSubtitleCheck = 0;
-    const SUBTITLE_CHECK_INTERVAL = 200; // ms
+    const SUBTITLE_CHECK_INTERVAL = 50; // ms
     const now = performance.now();
     if (now - window._lastSubtitleCheck >= SUBTITLE_CHECK_INTERVAL) {
         window._lastSubtitleCheck = now;

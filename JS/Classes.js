@@ -964,10 +964,11 @@ class SubtitleEditor {
     }
 
     add() {
+        const last = this.data[this.data.length - 1];
         const item = {
-            start: this.start.value !== "" ? +this.start.value : 0,
-            end: this.end.value !== "" ? +this.end.value : 1,
-            text: this.text.value.trim() !== "" ? this.text.value : "new subtitle"
+            start: this.start.value !== "" ? +this.start.value : (last ? last.end : 0),
+            end: this.end.value !== "" ? +this.end.value : (last ? last.end + 2 : 1),
+            text: this.text.value.trim() || "new subtitle"
         };
 
         this.data.push(item);
