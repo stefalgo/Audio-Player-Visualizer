@@ -569,15 +569,18 @@ function showSubtitle(timeSeconds, selectedSubtitle) {
     const h3 = subtitleTextEl;
     timeSeconds += Number(subtitleOffsetInput.value || 0) / 1000;
     const entry = subtitleList.find(e => e._fingerprint === selectedSubtitle);
+    const titleEl = document.getElementById("subtitle-title");
     if (!entry || !entry.subs?.length) {
         h3.innerHTML = "No subtitles";
         document.getElementById("subtitle-title").innerText = "字幕 - No subtitles";
         titleEl.dataset.tip = "字幕 - No subtitles";
+        document.querySelectorAll('.SubtitleItem').forEach(el => {
+            el.classList.remove('active');
+        });
         return null;
     }
     const subs = entry.subs;
     const titleText = `字幕 - ${entry.title || entry._fingerprint}`;
-    const titleEl = document.getElementById("subtitle-title");
     if (h3.textContent !== stripTags(titleText)) {
         titleEl.innerText = titleText;
         titleEl.dataset.tip = titleText;
