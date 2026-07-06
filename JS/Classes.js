@@ -901,3 +901,134 @@ class WallpaperSwitcher {
         this.topActive = !this.topActive;
     }
 }
+
+class SubtitleEditor {
+    constructor(winId) {
+        this.win = document.getElementById(winId);
+
+        this.list = this.win.querySelector("#subList");
+        this.out = this.win.querySelector("#subOut");
+        this.start = this.win.querySelector("#subStart");
+        this.end = this.win.querySelector("#subEnd");
+        this.text = this.win.querySelector("#subText");
+        this.btnSave = this.win.querySelector("#subSaveBtn");
+        this.btnClear = this.win.querySelector("#subClearBtn");
+        this.btnExport = this.win.querySelector("#subExportBtn");
+        this.btnAdd = this.win.querySelector("#subAddBtn");
+        this.btnRemove = this.win.querySelector("#subRemoveBtn");
+
+        this.data = [];
+        this.sel = -1;
+
+        this.bind();
+    }
+
+    bind() {
+        this.btnSave.onclick = () => this.save();
+        this.btnClear.onclick = () => this.clear();
+        this.btnExport.onclick = () => this.export();
+        this.btnAdd.onclick = () => this.add();
+        this.btnRemove.onclick = () => this.remove();
+    }
+
+    load(arr) {
+        this.data = arr || [];
+        this.sel = -1;
+        this.render();
+    }
+
+    render() {
+        this.list.innerHTML = "";
+        this.data.forEach((s, i) => {
+            const d = document.createElement("div");
+            const active = i === this.sel ? "background:#2a2a2a" : "";
+            d.style.cssText = "padding:5px;border-bottom:1px solid #222;cursor:pointer;" + active;
+            d.innerHTML = `${s.start.toFixed(2)} → ${s.end.toFixed(2)}<br>` + `${this.escape(s.text.slice(0, 50))}`;
+            d.onclick = () => this.select(i);
+            this.list.appendChild(d);
+        });
+    }
+
+    fillEditor() {
+        if (this.sel < 0) return;
+        const s = this.data[this.sel];
+        this.start.value = s.start;
+        this.end.value = s.end;
+        this.text.value = s.text;
+    }
+
+    select(i) {
+        this.sel = i;
+        this.fillEditor();
+        this.render();
+    }
+
+    add() {
+        const item = {
+            start: this.start.value !== "" ? +this.start.value : 0,
+            end: this.end.value !== "" ? +this.end.value : 1,
+            text: this.text.value.trim() !== "" ? this.text.value : "new subtitle"
+        };
+
+        this.data.push(item);
+        this.sel = this.data.length - 1;
+        this.render();
+        this.fillEditor();
+    }
+
+    remove() {
+        if (this.sel < 0) return;
+
+        this.data.splice(this.sel, 1);
+        this.sel = -1;
+        this.render();
+        this.start.value = "";
+        this.end.value = "";
+        this.text.value = "";
+    }
+
+    save() {
+        if (this.sel < 0) return;
+        const s = this.data[this.sel];
+        s.start = +this.start.value;
+        s.end = +this.end.value;
+        s.text = this.text.value;
+        this.render();
+    }
+
+    clear() {
+        this.data = [];
+        this.sel = -1;
+        this.list.innerHTML = "";
+        this.out.value = "";
+    }
+
+    export() {
+        let t = "";
+        this.data.forEach((s, i) => {
+            t += `${i + 1}\n`;
+            t += `${this.fmt(s.start)} --> ${this.fmt(s.end)}\n`;
+            t += `${s.text}\n\n`;
+        });
+        this.out.value = t;
+        this.out.select();
+        document.execCommand("copy");
+    }
+
+    fmt(s) { // format time thing
+        const h = String(s / 3600 | 0).padStart(2, "0");
+        const m = String(s % 3600 / 60 | 0).padStart(2, "0");
+        const ss = (s % 60).toFixed(3).padStart(6, "0");
+        return `${h}:${m}:${ss.replace(".", ",")}`;
+    }
+
+    escape(t) {
+        return t.replace(/[&<>"']/g, m => ({
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#039;"
+        }[m]));
+    }
+}

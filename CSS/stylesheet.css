@@ -383,6 +383,26 @@ input[type="file"]+label {
 
 /*------------------------------------------------*/
 
+#SubtitleEditorWindow {
+    position: fixed;
+    width: 600px;
+    max-width: 100%;
+    background-color: hsla(0, 0%, 0%, 0.7);
+    backdrop-filter: blur(10px);
+    border: 1px hsla(0, 0%, 24%, 0.5) solid;
+    box-sizing: border-box;
+    overflow: hidden;
+    z-index: 1000;
+}
+
+#SubtitleEditorWindow textarea {
+    width: 100%;
+    resize: none;
+    box-sizing: border-box;
+}
+
+/*------------------------------------------------*/
+
 #SubtitlesList {
     position: fixed;
     width: 500px;

@@ -22,6 +22,35 @@
 </head>
 
 <body>
+    <template id="songItemTemplate">
+        <div class="songItem">
+            <div class="songLeft">
+                <span class="songTitle">
+                    <span class="songName"></span>
+                    <span class="songMetadata songExtension" style="user-select: none;"></span>
+                </span>
+
+                <span class="songMetadata songInfo"></span>
+            </div>
+
+            <div class="songRight">
+                <button class="button songItemPlayButton" style="margin: 5px;"></button>
+                <button class="button songItemDeleteButton" style="margin: 5px;">Remove</button>
+            </div>
+        </div>
+    </template>
+    <template id="subtitleItemTemplate">
+        <div class="SubtitleItem">
+            <span class="subtitleTitle" style="margin: 5px; background-color: #0000003b;"></span>
+
+            <div class="subtitleButtons">
+                <button class="button subtitleSelectButton" style="margin: 5px;">Select</button>
+                <button class="button subtitleDeleteButton" style="margin: 5px;">Remove</button>
+            </div>
+        </div>
+    </template>
+
+
     <div style="z-index: 5; position: fixed;">
         <a href="https://github.com/stefalgo" target="_blank" class="githubProfile">
             <img src="https://github.com/stefalgo.png">
@@ -46,13 +75,41 @@
         </div>
     </div>
 
+    <div id="SubtitleEditorWindow" class="movable-window" style="display:none;">
+        <div class="window-topbar">字幕エディタ</div>
+
+        <div style="display:flex; gap:5px; padding:5px;">
+            <button class="button" id="subAddBtn">追加</button>
+            <button class="button" id="subRemoveBtn">削除</button>
+            <button class="button" id="subClearBtn">クリア</button>
+            <button class="button" id="subExportBtn">コピー</button>
+        </div>
+
+        <div style="display:flex; height:300px; border-top:1px solid #333;">
+
+            <div id="subList" style="width:40%; overflow:auto; padding:5px; border-right:1px solid #333;"></div>
+
+            <div style="flex:1; padding:5px;">
+
+                <input type="number" class="button" id="subStart" style="width:50%;" placeholder="Start Time (Sec)">
+                <input type="number" class="button" id="subEnd" style="width:50%;" placeholder="End Time (Sec)">
+                <textarea class="button" id="subText" style="width:100%; height:120px;" placeholder="Text"></textarea>
+
+                <button class="button" id="subSaveBtn">保存</button>
+            </div>
+        </div>
+
+        <textarea class="button" id="subOut" readonly style="width:100%; height:120px;" placeholder="Output"></textarea>
+    </div>
+
     <div id="SubtitlesList" class="movable-window" style="display: none;">
         <div class="window-topbar">字幕トラック</div>
-        <div style="display: flex; flex-direction: row;">
-            <button class="button" id="subUnloadSubBtn" style="margin-left: 10px;">Unload current subtitle</button>
-            <button class="button" id="subAutoFindBtn" style="margin-left: 10px;">Auto select subtitle</button>
+        <div style="display: flex; flex-direction: row; justify-content: space-between;">
+            <button class="button" id="subUnloadSubBtn">字幕トラックをオフ</button>
+            <button class="button" id="subAutoFindBtn">字幕トラックを自動選択</button>
             <input type="file" id="subtitleFile" multiple accept=".srt,.vtt">
-            <label for="subtitleFile" id="ChoosesubtitleFileLabel" class="button" data-tip="srt/vtt" style="margin-left: 10px;">Choose a subtitle file...</label>
+            <label for="subtitleFile" id="ChoosesubtitleFileLabel" class="button" data-tip="srt/vtt">Choose a file...</label>
+            <button id="removeAllSubtitles" class="button" style="margin-right: 10px;">クリア</button>
         </div>
         <input style="margin: 3px;" type="text" id="subSearch" class="button searchBar" placeholder="字幕検索">
         <div style="padding: 3px; margin-top: 5px;" id="SubtitlesList-Container"></div>

@@ -31,6 +31,9 @@ const SAMPLE_BYTES = 64 * 1024;
 // Make sure this error stays at line 32
 console.error("Roses are Red, Violets are Blue \n Unexpected '{' on line 32");
 
+const songItemTemplate = document.getElementById('songItemTemplate');
+const subtitleItemTemplate = document.getElementById('subtitleItemTemplate');
+
 window.alert = async function (message, targetEl) {
     await TooltipDialog.info(targetEl, message);
 };
@@ -156,6 +159,8 @@ const renderHandler = new RenderHandler(canvas, ctx, audioCtx, {
 
 const equalizer = new CanvasEQ(document.getElementById('eq'), EQ_BANDS, 12);
 
+//const subtitleEditor = new SubtitleEditor("SubtitleEditorWindow");
+
 //------------------------------------------------------------------------------------------------
 
 function getElapsedTime() {
@@ -196,10 +201,26 @@ function setPlaybackRate(rate) {
 }
 
 function timeToSeconds(t) {
-    const p = t.split(":").map(Number);
-    if (p.length === 3) return p[0] * 3600 + p[1] * 60 + p[2];
-    if (p.length === 2) return p[0] * 60 + p[1];
-    return 0;
+    if (!t) return 0;
+
+    t = t.trim();
+    t = t.replace(",", ".");
+
+    const parts = t.split(":");
+    let h = 0, m = 0, s = 0;
+
+    if (parts.length === 3) {
+        h = parseInt(parts[0], 10);
+        m = parseInt(parts[1], 10);
+        s = parseFloat(parts[2]);
+    } else if (parts.length === 2) {
+        m = parseInt(parts[0], 10);
+        s = parseFloat(parts[1]);
+    } else {
+        return 0;
+    }
+
+    return h * 3600 + m * 60 + s;
 }
 
 function formatTime(s, format = '{hh} : {mm} : {ss} . {mls}') {
@@ -288,22 +309,24 @@ function cleanupGraph() {
 //----------------------------------------------------------------------------------------------------------------------
 
 function addFilesToSongList(filesSelected) {
-    filesSelected.forEach((file, index) => {
-        const songDiv = document.createElement('div');
-        const left = document.createElement('div');
-        const right = document.createElement('div');
-        const playButton = document.createElement('button');
-        const deleteButton = document.createElement('button');
-        const title = document.createElement('span');
-        const metadata = document.createElement('span');
+    filesSelected.forEach((file) => {
+        const clone = songItemTemplate.content.cloneNode(true);
+        const songDiv = clone.querySelector('.songItem');
+        const title = clone.querySelector('.songName');
+        const extension = clone.querySelector('.songExtension');
+        const metadata = clone.querySelector('.songInfo');
+        const playButton = clone.querySelector('.songItemPlayButton');
+        const deleteButton = clone.querySelector('.songItemDeleteButton');
         const fileName = file.name.replace(/\.[^/.]+$/, "");
         const fileExt = file.name.replace(/^.*\./, "");
 
-        songDiv.classList.add('songItem');
-        songDiv.setAttribute('data-file-name', file._fingerprint);
+        songDiv.dataset.fileName = file._fingerprint;
+        title.textContent = fileName;
+        title.dataset.tip = fileName;
+        extension.textContent = `.${fileExt}`;
 
-        playButton.classList.add('button', 'songItemPlayButton');
-        playButton.style.cssText = 'margin: 5px;';
+        metadata.textContent = `${formatTime(file._duration, '{hh}:{mm}:{ss}')} | UID=${file._fingerprint} | Type="${file.type}"`;
+
         playButton.addEventListener('click', () => {
             if (currentSelectedFile === file._fingerprint) {
                 togglePlayPause();
@@ -312,31 +335,13 @@ function addFilesToSongList(filesSelected) {
             }
         });
 
-        deleteButton.textContent = 'Remove';
-        deleteButton.classList.add('button');
-        deleteButton.style.cssText = 'margin: 5px;';
         deleteButton.addEventListener('click', async () => {
-            if (await confirm("この曲をプレイリストから外しますか？", deleteButton, 1)) removeFile(file);
+            if (await confirm("この曲をプレイリストから外しますか？", deleteButton, 1)) {
+                removeFile(file);
+            }
         });
 
-        title.innerHTML = `<span>${fileName}</span><span class='songMetadata' style='user-select: none;'>.${fileExt}</span>`;
-        title.dataset.tip = fileName;
-
-        metadata.innerText = `${formatTime(file._duration, '{hh}:{mm}:{ss}')} | UID=${file._fingerprint} | Type="${file.type}"`;
-
-        left.classList.add('songLeft');
-        right.classList.add('songRight');
-        title.classList.add('songTitle');
-        metadata.classList.add('songMetadata');
-
-        left.appendChild(title);
-        left.appendChild(metadata);
-        right.appendChild(playButton);
-        right.appendChild(deleteButton);
-        songDiv.appendChild(left);
-        songDiv.appendChild(right);
-
-        songListContainer.appendChild(songDiv);
+        songListContainer.appendChild(clone);
     });
 }
 
@@ -345,46 +350,28 @@ function addSubtitleFilesToList(filesSelected) {
         if (document.querySelector(`[data-file-name="${file._fingerprint}"]`)) {
             return;
         }
-        const subDiv = document.createElement('div');
-        const buttonDiv = document.createElement('div');
-        const selectButton = document.createElement('button');
-        const deleteButton = document.createElement('button');
-        const title = document.createElement('span');
 
-        subDiv.classList.add('SubtitleItem');
-        subDiv.setAttribute('data-file-name', file._fingerprint);
+        const clone = subtitleItemTemplate.content.cloneNode(true);
+        const subDiv = clone.querySelector('.SubtitleItem');
+        const title = clone.querySelector('.subtitleTitle');
+        const selectButton = clone.querySelector('.subtitleSelectButton');
+        const deleteButton = clone.querySelector('.subtitleDeleteButton');
 
-        selectButton.textContent = 'Select';
-        selectButton.classList.add('button');
-        selectButton.style.cssText = 'margin: 5px;';
+        subDiv.dataset.fileName = file._fingerprint;
+        title.textContent = file.title;
+        title.dataset.tip = file.title;
 
         selectButton.addEventListener('click', () => {
             selectedSubtitle = file._fingerprint;
         });
 
-        deleteButton.textContent = 'Remove';
-        deleteButton.classList.add('button');
-        deleteButton.style.cssText = 'margin: 5px;';
-
         deleteButton.addEventListener('click', async () => {
             if (await confirm("この字幕トラックをリストから外しますか？", deleteButton, 1)) {
-                const index = subtitleList.findIndex(item => item._fingerprint === file._fingerprint);
-                if (index !== -1) subtitleList.splice(index, 1);
-                if (selectedSubtitle === file._fingerprint) selectedSubtitle = '';
-                subDiv.remove();
+                removeSubtitle(file._fingerprint);
             }
         });
 
-        title.style.cssText = 'margin: 5px; background-color: #0000003b';
-        title.innerText = file.title;
-        title.dataset.tip = file.title;
-
-        buttonDiv.appendChild(selectButton);
-        buttonDiv.appendChild(deleteButton);
-        subDiv.appendChild(title);
-        subDiv.appendChild(buttonDiv);
-
-        subListContainer.appendChild(subDiv);
+        subListContainer.appendChild(clone);
     });
 }
 
@@ -531,6 +518,21 @@ async function loadSubtitles(files) {
 
     forceFindSub();
     return subtitleList;
+}
+
+function removeSubtitle(fingerprint) {
+    const index = subtitleList.findIndex(item => item._fingerprint === fingerprint);
+    const el = document.querySelector(`[data-file-name="${fingerprint}"]`);
+
+    if (index !== -1) {
+        subtitleList.splice(index, 1);
+    }
+
+    if (selectedSubtitle === fingerprint) {
+        selectedSubtitle = '';
+    }
+
+    el.remove();
 }
 
 function getSubtitle(file) {
@@ -1377,6 +1379,16 @@ document.getElementById("removeAllSounds").addEventListener("click", async () =>
         files.filter(file => file._fingerprint !== currentSelectedFile).forEach(removeFile);
     } else {
         files.forEach(removeFile);
+    }
+});
+
+document.getElementById("removeAllSubtitles").addEventListener("click", async () => {
+    const ok = await confirm("字幕をリストから外しますか？", document.getElementById("removeAllSubtitles"), 1);
+    if (!ok) return;
+    if (subtitleList.length > 1) {
+        subtitleList.filter(file => file._fingerprint !== selectedSubtitle).forEach(file => removeSubtitle(file._fingerprint));
+    } else {
+        subtitleList.forEach(file => removeSubtitle(file._fingerprint));
     }
 });
 
