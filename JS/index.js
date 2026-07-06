@@ -572,6 +572,7 @@ function showSubtitle(timeSeconds, selectedSubtitle) {
     if (!entry || !entry.subs?.length) {
         h3.innerHTML = "No subtitles";
         document.getElementById("subtitle-title").innerText = "字幕 - No subtitles";
+        titleEl.dataset.tip = "字幕 - No subtitles";
         return null;
     }
     const subs = entry.subs;
@@ -580,6 +581,13 @@ function showSubtitle(timeSeconds, selectedSubtitle) {
     if (h3.textContent !== stripTags(titleText)) {
         titleEl.innerText = titleText;
         titleEl.dataset.tip = titleText;
+
+        document.querySelectorAll('.SubtitleItem').forEach(el => {
+            el.classList.toggle(
+                'active',
+                el.dataset.fileName === entry?._fingerprint
+            );
+        });
     }
 
     let i = subtitleLastIndex || 0;
