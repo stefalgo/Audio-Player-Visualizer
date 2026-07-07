@@ -1560,7 +1560,7 @@ document.addEventListener('DOMContentLoaded', () => {
             offset: "-90px"
         },
         {
-            src: "./Media/PlayerWallpapers/playerWallpaper3.png",
+            src: "./Media/PlayerWallpapers/playerWallpaper3.jpg",
             size: "1300px",
             offset: "-300px"
         },
