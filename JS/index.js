@@ -1576,6 +1576,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     ];
 
+    wallpapers.forEach(wallpaper => {
+        const img = new Image();
+        img.src = wallpaper.src;
+        img.decode().then(() => {
+            console.log(`${wallpaper.src} ready`);
+            wallpaper.ready = true;
+        }).catch(() => {
+            console.log(`${wallpaper.src} failed to decode`);
+        });
+        wallpaper.image = img;
+    });
+
     const wallpaperswitch = new WallpaperSwitcher(
         document.getElementById("wallpaper"),
         wallpapers
