@@ -83,7 +83,7 @@ body {
     /* background-image: url("../Media/playerWallpaper.png"); */
     /* background-image: url("../Media/691373.png"); */
     z-index: 0;
-    transition: 5s;
+    transition: opacity 5s;
 }
 
 .wallpaper1 {

@@ -161,11 +161,11 @@ class TooltipManager {
             this.activeElement = target;
         }
 
-        this.tooltip.textContent = target.dataset.tip;
+        this.tooltip.innerHTML = target.dataset.tip;
 
         const tooltipHeight = this.tooltip.offsetHeight;
         const tooltipWidth = this.tooltip.offsetWidth;
-        const margin = 10
+        const margin = 10;
 
         let top = event.pageY + 20;
         let left = event.pageX + 10;
@@ -868,9 +868,11 @@ class WallpaperSwitcher {
         this.wallpapers = wallpapers;
         this.current = this.random();
         this.topActive = false;
+
         this.w1 = this.container.querySelector(".wallpaper1");
         this.w2 = this.container.querySelector(".wallpaper2");
-        this.w1.style.backgroundImage = `url("${this.current}")`;
+
+        this.setWallpaper(this.w1, this.current);
     }
 
     random() {
@@ -881,6 +883,7 @@ class WallpaperSwitcher {
         let next;
         do next = this.random();
         while (next === this.current && this.wallpapers.length > 1);
+
         this.apply(next);
     }
 
@@ -889,15 +892,24 @@ class WallpaperSwitcher {
         this.apply(this.wallpapers[i]);
     }
 
-    apply(url) {
+    setWallpaper(element, wallpaper) {
+        element.style.backgroundImage = `url("${wallpaper.src}")`;
+        element.style.backgroundSize = wallpaper.size ?? "";
+        element.style.backgroundPositionY = wallpaper.offset ?? "";
+    }
+
+    apply(wallpaper) {
         const top = this.topActive ? this.w1 : this.w2;
         const bottom = this.topActive ? this.w2 : this.w1;
-        top.style.backgroundImage = `url("${url}")`;
+
+        this.setWallpaper(top, wallpaper);
+
         requestAnimationFrame(() => {
             top.style.opacity = 1;
             bottom.style.opacity = 0;
         });
-        this.current = url;
+
+        this.current = wallpaper;
         this.topActive = !this.topActive;
     }
 }

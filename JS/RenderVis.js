@@ -105,7 +105,7 @@ class BarRenderer extends Renderer {
             localCtx.fillStyle = 'rgb(' + r + ',' + g + ',50)';
             localCtx.fillRect(x, ch - h, barW, h);
 
-            x += barW + 1;
+            x += barW;
         }
     }
 }

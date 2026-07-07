@@ -2,7 +2,7 @@
 const canvas = document.getElementById('visualizer');
 const ctx = canvas.getContext('2d', { willReadFrequently: true });
 const audioFileInput = document.getElementById('audioFile');
-const subtitleFileInput = document.getElementById('subtitleFile')
+const subtitleFileInput = document.getElementById('subtitleFile');
 const timeSlider = document.getElementById('timeSlider');
 const volumeSlider = document.getElementById('volumeSlider');
 const pausePlayButton = document.getElementById('pause-play-button');
@@ -50,7 +50,7 @@ window.prompt = function (
     return TooltipDialog.prompt(targetEl, message, defaultValue);
 };
 
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 const videoEl = document.createElement("video");
 videoEl.muted = true;
@@ -59,7 +59,7 @@ videoEl.style.display = "none";
 document.body.appendChild(videoEl);
 
 // dont question it
-const pageOriginalTitle = document.title
+const pageOriginalTitle = document.title;
 
 const EQ_PRESETS = {
     General: {
@@ -186,6 +186,76 @@ function getMediaDuration(file) {
             reject(new Error('Failed to load media metadata'));
         };
     });
+}
+
+function getSupportedMediaFormats() {
+    const audio = document.createElement("audio");
+    const video = document.createElement("video");
+
+    const formats = {
+        video: [
+            ["mp4", "video/mp4"],
+            ["m4v", "video/x-m4v"],
+            ["webm", "video/webm"],
+            ["mkv", "video/x-matroska"],
+            ["avi", "video/x-msvideo"],
+            ["mov", "video/quicktime"],
+            ["ogv", "video/ogg"],
+            ["mpeg", "video/mpeg"],
+            ["mpg", "video/mpeg"],
+            ["ts", "video/mp2t"],
+            ["m2ts", "video/mp2t"],
+            ["3gp", "video/3gpp"],
+            ["3g2", "video/3gpp2"],
+            ["flv", "video/x-flv"],
+            ["wmv", "video/x-ms-wmv"]
+        ],
+        audio: [
+            ["mp3", "audio/mpeg"],
+            ["wav", "audio/wav"],
+            ["flac", "audio/flac"],
+            ["m4a", "audio/mp4"],
+            ["aac", "audio/aac"],
+            ["ogg", "audio/ogg"],
+            ["oga", "audio/ogg"],
+            ["opus", "audio/opus"],
+            ["webm", "audio/webm"],
+            ["wma", "audio/x-ms-wma"],
+            ["aiff", "audio/aiff"],
+            ["aif", "audio/aiff"],
+            ["alac", "audio/mp4"],
+            ["amr", "audio/amr"],
+            ["au", "audio/basic"],
+            ["mid", "audio/midi"],
+            ["midi", "audio/midi"]
+        ]
+    };
+
+    const alwaysLikelyAudio = [
+        ".opus",
+        ".flac",
+        ".ogg",
+        ".wav"
+    ];
+
+    const check = (element, mime) => {
+        const result = element.canPlayType(mime);
+        return result === "probably" || result === "maybe";
+    };
+
+    return {
+        video: formats.video
+            .filter(([_, mime]) => check(video, mime))
+            .map(([ext]) => "." + ext)
+            .sort(),
+
+        audio: formats.audio
+            .filter(([ext, mime]) =>
+                check(audio, mime) || alwaysLikelyAudio.includes("." + ext)
+            )
+            .map(([ext]) => "." + ext)
+            .sort()
+    };
 }
 
 // e
@@ -1119,11 +1189,6 @@ function eqPresetsDropdown(preselectedName = null) {
 }
 
 function saveEQPreset(name, values) {
-    name = name
-        .trim()
-        .replace(/\s+/g, "_")
-        .replace(/[^\p{L}\p{N}_-]/gu, "")
-        .slice(0, 50);
     user_eq_presets[name] = values;
     localStorage.setItem("USER_EQ_PRESETS", JSON.stringify(user_eq_presets));
     eqPresetsDropdown(name);
@@ -1265,7 +1330,7 @@ document.getElementById("eqPresetSetBtn").addEventListener("click", () => {
 
 document.getElementById("eqPresetSaveBtn").addEventListener("click", async () => {
     const selected = eqPresetSelect.options[eqPresetSelect.selectedIndex];
-    const name = await prompt(
+    let name = await prompt(
         "プリセット名を入力してください",
         selected ? selected.textContent : "",
         eqPresetSaveBtn,
@@ -1273,8 +1338,23 @@ document.getElementById("eqPresetSaveBtn").addEventListener("click", async () =>
     );
     if (!name || !name.trim()) return;
     const values = equalizer.getData().map(v => v.gain);
-    saveEQPreset(name.trim(), values);
+    const nameExists = Object.values(EQ_PRESETS).some(category =>
+        Object.hasOwn(category, name)
+    );
+    name = nameExists ? `${name} User` : name;
+    name = name
+        .trim()
+        .replace(/\s+/g, "_")
+        .replace(/[^\p{L}\p{N}_-]/gu, "")
+        .slice(0, 50);
+    saveEQPreset(name, values);
     eqPresetsDropdown();
+
+    const option = [...eqPresetSelect.options].find(o => o.text === name);
+    if (option) {
+        option.selected = true;
+        eqPresetSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    }
 });
 
 document.getElementById("eqPresetRemoveBtn").addEventListener("click", async () => {
@@ -1469,14 +1549,46 @@ document.addEventListener('DOMContentLoaded', () => {
     visualizerSL.setAttribute('data-tip', `Visualizer smoothing: ${analyserSmoothing * 100}%`);
 
     const wallpapers = [
-        "./Media/playerWallpaper.png",
-        "./Media/playerWallpaper2.png",
+        {
+            src: "./Media/PlayerWallpapers/playerWallpaper.png",
+            size: "1000px",
+            offset: "-90px"
+        },
+        {
+            src: "./Media/PlayerWallpapers/playerWallpaper2.png",
+            size: "1000px",
+            offset: "-90px"
+        },
+        {
+            src: "./Media/PlayerWallpapers/playerWallpaper3.png",
+            size: "1300px",
+            offset: "-300px"
+        },
+        {
+            src: "./Media/PlayerWallpapers/playerWallpaper4.png",
+            size: "1000px",
+            offset: "-270px"
+        },
+        {
+            src: "./Media/PlayerWallpapers/playerWallpaper5.png",
+            size: "1000px",
+            offset: "-150px"
+        }
     ];
 
     const wallpaperswitch = new WallpaperSwitcher(
         document.getElementById("wallpaper"),
         wallpapers
     );
+
+    const formats = getSupportedMediaFormats();
+    chooseAudioLabel.dataset.tip = `
+        <b>Audio</b><br>
+        ${formats.audio.join(", ")}
+        <hr>
+        <b>Video</b><br>
+        ${formats.video.join(", ")}
+    `;
 
     eqPresetsDropdown();
     resizeCanvas();

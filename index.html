@@ -181,7 +181,13 @@
         <div class="controls-container">
             <div style="height: 25px; display: flex; flex-direction: row; align-items: center;">
                 <input type="file" id="audioFile" accept="audio/*,video/*" multiple>
-                <label for="audioFile" id="ChooseaudioFileLabel" data-tip="mp3/wav/m4a/ogg/flac/opus/wma/aiff/oga/midi/au">Choose a file...</label>
+                <label
+                    for="audioFile"
+                    id="ChooseaudioFileLabel"
+                    data-tip="<b>Video</b><br><hr><b>Audio</b><br>"
+                >
+                    Choose a file...
+                </label>
             </div>
             <div style="display: flex; margin-top: 5px;">
                 <button id="loopModeBtn" class="button"></button>
