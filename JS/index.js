@@ -1577,7 +1577,6 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
 
     const wallpaperswitch = new WallpaperSwitcher(document.getElementById("wallpaper"));
-    wallpaperswitch.apply(wallpapers[4]);
     wallpapers.forEach(wallpaper => {
         const img = new Image();
         img.fetchPriority = "low";

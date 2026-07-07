@@ -79,8 +79,8 @@ body {
     width: 100%;
     height: 100%;
     background-size: 1000px;
-    background-position-y: -90px;
-    /* background-image: url("../Media/playerWallpaper.png"); */
+    background-position-y: -270px;
+    background-image: url("../Media/PlayerWallpapers/playerWallpaper4.png");
     /* background-image: url("../Media/691373.png"); */
     z-index: 0;
     transition: opacity 5s;
