@@ -863,33 +863,30 @@ class TooltipDialog {
 }
 
 class WallpaperSwitcher {
-    constructor(container, wallpapers) {
+    constructor(container) {
         this.container = container;
-        this.wallpapers = wallpapers;
-        this.current = this.random();
+        this.current;
         this.topActive = false;
 
         this.w1 = this.container.querySelector(".wallpaper1");
         this.w2 = this.container.querySelector(".wallpaper2");
-
-        this.setWallpaper(this.w1, this.current);
     }
 
-    random() {
-        return this.wallpapers[Math.random() * this.wallpapers.length | 0];
+    random(wallpapers) {
+        return wallpapers[Math.random() * wallpapers.length | 0];
     }
 
-    nextRandom() {
+    nextRandom(wallpapers) {
         let next;
-        do next = this.random();
-        while (next === this.current && this.wallpapers.length > 1);
+        do next = this.random(wallpapers);
+        while (next === this.current && wallpapers.length > 1);
 
         this.apply(next);
     }
 
-    nextIndex(i) {
-        if (i < 0 || i >= this.wallpapers.length) return;
-        this.apply(this.wallpapers[i]);
+    nextIndex(wallpapers, i) {
+        if (i < 0 || i >= wallpapers.length) return;
+        this.apply(wallpapers[i]);
     }
 
     setWallpaper(element, wallpaper) {

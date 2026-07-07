@@ -1576,22 +1576,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     ];
 
+    const wallpaperswitch = new WallpaperSwitcher(document.getElementById("wallpaper"));
+    wallpaperswitch.apply(wallpapers[4]);
     wallpapers.forEach(wallpaper => {
         const img = new Image();
+        img.fetchPriority = "low";
         img.src = wallpaper.src;
-        img.decode().then(() => {
-            console.log(`${wallpaper.src} ready`);
-            wallpaper.ready = true;
-        }).catch(() => {
-            console.log(`${wallpaper.src} failed to decode`);
-        });
+        img.decode()
+            .then(() => {
+                //console.log(`${wallpaper.src} ready`);
+                wallpaper.ready = true;
+            })
+            // .catch(() => {
+            //     console.log(`${wallpaper.src} failed to decode`);
+            // });
         wallpaper.image = img;
     });
-
-    const wallpaperswitch = new WallpaperSwitcher(
-        document.getElementById("wallpaper"),
-        wallpapers
-    );
 
     const formats = getSupportedMediaFormats();
     chooseAudioLabel.dataset.tip = `
@@ -1611,7 +1611,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('resize', () => { clearTimeout(resizeTimeout); resizeTimeout = setTimeout(resizeCanvas, 100); });
 
     setInterval(() => {
-        wallpaperswitch.nextRandom();
+        wallpaperswitch.nextRandom(wallpapers);
     }, 63000);
 
     setInterval(commonLoop, 16);
