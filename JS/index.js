@@ -1225,7 +1225,8 @@ window.addEventListener("drop", async (e) => {
         const name = file.name.toLowerCase();
         return name.endsWith(".vtt") ||
             name.endsWith(".srt") ||
-            name.endsWith(".txt");
+            name.endsWith(".ssa") ||
+            name.endsWith(".ass");
     });
 
     if (subtitleFiles.length > 0) {
