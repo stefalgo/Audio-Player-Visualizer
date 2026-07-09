@@ -530,9 +530,329 @@ function parseWebVTT(text) {
     return out;
 }
 
+function assTimeToSeconds(time) {
+    const parts = time.trim().split(":");
+    if (parts.length !== 3) return 0;
+    const hours = Number(parts[0]);
+    const minutes = Number(parts[1]);
+    const seconds = Number(parts[2]);
+    return hours * 3600 + minutes * 60 + seconds;
+}
+
+function stripASSTags(text) {
+    return text
+        .replace(/\{[^{}]*\}/g, "")
+        .replace(/\\N/g, "\n")
+        .replace(/\\n/g, "\n")
+        .replace(/\\h/g, " ")
+        .replace(/\\r/g, "");
+}
+
+function parseASSTags(text) {
+    const tags = {};
+    const groups = text.match(/\{[^{}]*\}/g) || [];
+    for (const group of groups) {
+        const content = group.slice(1, -1);
+        let index = 0;
+        while (index < content.length) {
+            if (content[index] !== "\\") {
+                index += 1;
+                continue;
+            }
+            const start = index;
+            index += 1;
+            const nameMatch = content.slice(index).match(/^[A-Za-z]+/);
+            if (!nameMatch) {
+                index = start + 1;
+                continue;
+            }
+            const name = nameMatch[0];
+            index += name.length;
+            let args = "";
+            if (content[index] === "(") {
+                const end = content.indexOf(")", index + 1);
+                if (end !== -1) {
+                    args = content.slice(index + 1, end);
+                    index = end + 1;
+                } else {
+                    index = start + 1;
+                    continue;
+                }
+            } else {
+                while (index < content.length && /[0-9A-Za-z&.+-]/.test(content[index])) {
+                    args += content[index];
+                    index += 1;
+                }
+            }
+            switch (name) {
+                case "an":
+                    tags.alignment = Number(args);
+                    break;
+                case "pos": {
+                    const [x, y] = args.split(",").map((v) => Number(v.trim()));
+                    if (!Number.isNaN(x) && !Number.isNaN(y)) {
+                        tags.pos = { x, y };
+                    }
+                    break;
+                }
+                case "move": {
+                    const values = args.split(",").map((v) => Number(v.trim()));
+                    if (values.length >= 6) {
+                        tags.move = {
+                            x1: values[0],
+                            y1: values[1],
+                            x2: values[2],
+                            y2: values[3],
+                            t1: values[4],
+                            t2: values[5]
+                        };
+                    }
+                    break;
+                }
+                case "org": {
+                    const [x, y] = args.split(",").map((v) => Number(v.trim()));
+                    if (!Number.isNaN(x) && !Number.isNaN(y)) {
+                        tags.org = { x, y };
+                    }
+                    break;
+                }
+                case "fad": {
+                    const values = args.split(",").map((v) => Number(v.trim()));
+                    if (values.length >= 2) {
+                        tags.fade = {
+                            in: values[0] / 1000,
+                            out: values[1] / 1000
+                        };
+                    }
+                    break;
+                }
+                case "fade": {
+                    const values = args.split(",").map((v) => Number(v.trim()));
+                    if (values.length >= 4) {
+                        tags.fade = {
+                            in: values[0] / 1000,
+                            out: values[1] / 1000,
+                            out2: values[2] / 1000,
+                            in2: values[3] / 1000
+                        };
+                    }
+                    break;
+                }
+                case "frz":
+                case "frx":
+                case "fry": {
+                    const value = Number(args);
+                    if (!Number.isNaN(value)) {
+                        if (name === "frz") tags.rotation = value;
+                        if (name === "frx") tags.rotationX = value;
+                        if (name === "fry") tags.rotationY = value;
+                    }
+                    break;
+                }
+                case "fscx":
+                case "fscy": {
+                    const value = Number(args);
+                    if (!Number.isNaN(value)) {
+                        tags[name === "fscx" ? "scaleX" : "scaleY"] = value / 100;
+                    }
+                    break;
+                }
+                case "fs": {
+                    const value = Number(args);
+                    if (!Number.isNaN(value)) tags.fontSize = value;
+                    break;
+                }
+                case "fn":
+                    tags.fontName = args.replace(/^"|"$/g, "");
+                    break;
+                case "b":
+                    tags.bold = Number(args) !== 0;
+                    break;
+                case "i":
+                    tags.italic = Number(args) !== 0;
+                    break;
+                case "u":
+                    tags.underline = Number(args) !== 0;
+                    break;
+                case "s":
+                    tags.strike = Number(args) !== 0;
+                    break;
+                case "bord": {
+                    const value = Number(args);
+                    if (!Number.isNaN(value)) tags.outline = value;
+                    break;
+                }
+                case "shad": {
+                    const value = Number(args);
+                    if (!Number.isNaN(value)) tags.shadow = value;
+                    break;
+                }
+                case "blur":
+                case "be": {
+                    const value = Number(args);
+                    if (!Number.isNaN(value)) tags.blur = value;
+                    break;
+                }
+                case "1c":
+                case "2c":
+                case "3c":
+                case "4c":
+                case "c": {
+                    const keyMap = {
+                        "1c": "primaryColour",
+                        "2c": "secondaryColour",
+                        "3c": "outlineColour",
+                        "4c": "shadowColour",
+                        "c": "primaryColour"
+                    };
+                    tags[keyMap[name]] = args;
+                    break;
+                }
+                case "k": {
+                    const value = Number(args);
+                    if (!Number.isNaN(value)) {
+                        tags.karaoke = tags.karaoke || [];
+                        tags.karaoke.push(value);
+                    }
+                    break;
+                }
+                default:
+                    break;
+            }
+        }
+    }
+    return tags;
+}
+
+function parseASS(text) {
+    const lines = text.replace(/\r/g, "").split("\n");
+    const assOptions = {
+        scriptInfo: {},
+        projectGarbage: {},
+        styles: {
+            format: [],
+            styles: [],
+            stylesByName: {}
+        }
+    };
+
+    const subs = [];
+    let section = "";
+    let eventFormat = [];
+
+    for (const rawLine of lines) {
+        const line = rawLine.trim();
+        if (!line || line.startsWith(";"))
+            continue;
+        if (line.startsWith("[") && line.endsWith("]")) {
+            section = line.slice(1, -1);
+            continue;
+        }
+        switch (section) {
+            case "Script Info": {
+                const idx = line.indexOf(":");
+                if (idx !== -1) {
+                    const key = line.slice(0, idx).trim();
+                    const value = line.slice(idx + 1).trim();
+
+                    assOptions.scriptInfo[key] = value;
+                }
+                break;
+            }
+            case "Aegisub Project Garbage": {
+                const idx = line.indexOf(":");
+                if (idx !== -1) {
+                    const key = line.slice(0, idx).trim();
+                    const value = line.slice(idx + 1).trim();
+                    assOptions.projectGarbage[key] = value;
+                }
+                break;
+            }
+            case "V4+ Styles": {
+                if (line.startsWith("Format:")) {
+                    assOptions.styles.format =
+                        line.slice(7)
+                            .split(",")
+                            .map(v => v.trim());
+                }
+                else if (line.startsWith("Style:")) {
+                    const values = line.slice(6)
+                        .split(",")
+                        .map(v => v.trim());
+                    const style = {};
+                    assOptions.styles.format.forEach((key, i) => {
+                        style[key] = values[i] ?? "";
+                    });
+                    assOptions.styles.styles.push(style);
+                    if (style.Name) {
+                        assOptions.styles.stylesByName[style.Name] = style;
+                    }
+                }
+                break;
+            }
+            case "Events": {
+                if (line.startsWith("Format:")) {
+                    eventFormat =
+                        line.slice(7)
+                            .split(",")
+                            .map(v => v.trim());
+
+                }
+                else if (
+                    line.startsWith("Dialogue:") ||
+                    line.startsWith("Comment:")
+                ) {
+                    const type = line.startsWith("Dialogue:") ? "Dialogue" : "Comment";
+                    const data = line.slice(type.length + 1);
+                    const parts = [];
+                    let rest = data;
+                    for (
+                        let i = 0;
+                        i < eventFormat.length - 1;
+                        i++
+                    ) {
+                        const comma = rest.indexOf(",");
+                        if (comma === -1) {
+                            parts.push(rest);
+                            rest = "";
+                        }
+                        else {
+                            parts.push(rest.slice(0, comma));
+                            rest = rest.slice(comma + 1);
+                        }
+                    }
+
+                    parts.push(rest);
+
+                    const obj = {
+                        Type: type
+                    };
+
+                    eventFormat.forEach((key, i) => {
+                        obj[key] = (parts[i] ?? "").trim();
+                    });
+
+                    obj.start = assTimeToSeconds(obj.Start);
+                    obj.end = assTimeToSeconds(obj.End);
+
+                    if (obj.Layer !== undefined) {
+                        obj.Layer = Number(obj.Layer);
+                    }
+                    obj.style = assOptions.styles.stylesByName[obj.Style] ?? null;
+                    obj.rawText = obj.Text;
+                    obj.tags = parseASSTags(obj.Text);
+                    obj.text = stripASSTags(obj.Text);
+                    subs.push(obj);
+                }
+                break;
+            }
+        }
+    }
+    return { assOptions, subs };
+}
+
 async function loadSubtitles(files) {
     const addedSubtitles = [];
-
     for (const file of files) {
         file._fingerprint = await fileFingerprint(file);
 
@@ -544,9 +864,21 @@ async function loadSubtitles(files) {
 
         const text = await file.text();
         let subs = [];
-
-        if (text.trim().startsWith('WEBVTT')) {
+        let assOptions = null;
+        const lowerName = file.name.toLowerCase();
+        const trimmed = text.trimStart();
+        if (trimmed.startsWith("WEBVTT")) {
             subs = parseWebVTT(text);
+
+        } else if (
+            lowerName.endsWith(".ass") ||
+            lowerName.endsWith(".ssa") ||
+            trimmed.startsWith("[Script Info]")
+        ) {
+            const parsed = parseASS(text);
+            subs = parsed.subs;
+            assOptions = parsed.assOptions;
+
         } else {
             subs = parseSRT(text);
         }
@@ -554,11 +886,14 @@ async function loadSubtitles(files) {
         const subtitleData = {
             _fingerprint: file._fingerprint,
             title,
-            subs
+            subs,
+            ...(assOptions && { assOptions })
         };
+
         subtitleList.push(subtitleData);
         addedSubtitles.push(subtitleData);
     }
+
     addSubtitleFilesToList(addedSubtitles);
 
     forceFindSub();
@@ -798,7 +1133,7 @@ function playFrom(offset) {
     startTime = audioCtx.currentTime - (offset / Math.max(0.0001, playbackRate));
     source.start(0, offset);
     videoEl.currentTime = offset;
-    videoEl.play().catch(() => { });
+    //videoEl.play().catch(() => { });
     pausePlayButton.dataset.state = 'pause';
 }
 
@@ -806,7 +1141,7 @@ function playFrom(offset) {
 function stopAudio(clearCanvas, pauseCtx) {
     if (source) {
         source.stop();
-        videoEl.pause();
+        //videoEl.pause();
         if (pauseCtx) {
             audioCtx.suspend();
             pausePlayButton.dataset.state = 'play';
@@ -1119,7 +1454,10 @@ function renderLoop() {
                 break;
 
             case 'video':
-                renderHandler.video.render(videoEl);
+                const track = subtitleList.find(
+                    sub => sub._fingerprint === selectedSubtitle
+                );
+                renderHandler.video.render(videoEl, track);
                 break;
 
             default:
@@ -1587,9 +1925,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 //console.log(`${wallpaper.src} ready`);
                 wallpaper.ready = true;
             })
-            // .catch(() => {
-            //     console.log(`${wallpaper.src} failed to decode`);
-            // });
+        // .catch(() => {
+        //     console.log(`${wallpaper.src} failed to decode`);
+        // });
         wallpaper.image = img;
     });
 

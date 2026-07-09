@@ -571,8 +571,9 @@ class VideoRender extends Renderer {
         this.lastHardSync = 0;
     }
 
-    render(videoEl) {
-        if (!videoEl || !buffer) return;
+    render(videoEl, subtitleData = null) {
+        if (!videoEl) return;
+
         const elapsed = getElapsedTime();
         const drift = videoEl.currentTime - elapsed;
         const canvasW = this.canvas.width;
@@ -580,27 +581,23 @@ class VideoRender extends Renderer {
         const videoW = videoEl.videoWidth;
         const videoH = videoEl.videoHeight;
 
-        if (
-            Math.abs(drift) > 0.25 &&
-            performance.now() - this.lastHardSync > 500
-        ) {
+        if (Math.abs(drift) > 0.25 && performance.now() - this.lastHardSync > 500) {
             videoEl.currentTime = elapsed;
             this.lastHardSync = performance.now();
         }
 
-        if (audioCtx.state === "running") {
+        if (this.audioCtx?.state === "running") {
             if (videoEl.paused) videoEl.play().catch(() => { });
-        } else {
-            if (!videoEl.paused) videoEl.pause();
+        } else if (!videoEl.paused) {
+            videoEl.pause();
         }
-
         if (videoEl.readyState < 2) return;
 
         this.bgCanvas ??= document.createElement("canvas");
         this.bgCtx ??= this.bgCanvas.getContext("2d");
 
-        const bw = this.bgCanvas.width = canvasW * 0.3;
-        const bh = this.bgCanvas.height = canvasH * 0.3;
+        const bw = (this.bgCanvas.width = canvasW * 0.3);
+        const bh = (this.bgCanvas.height = canvasH * 0.3);
         const bgScale = Math.max(bw / videoW, bh / videoH);
         const drawW = videoW * bgScale;
         const drawH = videoH * bgScale;
@@ -610,15 +607,231 @@ class VideoRender extends Renderer {
         this.bgCtx.clearRect(0, 0, bw, bh);
         this.bgCtx.drawImage(videoEl, bx, by, drawW, drawH);
 
+        this.ctx.save();
         this.ctx.globalAlpha = 0.4;
         this.ctx.drawImage(this.bgCanvas, 0, 0, canvasW, canvasH);
-        this.ctx.globalAlpha = 1;
+        this.ctx.restore();
 
         const fgScale = canvasH / videoH;
         const fgW = videoW * fgScale;
         const fgX = (canvasW - fgW) / 2;
 
         this.ctx.drawImage(videoEl, fgX, 0, fgW, canvasH);
+
+        if (subtitleData?.subs) {
+            this.renderASS(subtitleData, videoEl.currentTime);
+        }
+    }
+
+    renderASS(subtitleData, time) {
+        const active = subtitleData.subs
+            .filter(
+                (sub) => sub.Type === "Dialogue" && time >= sub.start && time <= sub.end,
+            )
+            .sort((a, b) => Number(a.Layer ?? 0) - Number(b.Layer ?? 0));
+
+        for (const sub of active) {
+            this.drawASSLine({
+                ...sub,
+                assOptions: subtitleData.assOptions,
+                currentTime: time,
+            });
+        }
+    }
+
+    drawASSLine(sub) {
+        const ctx = this.ctx;
+        const style = sub.style || {};
+        const tags = sub.tags || {};
+        const assInfo = sub.assOptions?.scriptInfo || {};
+        const playResX = Number(assInfo.PlayResX) || 1920;
+        const playResY = Number(assInfo.PlayResY) || 1080;
+        const scaleX = this.canvas.width / playResX;
+        const scaleY = this.canvas.height / playResY;
+        const fontName = tags.fontName || style.Fontname || "Arial";
+        const fontSize = Number(tags.fontSize ?? style.Fontsize ?? 48) * scaleY;
+        const bold = tags.bold ?? Number(style.Bold) !== 0;
+        const italic = tags.italic ?? Number(style.Italic) !== 0;
+        const underline = tags.underline ?? Number(style.Underline) !== 0;
+        const strike = tags.strike ?? Number(style.StrikeOut) !== 0;
+        const scaleFactorX = Number(tags.scaleX ?? style.ScaleX ?? 100) / 100;
+        const scaleFactorY = Number(tags.scaleY ?? style.ScaleY ?? 100) / 100;
+
+        ctx.save();
+        ctx.font = `${italic ? "italic " : ""}${bold ? "bold " : ""}${Math.max(8, fontSize * scaleFactorY)}px "${fontName}"`;
+        ctx.letterSpacing = `${Number(tags.spacing ?? style.Spacing ?? 0) * scaleX}px`;
+        ctx.textRendering = "geometricPrecision";
+        ctx.lineJoin = "round";
+        ctx.lineCap = "round";
+        ctx.miterLimit = 2;
+
+        let alpha = 1;
+        if (tags.fade) {
+            const t = sub.currentTime - sub.start;
+            const length = sub.end - sub.start;
+            if (t < tags.fade.in) {
+                alpha = t / tags.fade.in;
+            }
+            if (length - t < tags.fade.out) {
+                alpha = Math.min(alpha, (length - t) / tags.fade.out);
+            }
+        }
+        ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+
+        const alignment = tags.alignment ?? (Number(style.Alignment) || 2);
+        const marginL = Number(style.MarginL || 10) * scaleX;
+        const marginR = Number(style.MarginR || 10) * scaleX;
+        const marginV = Number(style.MarginV || 10) * scaleY;
+
+        let x;
+        let y;
+
+        switch (alignment) {
+            case 1:
+            case 4:
+            case 7:
+                ctx.textAlign = "left";
+                x = marginL;
+                break;
+            case 3:
+            case 6:
+            case 9:
+                ctx.textAlign = "right";
+                x = this.canvas.width - marginR;
+                break;
+            default:
+                ctx.textAlign = "center";
+                x = this.canvas.width / 2;
+        }
+
+        if (alignment <= 3) {
+            ctx.textBaseline = "bottom";
+            y = this.canvas.height - marginV;
+        } else if (alignment <= 6) {
+            ctx.textBaseline = "middle";
+            y = this.canvas.height / 2;
+        } else {
+            ctx.textBaseline = "top";
+            y = marginV;
+        }
+
+        if (tags.pos) {
+            x = tags.pos.x * scaleX;
+            y = tags.pos.y * scaleY;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+        }
+
+        if (tags.move) {
+            const move = tags.move;
+            const duration = Math.max(0.001, (move.t2 - move.t1) / 1000);
+            const progress = Math.max(0, Math.min(1, (sub.currentTime - sub.start - move.t1 / 1000) / duration));
+            x = move.x1 + (move.x2 - move.x1) * progress;
+            y = move.y1 + (move.y2 - move.y1) * progress;
+            x *= scaleX;
+            y *= scaleY;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+        }
+
+        const originX = tags.org ? tags.org.x * scaleX : x;
+        const originY = tags.org ? tags.org.y * scaleY : y;
+
+        ctx.translate(originX, originY);
+
+        const rotation = Number(tags.rotation ?? style.Angle ?? 0);
+        if (rotation) {
+            ctx.rotate((rotation * Math.PI) / 180);
+        }
+
+        if (scaleFactorX !== 1 || scaleFactorY !== 1) {
+            ctx.scale(scaleFactorX, scaleFactorY);
+        }
+
+        ctx.translate(-originX, -originY);
+
+        const outline = Number(tags.outline ?? style.Outline ?? 0) * scaleY;
+        const shadow = Number(tags.shadow ?? style.Shadow ?? 0);
+        const shadowX = shadow * scaleX;
+        const shadowY = shadow * scaleY;
+        const blur = Number(tags.blur ?? 0);
+        const outlineColor = this.assColor(tags.outlineColour || style.OutlineColour || "&H00000000&");
+        const shadowColor = this.assColor(tags.shadowColour || style.BackColour || style.SecondaryColour || "&H00000000&");
+        const fillColor = this.assColor(tags.primaryColour || style.PrimaryColour || "&H00FFFFFF&");
+
+        const lines = String(sub.text || "")
+            .replace(/\\h/g, " ")
+            .replace(/\\N/g, "\n")
+            .replace(/\\n/g, "\n")
+            .split("\n");
+
+        const lineHeight = fontSize * 1.2;
+
+        if (shadow > 0) {
+            ctx.fillStyle = shadowColor;
+            for (let i = 0; i < lines.length; i++) {
+                const yy = y + i * lineHeight;
+                ctx.fillText(lines[i], x + shadowX, yy + shadowY);
+            }
+        }
+
+        if (blur > 0) {
+            ctx.save();
+            ctx.filter = `blur(${blur}px)`;
+            ctx.fillStyle = fillColor;
+            for (let i = 0; i < lines.length; i++) {
+                const yy = y + i * lineHeight;
+                ctx.fillText(lines[i], x, yy);
+            }
+            ctx.restore();
+        }
+
+        ctx.lineWidth = outline;
+        ctx.strokeStyle = outlineColor;
+        ctx.fillStyle = fillColor;
+
+        for (let i = 0; i < lines.length; i++) {
+            const yy = y + i * lineHeight;
+            if (outline > 0) {
+                ctx.strokeText(lines[i], x, yy);
+            }
+            ctx.fillText(lines[i], x, yy);
+        }
+
+        if (underline || strike) {
+            ctx.strokeStyle = fillColor;
+            ctx.lineWidth = Math.max(1, fontSize * 0.08);
+            ctx.beginPath();
+            for (let i = 0; i < lines.length; i++) {
+                const yy = y + i * lineHeight;
+                if (underline) {
+                    ctx.moveTo(x - 0.5 * (ctx.measureText(lines[i]).width || 0), yy + fontSize * 0.08);
+                    ctx.lineTo(x + 0.5 * (ctx.measureText(lines[i]).width || 0), yy + fontSize * 0.08);
+                }
+                if (strike) {
+                    ctx.moveTo(x - 0.5 * (ctx.measureText(lines[i]).width || 0), yy - fontSize * 0.35);
+                    ctx.lineTo(x + 0.5 * (ctx.measureText(lines[i]).width || 0), yy - fontSize * 0.35);
+                }
+            }
+            ctx.stroke();
+        }
+
+        ctx.restore();
+        ctx.globalAlpha = 1;
+    }
+
+    assColor(value) {
+        if (!value) return "rgba(255,255,255,1)";
+
+        const normalized = String(value).trim();
+        const cleaned = normalized.replace("&H", "").replace("&", "").padStart(8, "0");
+
+        const alpha = parseInt(cleaned.slice(0, 2), 16);
+        const blue = parseInt(cleaned.slice(2, 4), 16);
+        const green = parseInt(cleaned.slice(4, 6), 16);
+        const red = parseInt(cleaned.slice(6, 8), 16);
+
+        return `rgba(${red}, ${green}, ${blue}, ${1 - alpha / 255})`;
     }
 }
 
