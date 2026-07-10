@@ -457,6 +457,10 @@ class RetroRenderer extends Renderer {
         this.VIS_MAX_DB = config.visMaxDb ?? -20;
     }
 
+    formatFreq(f) {
+        return f >= 1000 ? (f / 1000) + ' k' : `${f} `;
+    }
+
     render(floatData, analyser) {
         const ctx = this.ctx;
         const cw = this.canvas.width;
@@ -519,7 +523,7 @@ class RetroRenderer extends Renderer {
 
             ctx.fillStyle = "rgba(230,230,230,0.85)";
             ctx.font = "10px monospace";
-            ctx.fillText(`${fCenter} Hz`, ledX, 14);
+            ctx.fillText(`${this.formatFreq(fCenter)}Hz`, ledX, 14);
 
             for (let l = 0; l < LEDS; l++) {
                 const y = headerH + ledAreaH - (l + 1) * ledH;

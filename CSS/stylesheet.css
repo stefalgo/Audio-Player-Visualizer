@@ -486,21 +486,21 @@ input[type="file"]+label {
 
 /*------------------------------------------------*/
 
-#SubtitlesList,
-#SongList {
+#subtitlesList,
+#songList {
     width: var(--window-width-sm);
     max-height: min(80vh, 520px);
 }
 
-#SubtitlesList>#SubtitlesList-Container,
-#SongList>#SongList-Container {
+#subtitlesList>#subtitlesList-Container,
+#songList>#songList-Container {
     height: 300px;
     overflow-y: auto;
 }
 
 /*------------------------------------------------*/
 
-#SongList {
+#songList {
     bottom: 0;
 }
 
@@ -595,13 +595,13 @@ input[type="file"]+label:hover {
     background: var(--bg-control-hover) !important;
 }
 
-#SongList-Container::-webkit-scrollbar,
-#SubtitlesList-Container::-webkit-scrollbar {
+#songList-Container::-webkit-scrollbar,
+#subtitlesList-Container::-webkit-scrollbar {
     width: 8px;
 }
 
-#SongList-Container::-webkit-scrollbar-thumb,
-#SubtitlesList-Container::-webkit-scrollbar-thumb {
+#songList-Container::-webkit-scrollbar-thumb,
+#subtitlesList-Container::-webkit-scrollbar-thumb {
     background: var(--text-muted);
 }
 

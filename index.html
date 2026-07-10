@@ -69,12 +69,29 @@
     </div>
     <div id="eq-sliders" class="movable-window" style="display: none;">
         <div class="window-topbar">イコライザーエディター</div>
-        <div style="display: flex; flex-direction: row;">
-            <button class="button" id="eqResetBtn" style="margin-left: 10px;">Flat</button>
-            <select id="eqPresetSelect" data-tip="Presets" style="margin-left: 10px;"></select>
-            <button class="button" id="eqPresetSetBtn">Set preset</button>
-            <button class="button" id="eqPresetSaveBtn" style="margin-left: 10px;">Save preset</button>
-            <button class="button" id="eqPresetRemoveBtn">Delete preset</button>
+        <div style="display: flex; flex-direction: column; align-items: flex-start;">
+            <div style="margin-left: 10px;">
+                <button class="button" id="eqResetBtn">Flat</button>
+                <select id="eqPresetSelect" data-tip="Presets" style="margin-left: 10px;"></select>
+                <button class="button" id="eqPresetSetBtn">Set preset</button>
+                <button class="button" id="eqPresetSaveBtn" style="margin-left: 10px;">Save preset</button>
+                <button class="button" id="eqPresetRemoveBtn">Delete preset</button>
+            </div>
+
+            <div style="margin-left: 10px; display: flex; flex-direction: row; align-items: center;">
+                <label for="eqSliderLink">Smooth EQ</label>
+                <input class="checkbox" type="checkbox" id="eqSliderLink">
+                <select id="eqSliderLinkModes" data-tip="Band link curve shape" style="margin-left: 10px;">
+                    <option value="linear">Linear</option>
+                    <option value="sine">Smooth (Sine)</option>
+                    <option value="quad" selected>Soft (Quadratic)</option>
+                    <option value="cubic">Balanced (Cubic)</option>
+                    <option value="quart">Focused (Quartic)</option>
+                    <option value="expo">Sharp (Exponential)</option>
+                    <option value="back">Wide (Back)</option>
+                </select>
+                <input type="range" id="eqSliderLinkQsize">
+            </div>
         </div>
         <div style="padding: 3px;">
             <canvas id="eq"></canvas>
@@ -92,11 +109,8 @@
         </div>
 
         <div style="display:flex; height:300px; border-top:1px solid #333;">
-
             <div id="subList" style="width:40%; overflow:auto; padding:5px; border-right:1px solid #333;"></div>
-
             <div style="flex:1; padding:5px;">
-
                 <input type="number" class="button" id="subStart" style="width:50%;" placeholder="Start Time (Sec)">
                 <input type="number" class="button" id="subEnd" style="width:50%;" placeholder="End Time (Sec)">
                 <textarea class="button" id="subText" style="width:100%; height:120px;" placeholder="Text"></textarea>
@@ -104,11 +118,10 @@
                 <button class="button" id="subSaveBtn">保存</button>
             </div>
         </div>
-
         <textarea class="button" id="subOut" readonly style="width:100%; height:120px;" placeholder="Output"></textarea>
     </div>
 
-    <div id="SubtitlesList" class="movable-window" style="display: none;">
+    <div id="subtitlesList" class="movable-window" style="display: none;">
         <div class="window-topbar">字幕トラック</div>
         <div style="display: flex; flex-direction: row; justify-content: space-between;">
             <button class="button" id="subUnloadSubBtn">字幕トラックをオフ</button>
@@ -118,17 +131,17 @@
             <button id="removeAllSubtitles" class="button" style="margin-right: 10px;">クリア</button>
         </div>
         <input style="margin: 3px;" type="text" id="subSearch" class="button searchBar" placeholder="字幕検索">
-        <div style="padding: 3px; margin-top: 5px;" id="SubtitlesList-Container"></div>
+        <div style="padding: 3px; margin-top: 5px;" id="subtitlesList-Container"></div>
     </div>
 
-    <div id="SongList" class="movable-window" style="display: none;">
+    <div id="songList" class="movable-window" style="display: none;">
         <div class="window-topbar">オーディオトラック</div>
         <div style="display: flex; flex-direction: row; justify-content: space-between;">
             <span style="padding: 3px;" id="songList-totalPlayTime">Total: 00:00:00 | Avg: 00:00:00</span>
             <button id="removeAllSounds" class="button" style="margin-right: 10px;">クリア</button>
         </div>
         <input style="margin: 3px;" type="text" id="songSearch" class="button searchBar" placeholder="オーディオ検索">
-        <div style="padding: 3px; margin-top: 5px;" id="SongList-Container"></div>
+        <div style="padding: 3px; margin-top: 5px;" id="songList-Container"></div>
     </div>
 
     <div id="SubtitlesOptions" class="movable-window" style="display: none;">

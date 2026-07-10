@@ -10,8 +10,8 @@ const subtitleFileInput = document.getElementById('subtitleFile');
 const timeSlider = document.getElementById('timeSlider');
 const volumeSlider = document.getElementById('volumeSlider');
 const pausePlayButton = document.getElementById('pause-play-button');
-const songListContainer = document.getElementById('SongList-Container');
-const subListContainer = document.getElementById('SubtitlesList-Container');
+const songListContainer = document.getElementById('songList-Container');
+const subListContainer = document.getElementById('subtitlesList-Container');
 const eqSlidersContainer = document.getElementById('eq-sliders');
 const subtitlesDiv = document.getElementById('Subtitles');
 const subtitlesOptionsDiv = document.getElementById('SubtitlesOptions');
@@ -32,6 +32,33 @@ const songListTotalPlayTimeText = document.getElementById('songList-totalPlayTim
 console.error("Roses are Red, Violets are Blue \n Unexpected '{' on line 32");
 const songItemTemplate = document.getElementById('songItemTemplate');
 const subtitleItemTemplate = document.getElementById('subtitleItemTemplate');
+const songListBtn = document.getElementById("songListBtn");
+const subListBtn = document.getElementById("subListBtn");
+const eqBtn = document.getElementById("eqBtn");
+const subBtn = document.getElementById("subBtn");
+const subOptionsBtn = document.getElementById("subOptionsBtn");
+const eqResetBtn = document.getElementById("eqResetBtn");
+const eqPresetSetBtn = document.getElementById("eqPresetSetBtn");
+const eqSliderLink = document.getElementById("eqSliderLink");
+const eqSliderLinkModes = document.getElementById("eqSliderLinkModes");
+const eqPresetSaveBtn = document.getElementById("eqPresetSaveBtn");
+const eqPresetRemoveBtn = document.getElementById("eqPresetRemoveBtn");
+const subUnloadSubBtn = document.getElementById("subUnloadSubBtn");
+const subAutoFindBtn = document.getElementById("subAutoFindBtn");
+const vizPauseVizBtn = document.getElementById("vizPauseVizBtn");
+const playPreviousButton = document.getElementById("play-previous-button");
+const playNextButton = document.getElementById("play-next-button");
+const playNextRandomButton = document.getElementById("play-next-random-button");
+const subtitleFontSize = document.getElementById("subtitleFontSize");
+const subtitleFont = document.getElementById("subtitleFont");
+const removeAllSounds = document.getElementById("removeAllSounds");
+const removeAllSubtitles = document.getElementById("removeAllSubtitles");
+const topListBtn = document.getElementById("topListBtn");
+const songList = document.getElementById("songList");
+const subtitlesList = document.getElementById("subtitlesList");
+const songSearch = document.getElementById("songSearch");
+const subSearch = document.getElementById("subSearch");
+const eqSliderLinkQsize = document.getElementById("eqSliderLinkQsize");
 
 window.alert = async function (message, targetEl) {
     await TooltipDialog.info(targetEl, message);
@@ -1691,37 +1718,45 @@ document.addEventListener("keydown", (e) => {
     if (e.code === "ArrowLeft") jumpAt(-5);
 });
 
-//yeah....
-
-document.getElementById("songListBtn").addEventListener("click", () => {
-    document.getElementById('SongList').style.display = document.getElementById('SongList').style.display === 'none' ? 'block' : 'none';
+songListBtn.addEventListener("click", () => {
+    songList.style.display = songList.style.display === "none" ? "block" : "none";
 });
 
-document.getElementById("subListBtn").addEventListener("click", () => {
-    document.getElementById('SubtitlesList').style.display = document.getElementById('SubtitlesList').style.display === 'none' ? 'block' : 'none';
+subListBtn.addEventListener("click", () => {
+    subtitlesList.style.display = subtitlesList.style.display === "none" ? "block" : "none";
 });
 
-document.getElementById("eqBtn").addEventListener("click", () => {
-    eqSlidersContainer.style.display = eqSlidersContainer.style.display === 'none' ? 'block' : 'none';
+eqBtn.addEventListener("click", () => {
+    eqSlidersContainer.style.display =
+        eqSlidersContainer.style.display === "none" ? "block" : "none";
 });
 
-document.getElementById("subBtn").addEventListener("click", () => {
-    subtitlesDiv.style.display = subtitlesDiv.style.display === 'none' ? 'block' : 'none';
+subBtn.addEventListener("click", () => {
+    subtitlesDiv.style.display =
+        subtitlesDiv.style.display === "none" ? "block" : "none";
 });
 
-document.getElementById("subOptionsBtn").addEventListener("click", () => {
-    subtitlesOptionsDiv.style.display = subtitlesOptionsDiv.style.display === 'none' ? 'block' : 'none';
+subOptionsBtn.addEventListener("click", () => {
+    subtitlesOptionsDiv.style.display = subtitlesOptionsDiv.style.display === "none" ? "block" : "none";
 });
 
-document.getElementById("eqResetBtn").addEventListener("click", () => {
+eqResetBtn.addEventListener("click", () => {
     equalizer.reset();
 });
 
-document.getElementById("eqPresetSetBtn").addEventListener("click", () => {
-    equalizer.loadPreset(JSON.parse(eqPresetSelect.value))
+eqPresetSetBtn.addEventListener("click", () => {
+    equalizer.loadPreset(JSON.parse(eqPresetSelect.value));
 });
 
-document.getElementById("eqPresetSaveBtn").addEventListener("click", async () => {
+eqSliderLink.addEventListener("change", () => {
+    equalizer.linkSliders = eqSliderLink.checked;
+});
+
+eqSliderLinkModes.addEventListener("input", () => {
+    equalizer.linkType = eqSliderLinkModes.value;
+});
+
+eqPresetSaveBtn.addEventListener("click", async () => {
     const selected = eqPresetSelect.options[eqPresetSelect.selectedIndex];
     let name = await prompt(
         "プリセット名を入力してください",
@@ -1742,7 +1777,6 @@ document.getElementById("eqPresetSaveBtn").addEventListener("click", async () =>
         .slice(0, 50);
     saveEQPreset(name, values);
     eqPresetsDropdown();
-
     const option = [...eqPresetSelect.options].find(o => o.text === name);
     if (option) {
         option.selected = true;
@@ -1750,66 +1784,61 @@ document.getElementById("eqPresetSaveBtn").addEventListener("click", async () =>
     }
 });
 
-document.getElementById("eqPresetRemoveBtn").addEventListener("click", async () => {
+eqPresetRemoveBtn.addEventListener("click", async () => {
     const selected = eqPresetSelect.options[eqPresetSelect.selectedIndex];
     if (!selected) return;
-    const optGroup = selected.parentElement;
-    if (!optGroup || optGroup.label !== "User presets") {
+    const group = selected.parentElement;
+    if (!group || group.label !== "User presets") {
         await alert("ユーザーが保存したプリセットのみ削除できます", eqPresetRemoveBtn, 0);
         return;
     }
-    const name = selected.textContent;
     const ok = await confirm(
         "選択したプリセットを削除しますか？",
         eqPresetRemoveBtn,
         1
     );
     if (!ok) return;
-    removeEQPreset(name);
+    removeEQPreset(selected.textContent);
 });
 
-document.getElementById("subUnloadSubBtn").addEventListener("click", () => {
-    selectedSubtitle = '';
+subUnloadSubBtn.addEventListener("click", () => {
+    selectedSubtitle = "";
 });
 
-document.getElementById("subAutoFindBtn").addEventListener("click", () => {
+subAutoFindBtn.addEventListener("click", () => {
     forceFindSub();
 });
 
-document.getElementById("vizPauseVizBtn").addEventListener("click", () => {
+vizPauseVizBtn.addEventListener("click", () => {
     pauseViz = !pauseViz;
 });
 
-document.getElementById("play-previous-button").addEventListener("click", () => {
+playPreviousButton.addEventListener("click", () => {
     playNext(-1);
 });
 
-document.getElementById("play-next-button").addEventListener("click", () => {
+playNextButton.addEventListener("click", () => {
     playNext(1);
 });
 
-document.getElementById("play-next-random-button").addEventListener("click", () => {
+playNextRandomButton.addEventListener("click", () => {
     loadRandom();
 });
 
-//---------------------------------------------
-// subtitle settings
-document.getElementById("subtitleFontSize").addEventListener("input", () => {
+subtitleFontSize.addEventListener("input", () => {
     subtitleTextEl.style.fontSize = `${subtitleFontSize.value}px`;
 });
 
-document.getElementById("subtitleFont").addEventListener("change", (e) => {
-    const value = e.target.value;
-    if (value === "default") {
+subtitleFont.addEventListener("change", (e) => {
+    if (e.target.value === "default") {
         subtitleTextEl.style.removeProperty("font-family");
     } else {
-        subtitleTextEl.style.fontFamily = value;
+        subtitleTextEl.style.fontFamily = e.target.value;
     }
 });
-//---------------------------------------------
 
-document.getElementById("removeAllSounds").addEventListener("click", async () => {
-    const ok = await confirm("プレイリストをクリアしますか？", document.getElementById("removeAllSounds"), 1);
+removeAllSounds.addEventListener("click", async () => {
+    const ok = await confirm("プレイリストをクリアしますか？", removeAllSounds, 1);
     if (!ok) return;
     if (files.length > 1) {
         files.filter(file => file._fingerprint !== currentSelectedFile).forEach(removeFile);
@@ -1818,8 +1847,8 @@ document.getElementById("removeAllSounds").addEventListener("click", async () =>
     }
 });
 
-document.getElementById("removeAllSubtitles").addEventListener("click", async () => {
-    const ok = await confirm("字幕をリストから外しますか？", document.getElementById("removeAllSubtitles"), 1);
+removeAllSubtitles.addEventListener("click", async () => {
+    const ok = await confirm("字幕をリストから外しますか？", removeAllSubtitles, 1);
     if (!ok) return;
     if (subtitleList.length > 1) {
         subtitleList.filter(file => file._fingerprint !== selectedSubtitle).forEach(file => removeSubtitle(file._fingerprint));
@@ -1828,53 +1857,45 @@ document.getElementById("removeAllSubtitles").addEventListener("click", async ()
     }
 });
 
-document.getElementById("topListBtn").addEventListener("click", () => {
+topListBtn.addEventListener("click", () => {
     if (files.length > 0) {
         loadFile(files[0]);
     }
 });
 
-pausePlayButton.addEventListener("click", (e) => {
+pausePlayButton.addEventListener("click", () => {
     togglePlayPause();
 });
 
-document.getElementById("songSearch").addEventListener("input", () => {
-    const songItems = document.querySelectorAll(".songItem");
+songSearch.addEventListener("input", () => {
     const searchTerm = songSearch.value.toLowerCase().trim();
     const matchingFingerprints = files.filter(file => file.name.toLowerCase().includes(searchTerm)).map(file => file._fingerprint);
 
-    songItems.forEach(item => {
+    document.querySelectorAll(".songItem").forEach(item => {
         const fingerprint = item.dataset.fileName;
-
         item.style.display = matchingFingerprints.includes(fingerprint) ? "" : "none";
     });
 });
 
-document.getElementById("subSearch").addEventListener("input", () => {
-    const subItems = document.querySelectorAll(".subtitleItem");
+subSearch.addEventListener("input", () => {
     const searchTerm = subSearch.value.toLowerCase().trim();
-    const matchingFingerprints = subtitleList.filter(sub => sub.title.toLowerCase().includes(searchTerm)).map(sub => sub._fingerprint);
-
-    subItems.forEach(item => {
+    const matchingFingerprints = subtitleList.filter(sub => sub.name.toLowerCase().includes(searchTerm)).map(sub => sub._fingerprint);
+    document.querySelectorAll(".subtitleItem").forEach(item => {
         const fingerprint = item.dataset.fileName;
-
         item.style.display = matchingFingerprints.includes(fingerprint) ? "" : "none";
     });
 });
 
 document.querySelectorAll(".searchBar").forEach(searchBar => {
-    searchBar.addEventListener("keydown", (event) => {
-        if (event.key === "Enter") {
-            event.target.blur();
-        }
+    searchBar.addEventListener("keydown", e => {
+        if (e.key === "Enter") e.target.blur();
     });
 });
 
-equalizer.onChange((data) => {
+equalizer.onChange(data => {
     data.forEach((band, i) => {
         eqState[i] = band.gain;
-
-        const filter = eqFilters.find(b => b.frequency.value === band.freq);
+        const filter = eqFilters.find(f => f.frequency.value === band.freq);
         if (filter) filter.gain.value = band.gain;
     });
 });

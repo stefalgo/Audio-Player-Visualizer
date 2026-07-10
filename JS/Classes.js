@@ -411,6 +411,44 @@ class CanvasEQ {
         this.onChangeCallbacks = [];
         this.bind();
         this.loop();
+
+        this.dragStartGains = [];
+
+        this.linkSliders = false;
+        this.linkType = "quad";
+        this.linkQ = 4;
+
+        this.linkFunction = (distance) => {
+            const x = Math.min(distance / this.linkQ, 1);
+            return 1 - this.ease(x, this.linkType);
+        };
+    }
+
+    ease(t, type) {
+        switch (type) {
+            case "linear":
+                return t;
+            case "sine":
+                return 1 - Math.cos((t * Math.PI) / 2);
+            case "quad":
+                return t * t;
+            case "cubic":
+                return t * t * t;
+            case "quart":
+                return t * t * t * t;
+            case "quint":
+                return t * t * t * t * t;
+            case "back":
+                const c1 = 1.70158;
+                const c3 = c1 + 1;
+                return c3 * t * t * t - c1 * t * t;
+            case "circ":
+                return 1 - Math.sqrt(1 - t * t);
+            case "expo":
+                return t === 0 ? 0 : Math.pow(2, 10 * (t - 1));
+            default:
+                return t;
+        }
     }
 
     onChange(fn) {
@@ -454,14 +492,15 @@ class CanvasEQ {
     }
 
     formatFreq(f) {
-        return f >= 1000 ? (f / 1000) + 'k' : f;
+        return f >= 1000 ? (f / 1000) + ' k' : `${f} `;
     }
 
     hit(x, y) {
         for (let i = 0; i < this.bands.length; i++) {
             const sx = this.x(i);
             const sy = this.top();
-            if (x > sx - 18 && x < sx + 18 && y > sy && y < sy + this.sliderH) return i;
+            const offset = 10;
+            if (x > sx - 18 && x < sx + 18 && y > sy - offset && y < sy + this.sliderH + offset) return i;
         }
         return -1;
     }
@@ -472,6 +511,7 @@ class CanvasEQ {
         if (i !== -1) {
             this.active = i;
             this.dragging = true;
+            this.dragStartGains = this.bands.map(b => b.gain);
             this.update(m);
         }
     }
@@ -483,7 +523,6 @@ class CanvasEQ {
 
     emitChange() {
         const data = this.getData();
-
         for (const fn of this.onChangeCallbacks) {
             fn(data);
         }
@@ -494,7 +533,22 @@ class CanvasEQ {
         let g = this.yToGain(m.y);
         g = Math.round(g);
         g = Math.max(-this.range, Math.min(this.range, g));
+        const delta = g - this.dragStartGains[i];
         this.bands[i].gain = g;
+        if (this.linkSliders) {
+            for (let n = 0; n < this.bands.length; n++) {
+                if (n === i) continue;
+                const distance = Math.abs(n - i);
+                const amount = this.linkFunction(distance);
+                let newGain = this.dragStartGains[n] + (delta * amount);
+                newGain = Math.round(newGain);
+                newGain = Math.max(
+                    -this.range,
+                    Math.min(this.range, newGain)
+                );
+                this.bands[n].gain = newGain;
+            }
+        }
         this.emitChange();
     }
 
