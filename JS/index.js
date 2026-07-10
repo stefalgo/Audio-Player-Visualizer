@@ -613,8 +613,9 @@ function stripASSTags(text) {
         .replace(/\{[^{}]*\}/g, "")
         .replace(/\\N/g, "\n")
         .replace(/\\n/g, "\n")
-        .replace(/\\h/g, " ")
-        .replace(/\\r/g, "");
+        .replace(/\\h/g, "\u00A0")
+        .replace(/\\~/g, " ")
+        .replace(/\\r[^\\}]*/g, "");
 }
 
 function parseASSTags(text) {
@@ -625,114 +626,80 @@ function parseASSTags(text) {
         let index = 0;
         while (index < content.length) {
             if (content[index] !== "\\") {
-                index += 1;
+                index++;
                 continue;
             }
-            const start = index;
-            index += 1;
+            index++;
             const nameMatch = content.slice(index).match(/^[A-Za-z]+/);
             if (!nameMatch) {
-                index = start + 1;
                 continue;
             }
             const name = nameMatch[0];
             index += name.length;
             let args = "";
             if (content[index] === "(") {
-                const end = content.indexOf(")", index + 1);
+                const end = content.indexOf(")", index);
                 if (end !== -1) {
                     args = content.slice(index + 1, end);
                     index = end + 1;
-                } else {
-                    index = start + 1;
-                    continue;
                 }
             } else {
-                while (index < content.length && /[0-9A-Za-z&.+-]/.test(content[index])) {
+                while (
+                    index < content.length &&
+                    /[0-9A-Za-z&.+#(),-]/.test(content[index])
+                ) {
                     args += content[index];
-                    index += 1;
+                    index++;
                 }
             }
             switch (name) {
+                case "r":
+                    tags.resetStyle = args || true;
+                    break;
                 case "an":
                     tags.alignment = Number(args);
                     break;
                 case "pos": {
-                    const [x, y] = args.split(",").map((v) => Number(v.trim()));
+                    const [x, y] = args.split(",").map(Number);
                     if (!Number.isNaN(x) && !Number.isNaN(y)) {
                         tags.pos = { x, y };
                     }
                     break;
                 }
                 case "move": {
-                    const values = args.split(",").map((v) => Number(v.trim()));
-                    if (values.length >= 6) {
+                    const v = args.split(",").map(Number);
+                    if (v.length >= 6) {
                         tags.move = {
-                            x1: values[0],
-                            y1: values[1],
-                            x2: values[2],
-                            y2: values[3],
-                            t1: values[4],
-                            t2: values[5]
+                            x1: v[0],
+                            y1: v[1],
+                            x2: v[2],
+                            y2: v[3],
+                            t1: v[4],
+                            t2: v[5],
                         };
                     }
                     break;
                 }
                 case "org": {
-                    const [x, y] = args.split(",").map((v) => Number(v.trim()));
+                    const [x, y] = args.split(",").map(Number);
                     if (!Number.isNaN(x) && !Number.isNaN(y)) {
                         tags.org = { x, y };
                     }
                     break;
                 }
                 case "fad": {
-                    const values = args.split(",").map((v) => Number(v.trim()));
-                    if (values.length >= 2) {
-                        tags.fade = {
-                            in: values[0] / 1000,
-                            out: values[1] / 1000
-                        };
-                    }
+                    const [a, b] = args.split(",").map(Number);
+                    tags.fade = {
+                        in: a / 1000,
+                        out: b / 1000,
+                    };
                     break;
                 }
-                case "fade": {
-                    const values = args.split(",").map((v) => Number(v.trim()));
-                    if (values.length >= 4) {
-                        tags.fade = {
-                            in: values[0] / 1000,
-                            out: values[1] / 1000,
-                            out2: values[2] / 1000,
-                            in2: values[3] / 1000
-                        };
-                    }
+                case "fs":
+                    tags.fontSize = Number(args);
                     break;
-                }
-                case "frz":
-                case "frx":
-                case "fry": {
-                    const value = Number(args);
-                    if (!Number.isNaN(value)) {
-                        if (name === "frz") tags.rotation = value;
-                        if (name === "frx") tags.rotationX = value;
-                        if (name === "fry") tags.rotationY = value;
-                    }
-                    break;
-                }
-                case "fscx":
-                case "fscy": {
-                    const value = Number(args);
-                    if (!Number.isNaN(value)) {
-                        tags[name === "fscx" ? "scaleX" : "scaleY"] = value / 100;
-                    }
-                    break;
-                }
-                case "fs": {
-                    const value = Number(args);
-                    if (!Number.isNaN(value)) tags.fontSize = value;
-                    break;
-                }
                 case "fn":
-                    tags.fontName = args.replace(/^"|"$/g, "");
+                    tags.fontName = args;
                     break;
                 case "b":
                     tags.bold = Number(args) !== 0;
@@ -746,47 +713,65 @@ function parseASSTags(text) {
                 case "s":
                     tags.strike = Number(args) !== 0;
                     break;
-                case "bord": {
-                    const value = Number(args);
-                    if (!Number.isNaN(value)) tags.outline = value;
+                case "fscx":
+                    tags.scaleX = Number(args) / 100;
                     break;
-                }
-                case "shad": {
-                    const value = Number(args);
-                    if (!Number.isNaN(value)) tags.shadow = value;
+                case "fscy":
+                    tags.scaleY = Number(args) / 100;
                     break;
-                }
+                case "bord":
+                    tags.outline = Number(args);
+                    break;
+                case "shad":
+                    tags.shadow = Number(args);
+                    break;
                 case "blur":
-                case "be": {
-                    const value = Number(args);
-                    if (!Number.isNaN(value)) tags.blur = value;
+                case "be":
+                    tags.blur = Number(args);
                     break;
-                }
+                case "frz":
+                    tags.rotation = Number(args);
+                    break;
                 case "1c":
-                case "2c":
-                case "3c":
-                case "4c":
-                case "c": {
-                    const keyMap = {
-                        "1c": "primaryColour",
-                        "2c": "secondaryColour",
-                        "3c": "outlineColour",
-                        "4c": "shadowColour",
-                        "c": "primaryColour"
-                    };
-                    tags[keyMap[name]] = args;
+                case "c":
+                    tags.primaryColour = args;
                     break;
-                }
-                case "k": {
-                    const value = Number(args);
-                    if (!Number.isNaN(value)) {
-                        tags.karaoke = tags.karaoke || [];
-                        tags.karaoke.push(value);
+                case "2c":
+                    tags.secondaryColour = args;
+                    break;
+                case "3c":
+                    tags.outlineColour = args;
+                    break;
+                case "4c":
+                    tags.shadowColour = args;
+                    break;
+                case "t": {
+                    const values = args.split(",");
+                    if (values.length >= 3) {
+                        tags.transform = {
+                            t1: Number(values[0]) || 0,
+                            t2: Number(values[1]) || 0,
+                            commands: values.slice(2).join(","),
+                        };
                     }
                     break;
                 }
-                default:
+                case "k":
+                case "K":
+                case "kf":
+                case "ko": {
+                    const value = Number(args);
+
+                    if (!Number.isNaN(value)) {
+                        tags.karaoke ??= [];
+                        tags.karaoke.push({
+                            duration: value / 100,
+                            type: name,
+                        });
+                    }
+
                     break;
+                }
             }
         }
     }
@@ -1754,6 +1739,11 @@ eqSliderLink.addEventListener("change", () => {
 
 eqSliderLinkModes.addEventListener("input", () => {
     equalizer.linkType = eqSliderLinkModes.value;
+});
+
+eqSliderLinkQsize.addEventListener("input", () => {
+    equalizer.linkQ = eqSliderLinkQsize.value;
+    eqSliderLinkQsize.dataset.tip = eqSliderLinkQsize.value;
 });
 
 eqPresetSaveBtn.addEventListener("click", async () => {
