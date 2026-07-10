@@ -10,8 +10,11 @@
 
 :root {
     --text-Color: #fff;
-    --act-color: #978fc2;
+    --text-faded: #f5f5f5;
+    --text-muted: rgba(255, 255, 255, 0.6);
+    --text-dim: rgb(185, 185, 185);
 
+    --act-color: #978fc2;
     --success: #6aeb6a;
     --warning: #ebeb6a;
     --error: #eb6a6a;
@@ -19,7 +22,60 @@
     --githubBG: hsla(216, 28%, 7%, 0.8);
     --githubLink: #428eef;
 
-    --borderShadowColorEffect: inset 0 0 0 1px hsla(0, 0%, 90%, 0.3);
+    --gray-800: #111;
+    --gray-700: #1a1a1a;
+    --gray-600: #2a2a2a;
+    --gray-500: #333;
+    --gray-400: #444;
+    --gray-300: #666;
+    --gray-200: #888;
+    --gray-150: #999;
+    --gray-100: #eee;
+
+    --bg-dark: #000;
+    --bg-overlay-dark: hsla(0, 0%, 0%, 0.5);
+    --bg-overlay-light: hsla(0, 0%, 0%, 0.72);
+    --bg-control: hsla(0, 0%, 40%, 0.2);
+    --bg-control-hover: hsla(0, 0%, 77%, 0.2);
+    --bg-select: hsla(0, 0%, 27%, 0.2);
+    --bg-card: rgba(255, 255, 255, 0.06);
+    --bg-topbar: rgba(255, 255, 255, 0.04);
+
+    --border-primary: 1px hsla(0, 0%, 24%, 0.5) solid;
+    --border-color: hsla(0, 0%, 24%, 0.5);
+    --border-card: 1px solid rgba(255, 255, 255, 0.08);
+    --border-effect: inset 0 0 0 1px hsla(0, 0%, 90%, 0.3);
+
+    --backdrop-blur: blur(10px);
+    --box-shadow-window: 0 12px 32px rgba(0, 0, 0, 0.25);
+
+    --transition-fast: 0.1s;
+    --transition-base: 0.2s;
+    --transition-medium: 0.15s ease;
+
+    --spacing-xs: 3px;
+    --spacing-sm: 5px;
+    --spacing-md: 10px;
+    --spacing-lg: 12px;
+
+    --radius-sm: 5px;
+
+    --z-topbar: 2;
+    --z-controls: 1;
+    --z-modal: 1000;
+    --z-tooltip: 9999;
+
+    --window-width-sm: 500px;
+    --window-width-md: 600px;
+    --window-max-height: min(85vh, 680px);
+
+    --state-active-bg: rgba(33, 175, 64, 0.33);
+    --state-error-bg: rgba(175, 33, 64, 0.33);
+    --state-loading-bg: rgba(175, 175, 33, 0.33);
+
+    --button-transition: var(--transition-base);
+    --slider-track-height: 8px;
+    --slider-thumb-size: 16px;
 }
 
 :focus-visible {
@@ -29,7 +85,7 @@
 
 ::selection {
     background: var(--act-color);
-    color: #EEE;
+    color: var(--gray-100);
     text-shadow: none;
 }
 
@@ -42,7 +98,7 @@ body {
     display: flex;
     flex-direction: column;
     height: 100vh;
-    background: #000;
+    background: var(--bg-dark);
     color: var(--text-Color);
 }
 
@@ -58,12 +114,12 @@ body {
 
 #controls {
     position: relative;
-    z-index: 1;
+    z-index: var(--z-controls);
 }
 
 #controls .controls-container {
-    padding: 10px;
-    background: #11111185;
+    padding: var(--spacing-md);
+    background: rgba(17, 17, 17, 0.52);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -71,7 +127,7 @@ body {
 
 .controls-container {
     position: relative;
-    z-index: 2
+    z-index: var(--z-controls);
 }
 
 #wallpaper,
@@ -82,13 +138,14 @@ body {
     height: 100%;
     background-size: 1000px;
     background-position-y: -270px;
-    background-image: url("../Media/PlayerWallpapers/playerWallpaper4.png");
+    /* background-image: url("../Media/PlayerWallpapers/playerWallpaper4.png"); */
     /* background-image: url("../Media/691373.png"); */
     z-index: 0;
     transition: opacity 5s;
 }
 
 .wallpaper1 {
+    background-image: url("../Media/PlayerWallpapers/playerWallpaper4.png");
     opacity: 1;
 }
 
@@ -117,10 +174,10 @@ body {
     position: absolute;
     right: 0;
     top: 0;
-    background: hsla(0, 0%, 0%, 0.5);
-    backdrop-filter: blur(10px);
-    border: 1px hsla(0, 0%, 24%, 0.5) solid;
-    padding: 10px;
+    background: var(--bg-overlay-dark);
+    backdrop-filter: var(--backdrop-blur);
+    border: var(--border-primary);
+    padding: var(--spacing-md);
 }
 
 input[type="file"] {
@@ -130,52 +187,52 @@ input[type="file"] {
 input[type="range"] {
     -webkit-appearance: none;
     appearance: none;
-    margin: 5px;
-    transition: 0.1s;
-    background: #444;
+    margin: var(--spacing-sm);
+    transition: var(--transition-fast);
+    background: var(--gray-400);
 }
 
 input[type="range"].time {
     background: linear-gradient(to right,
-            #888 0%,
-            #888 var(--value),
-            #444 var(--value),
-            #444 100%);
+            var(--gray-200) 0%,
+            var(--gray-200) var(--value),
+            var(--gray-400) var(--value),
+            var(--gray-400) 100%);
 }
 
 input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
-    width: 16px;
-    height: 16px;
-    background: #666;
+    width: var(--slider-thumb-size);
+    height: var(--slider-thumb-size);
+    background: var(--gray-300);
     cursor: pointer;
     margin-top: -4px;
-    transition: 0.1s;
+    transition: var(--transition-fast);
 }
 
 input[type="range"]::-moz-range-thumb {
-    width: 16px;
-    height: 16px;
-    background: #666;
+    width: var(--slider-thumb-size);
+    height: var(--slider-thumb-size);
+    background: var(--gray-300);
     cursor: pointer;
     margin-top: -4px;
-    transition: 0.1s;
+    transition: var(--transition-fast);
 }
 
 input[type="range"]:hover::-webkit-slider-thumb {
-    background: #999;
+    background: var(--gray-150);
 }
 
 input[type="range"]:hover::-moz-range-thumb {
-    background: #999;
+    background: var(--gray-150);
 }
 
 input[type="range"]::-webkit-slider-runnable-track {
-    height: 8px;
+    height: var(--slider-track-height);
 }
 
 input[type="range"]::-moz-range-track {
-    height: 8px;
+    height: var(--slider-track-height);
 }
 
 #loopModeBtn,
@@ -185,10 +242,11 @@ input[type="range"]::-moz-range-track {
 #play-next-button,
 #play-next-random-button,
 .songItemPlayButton,
+.subtitleSelectButton,
 #topListBtn {
     width: 30px;
     height: 30px;
-    margin: 3px;
+    margin: var(--spacing-xs);
     position: relative;
 }
 
@@ -199,6 +257,7 @@ input[type="range"]::-moz-range-track {
 #play-next-button::before,
 #play-next-random-button::before,
 .songItemPlayButton::before,
+.subtitleSelectButton::before,
 #topListBtn::before {
     content: "";
     position: absolute;
@@ -271,24 +330,42 @@ body:has(#pause-play-button[data-state="pause"]) .songItem.active .songItemPlayB
     background-image: url(data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%2224%22%20height=%2224%22%20viewBox=%220%200%2024%2024%22%20fill=%22none%22%20stroke=%22currentColor%22%20stroke-width=%222%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%20class=%22icon%20icon-tabler%20icons-tabler-outline%20icon-tabler-dots%22%3E%3Cpath%20stroke=%22none%22%20d=%22M0%200h24v24H0z%22%20fill=%22none%22%20/%3E%3Cpath%20d=%22M4%2012a1%201%200%201%200%202%200a1%201%200%201%200%20-2%200%22%20/%3E%3Cpath%20d=%22M11%2012a1%201%200%201%200%202%200a1%201%200%201%200%20-2%200%22%20/%3E%3Cpath%20d=%22M18%2012a1%201%200%201%200%202%200a1%201%200%201%200%20-2%200%22%20/%3E%3C/svg%3E);
 }
 
+.subtitleSelectButton::before {
+    content: "";
+    display: grid;
+    place-items: center;
+    font-size: 14px;
+    font-weight: bold;
+    color: rgba(0, 0, 0, 0.6);
+}
+
+.subtitleSelectButton:hover:before {
+    color: rgba(0, 0, 0, 0.6);
+}
+
+.subtitleItem.active .subtitleSelectButton::before {
+    content: "\2713";
+    color: rgb(0, 0, 0);
+}
+
 .button,
 input[type="file"]+label {
     color: var(--text-Color);
     border: none;
-    padding: 3px;
-    background: hsla(0, 0%, 40%, 0.2);
-    backdrop-filter: blur(10px);
-    border: 1px hsla(0, 0%, 24%, 0.5) solid;
-    transition: 0.2s;
+    padding: var(--spacing-xs);
+    background: var(--bg-control);
+    backdrop-filter: var(--backdrop-blur);
+    border: var(--border-primary);
+    transition: var(--transition-base);
 }
 
 .searchBar {
     width: 150px;
-    padding: 3px;
+    padding: var(--spacing-xs);
     box-sizing: border-box;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: rgb(185, 185, 185);
+    color: var(--text-dim);
 }
 
 .searchBar:focus {
@@ -300,18 +377,18 @@ input[type="file"]+label {
     appearance: none;
     width: 20px;
     height: 20px;
-    border: 2px solid #888;
+    border: 2px solid var(--gray-200);
     cursor: pointer;
     position: relative;
-    transition: 0.2s;
+    transition: var(--transition-base);
 }
 
 .checkbox:hover {
-    background-color: #eeeeee3e;
+    background-color: rgba(238, 238, 238, 0.24);
 }
 
 .checkbox:checked {
-    background-color: #eee;
+    background-color: var(--gray-100);
 }
 
 .checkbox:checked::after {
@@ -341,33 +418,33 @@ input[type="file"]+label {
 }
 
 .window-topbar {
-    padding: 0px 10px;
+    padding: 0px var(--spacing-md);
     min-height: 32px;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--spacing-lg);
     touch-action: none;
     user-select: none;
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--bg-topbar);
     font-weight: 600;
-    color: #f5f5f5;
+    color: var(--text-faded);
 }
 
 .movable-window {
     position: fixed;
     max-width: 100%;
-    max-height: min(85vh, 680px);
+    max-height: var(--window-max-height);
     display: flex;
     flex-direction: column;
-    background-color: hsla(0, 0%, 0%, 0.72);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid hsla(0, 0%, 24%, 0.5);
+    background-color: var(--bg-overlay-light);
+    backdrop-filter: var(--backdrop-blur);
+    -webkit-backdrop-filter: var(--backdrop-blur);
+    border: 1px solid var(--border-color);
     box-sizing: border-box;
     overflow: hidden;
-    z-index: 1000;
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
-    color: var(--fade-text-color, #f5f5f5);
+    z-index: var(--z-modal);
+    box-shadow: var(--box-shadow-window);
+    color: var(--fade-text-color, var(--text-faded));
 }
 
 /*------------------------------------------------*/
@@ -383,7 +460,7 @@ input[type="file"]+label {
 #Subtitles,
 #SubtitlesOptions {
     right: 0;
-    width: 500px;
+    width: var(--window-width-sm);
     max-height: calc(100vh - 100px);
     overflow-y: auto;
 }
@@ -397,7 +474,7 @@ input[type="file"]+label {
 /*------------------------------------------------*/
 
 #SubtitleEditorWindow {
-    width: 600px;
+    width: var(--window-width-md);
 }
 
 #SubtitleEditorWindow textarea {
@@ -411,7 +488,7 @@ input[type="file"]+label {
 
 #SubtitlesList,
 #SongList {
-    width: 500px;
+    width: var(--window-width-sm);
     max-height: min(80vh, 520px);
 }
 
@@ -421,43 +498,24 @@ input[type="file"]+label {
     overflow-y: auto;
 }
 
-.SubtitleItem {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-
-    transition: 0.15s ease;
-}
-
-.SubtitleItem>span {
-    text-overflow: ellipsis;
-    overflow: hidden;
-    white-space: nowrap;
-    width: 300px;
-}
-
 /*------------------------------------------------*/
 
 #SongList {
     bottom: 0;
 }
 
-.songItem {
+.cardItem {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 12px;
+    padding: var(--spacing-md) var(--spacing-lg);
     margin-bottom: 8px;
     position: relative;
 
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--bg-card);
+    border: var(--border-card);
 
-    transition: 0.15s ease;
+    transition: var(--transition-medium);
 }
 
 .songItem.active::after {
@@ -470,7 +528,7 @@ input[type="file"]+label {
     background: #0b9b61;
 }
 
-.songItem .songLeft {
+.cardLeft {
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -478,7 +536,12 @@ input[type="file"]+label {
     flex: 1;
 }
 
-.songItem .songTitle {
+.cardRight {
+    display: flex;
+    gap: 6px;
+}
+
+.cardItem .cardTitle {
     font-size: 14px;
     color: white;
 
@@ -487,57 +550,49 @@ input[type="file"]+label {
     text-overflow: ellipsis;
 }
 
-.songItem .songMetadata {
+.cardItem .cardMetadata {
     font-size: 12px;
     color: rgba(255, 255, 255, 0.6);
 }
 
-.songItem .songRight {
-    display: flex;
-    gap: 6px;
+.cardItem.active {
+    background: var(--state-active-bg);
 }
 
-.songItem.active,
-.SubtitleItem.active {
-    background: rgba(33, 175, 64, 0.33);
+.cardItem.error {
+    background: var(--state-error-bg);
 }
 
-.songItem.error,
-.SubtitleItem.error {
-    background: rgba(175, 33, 64, 0.33);
-}
-
-.songItem.loading,
-.SubtitleItem.loading {
-    background: rgba(175, 175, 33, 0.33);
+.cardItem.loading {
+    background: var(--state-loading-bg);
 }
 
 /*------------------------------------------------*/
 
 select {
-    background-color: hsla(0, 0%, 27%, 0.2);
-    backdrop-filter: blur(10px);
-    border: 1px hsla(0, 0%, 24%, 0.5) solid;
+    background-color: var(--bg-select);
+    backdrop-filter: var(--backdrop-blur);
+    border: var(--border-primary);
     color: var(--fade-text-color);
     outline: none;
-    padding: 5px;
+    padding: var(--spacing-sm);
     transition-duration: 300ms;
 }
 
 select option {
-    background: rgb(40, 40, 40);
+    background: var(--gray-600);
     color: white;
 }
 
 select optgroup {
-    background: rgb(19, 19, 19);
+    background: var(--gray-700);
     color: white;
 }
 
 select:hover,
 .button:hover,
 input[type="file"]+label:hover {
-    background: hsla(0, 0%, 77%, 0.2) !important;
+    background: var(--bg-control-hover) !important;
 }
 
 #SongList-Container::-webkit-scrollbar,
@@ -547,35 +602,35 @@ input[type="file"]+label:hover {
 
 #SongList-Container::-webkit-scrollbar-thumb,
 #SubtitlesList-Container::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
+    background: var(--text-muted);
 }
 
 .tooltip {
     position: fixed;
     background: hsla(0, 0%, 12%, 0.5);
-    backdrop-filter: blur(10px);
-    border: 1px hsla(0, 0%, 24%, 0.5) solid;
-    padding: 5px;
+    backdrop-filter: var(--backdrop-blur);
+    border: var(--border-primary);
+    padding: var(--spacing-sm);
     color: white;
-    border-radius: 5px;
+    border-radius: var(--radius-sm);
     white-space: nowrap;
     pointer-events: none;
     opacity: 0;
-    transition: opacity 0.2s;
-    z-index: 9999;
+    transition: opacity var(--transition-base);
+    z-index: var(--z-tooltip);
 }
 
 #tc-confirm {
     position: fixed;
     background: hsla(0, 0%, 12%, 0.5);
-    backdrop-filter: blur(10px);
-    border: 1px hsla(0, 0%, 24%, 0.5) solid;
-    padding: 10px;
+    backdrop-filter: var(--backdrop-blur);
+    border: var(--border-primary);
+    padding: var(--spacing-md);
     color: white;
-    border-radius: 5px;
+    border-radius: var(--radius-sm);
     font-family: system-ui, sans-serif;
     min-width: 160px;
-    z-index: 9999;
+    z-index: var(--z-tooltip);
 
     animation: tc-fade 0.05s ease-out;
 }
@@ -593,12 +648,12 @@ input[type="file"]+label:hover {
 
 .tc-btn {
     font-size: 12px;
-    padding: 4px 10px;
+    padding: 4px var(--spacing-md);
 }
 
 .tc-btn.ok,
 .tc-btn.cancel {
-    backdrop-filter: blur(10px);
+    backdrop-filter: var(--backdrop-blur);
 }
 
 .tc-btn:focus {
@@ -612,13 +667,13 @@ input[type="file"]+label:hover {
     display: flex;
     align-items: center;
     background: hsla(0, 0%, 12%, 0.5);
-    backdrop-filter: blur(10px);
-    padding: 3px;
+    backdrop-filter: var(--backdrop-blur);
+    padding: var(--spacing-xs);
     color: var(--text-Color);
     text-decoration: none;
     font-weight: 500;
     margin: 4px 2px;
-    transition: 0.1s;
+    transition: var(--transition-fast);
 }
 
 .githubProfile:hover {

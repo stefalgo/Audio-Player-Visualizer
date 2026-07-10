@@ -23,28 +23,34 @@
 
 <body>
     <template id="songItemTemplate">
-        <div class="songItem">
-            <div class="songLeft">
-                <span class="songTitle">
+        <div class="cardItem songItem">
+            <div class="cardLeft">
+                <span class="cardTitle">
                     <span class="songName"></span>
-                    <span class="songMetadata songExtension" style="user-select: none;"></span>
+                    <span class="cardMetadata songExtension" style="user-select: none;"></span>
                 </span>
 
-                <span class="songMetadata songInfo"></span>
+                <span class="cardMetadata songInfo"></span>
             </div>
 
-            <div class="songRight">
+            <div class="cardRight">
                 <button class="button songItemPlayButton" style="margin: 5px;"></button>
                 <button class="button songItemDeleteButton" style="margin: 5px;">Remove</button>
             </div>
         </div>
     </template>
     <template id="subtitleItemTemplate">
-        <div class="SubtitleItem">
-            <span class="subtitleTitle" style="margin: 5px; background-color: #0000003b;"></span>
+        <div class="cardItem subtitleItem">
+            <div class="cardLeft">
+                <span class="cardTitle">
+                    <span class="subtitleTitle"></span>
+                    <span class="cardMetadata subtitleExtension" style="user-select: none;"></span>
+                </span>
 
-            <div class="subtitleButtons">
-                <button class="button subtitleSelectButton" style="margin: 5px;">Select</button>
+                <span class="cardMetadata subInfo"></span>
+            </div>
+            <div class="cardRight">
+                <button class="button subtitleSelectButton" style="margin: 5px;"></button>
                 <button class="button subtitleDeleteButton" style="margin: 5px;">Remove</button>
             </div>
         </div>

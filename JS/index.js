@@ -1,3 +1,7 @@
+// It is a total mess :) pls prepare mentally before proceeding
+// at least i tried my best
+// pls dont judge me
+
 //import { RenderHandler } from "./RenderVis"
 const canvas = document.getElementById('visualizer');
 const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -24,13 +28,8 @@ const controlsEl = document.getElementById('controls');
 const subtitleTextEl = document.getElementById('subtitleText');
 const subtitleStyleCheckbox = document.getElementById('subtitlePlainStyle');
 const songListTotalPlayTimeText = document.getElementById('songList-totalPlayTime');
-const SAMPLE_BYTES = 64 * 1024;
-// It is a total mess :) pls prepare mentally before proceeding
-// at least i tried my best
-// pls dont judge me
-// Make sure this error stays at line 32
-console.error("Roses are Red, Violets are Blue \n Unexpected '{' on line 32");
 
+console.error("Roses are Red, Violets are Blue \n Unexpected '{' on line 32");
 const songItemTemplate = document.getElementById('songItemTemplate');
 const subtitleItemTemplate = document.getElementById('subtitleItemTemplate');
 
@@ -49,6 +48,8 @@ window.prompt = function (
 ) {
     return TooltipDialog.prompt(targetEl, message, defaultValue);
 };
+
+const SAMPLE_BYTES = 64 * 1024;
 
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
@@ -158,6 +159,10 @@ const renderHandler = new RenderHandler(canvas, ctx, audioCtx, {
 });
 
 const equalizer = new CanvasEQ(document.getElementById('eq'), EQ_BANDS, 12);
+
+const languageNames = new Intl.DisplayNames(["en"], {
+    type: "language",
+});
 
 //const subtitleEditor = new SubtitleEditor("SubtitleEditorWindow");
 
@@ -310,6 +315,36 @@ function updateTotalDurationText() {
     songListTotalPlayTimeText.innerHTML = `Total: ${formatTime(totalDuration, '{hh}:{mm}:{ss}')} | Avg: ${formatTime(avgTime, '{hh}:{mm}:{ss}')}`;
 }
 
+function getLanguage(fileName) {
+    const match = fileName.match(/\.([^.]+)\.vtt$/i);
+    if (!match) return "Other";
+
+    const tag = match[1];
+
+    const validTag = /^[a-z]{2,3}(?:-[A-Z]{2}|-[A-Z][a-z]{3}|-[a-z]{4})?$/;
+    if (!validTag.test(tag)) return tag;
+
+    try {
+        return languageNames.of(tag);
+    } catch {
+        return "Other";
+    }
+}
+
+function getSubtitleMimeType(filename) {
+    const mime = {
+        vtt: "text/vtt",
+        srt: "text/plain",
+        ass: "text/plain",
+        ssa: "text/plain",
+        srv1: "application/xml",
+        srv2: "application/xml",
+        srv3: "application/xml",
+        ttml: "application/ttml+xml",
+    };
+    return mime[filename.split(".").pop().toLowerCase()] ?? "text/plain";
+}
+
 //----------------------------------------------------------------------------------------------------------------------
 
 // fingerprint files
@@ -422,17 +457,24 @@ function addSubtitleFilesToList(filesSelected) {
         }
 
         const clone = subtitleItemTemplate.content.cloneNode(true);
-        const subDiv = clone.querySelector('.SubtitleItem');
+        const subDiv = clone.querySelector('.subtitleItem');
         const title = clone.querySelector('.subtitleTitle');
+        const extension = clone.querySelector('.subtitleExtension');
+        const metadata = clone.querySelector('.subInfo');
         const selectButton = clone.querySelector('.subtitleSelectButton');
         const deleteButton = clone.querySelector('.subtitleDeleteButton');
+        const fileName = file.name.replace(/\.[^/.]+$/, "");
+        const fileExt = file.name.replace(/^.*\./, "");
 
         subDiv.dataset.fileName = file._fingerprint;
-        title.textContent = file.title;
-        title.dataset.tip = file.title;
+        title.textContent = fileName;
+        title.dataset.tip = fileName;
+        extension.textContent = `.${fileExt}`;
+
+        metadata.textContent = `UID=${file._fingerprint} | Type="${file._type}" | ${file._language}`;
 
         selectButton.addEventListener('click', () => {
-            selectedSubtitle = file._fingerprint;
+            selectedSubtitle = selectedSubtitle === file._fingerprint ? "" : file._fingerprint;
         });
 
         deleteButton.addEventListener('click', async () => {
@@ -518,7 +560,7 @@ function parseWebVTT(text) {
             txt.push(lines[i]);
             i++;
         }
-        let content = txt.join("\n");
+        let content = txt.join("<br>");
         out.push({
             start: timeToSeconds(start),
             end: timeToSeconds(end),
@@ -856,16 +898,19 @@ async function loadSubtitles(files) {
     for (const file of files) {
         file._fingerprint = await fileFingerprint(file);
 
-        const title = file.name;
+        const name = file.name;
         if (subtitleList.some(s => s._fingerprint === file._fingerprint)) {
-            console.warn(`Subtitle file "${title}" already exists. Skipping duplicate.`);
+            console.warn(`Subtitle file "${name}" already exists. Skipping duplicate.`);
             continue;
         }
+
+        file._type = getSubtitleMimeType(name);
+        file._language = `language/${getLanguage(name)}`;
 
         const text = await file.text();
         let subs = [];
         let assOptions = null;
-        const lowerName = file.name.toLowerCase();
+        const lowerName = name.toLowerCase();
         const trimmed = text.trimStart();
         if (trimmed.startsWith("WEBVTT")) {
             subs = parseWebVTT(text);
@@ -885,7 +930,9 @@ async function loadSubtitles(files) {
 
         const subtitleData = {
             _fingerprint: file._fingerprint,
-            title,
+            _type: file._type,
+            _language: file._language,
+            name,
             subs,
             ...(assOptions && { assOptions })
         };
@@ -944,7 +991,7 @@ function getSubtitle(file) {
     if (a.length === 0) return "NO_SUB";
 
     for (const entry of subtitleList) {
-        const rawTitle = entry.title || '';
+        const rawTitle = entry.name || '';
         const cleaned = normalizeForCompare(rawTitle, { isSubtitle: true });
         const b = cleaned.split(" ").filter(Boolean);
 
@@ -965,43 +1012,48 @@ function getSubtitle(file) {
     if (bestScore < 0.5 || !bestFp) return "NO_SUB";
 
     const found = subtitleList.find(e => e._fingerprint === bestFp);
-    console.log("Found subtitle :", found ? found.title : bestFp, bestScore, bestFp);
+    console.log("Found subtitle :", found ? found.name : bestFp, bestScore, bestFp);
     return bestFp;
 }
 
 //selectedSubtitle = _fingerprint
 function showSubtitle(timeSeconds, selectedSubtitle) {
     const h3 = subtitleTextEl;
-    timeSeconds += Number(subtitleOffsetInput.value || 0) / 1000;
+    timeSeconds -= Number(subtitleOffsetInput.value || 0) / 1000;
     const entry = subtitleList.find(e => e._fingerprint === selectedSubtitle);
     const titleEl = document.getElementById("subtitle-title");
+
     if (!entry || !entry.subs?.length) {
-        h3.innerHTML = "No subtitles";
-        document.getElementById("subtitle-title").innerText = "字幕 - No subtitles";
-        titleEl.dataset.tip = "字幕 - No subtitles";
-        document.querySelectorAll('.SubtitleItem').forEach(el => {
-            el.classList.remove('active');
-        });
+        if (h3.innerHTML !== "") {
+            h3.innerHTML = "";
+        }
+        const title = "字幕 - No subtitles";
+        if (titleEl.innerText !== title) {
+            titleEl.innerText = title;
+            titleEl.dataset.tip = title;
+            document.querySelectorAll('.subtitleItem').forEach(el => {
+                el.classList.remove('active');
+            });
+        }
         return null;
     }
+
     const subs = entry.subs;
-    const titleText = `字幕 - ${entry.title || entry._fingerprint}`;
-    if (h3.textContent !== stripTags(titleText)) {
+    const titleText = `字幕 - ${entry.name || entry._fingerprint}`;
+
+    if (titleEl.textContent !== titleText) {
         titleEl.innerText = titleText;
         titleEl.dataset.tip = titleText;
-
-        document.querySelectorAll('.SubtitleItem').forEach(el => {
+        document.querySelectorAll('.subtitleItem').forEach(el => {
             el.classList.toggle(
                 'active',
-                el.dataset.fileName === entry?._fingerprint
+                el.dataset.fileName === entry._fingerprint
             );
         });
     }
 
     let i = subtitleLastIndex || 0;
-
     if (i >= subs.length) i = 0;
-
     for (let j = 0; j < subs.length; j++) {
         const s = subs[i];
         if (timeSeconds >= s.start && timeSeconds <= s.end) {
@@ -1010,14 +1062,16 @@ function showSubtitle(timeSeconds, selectedSubtitle) {
             if (h3.textContent !== stripTags(text)) {
                 h3.innerHTML = text;
             }
-            h3.style.display = "block";
-
+            if (h3.style.display !== "block") {
+                h3.style.display = "block";
+            }
             return s.text;
         }
         i = (i + 1) % subs.length;
     }
-
-    h3.innerHTML = "";
+    if (h3.innerHTML !== "") {
+        h3.innerHTML = "";
+    }
     return null;
 }
 
@@ -1797,7 +1851,7 @@ document.getElementById("songSearch").addEventListener("input", () => {
 });
 
 document.getElementById("subSearch").addEventListener("input", () => {
-    const subItems = document.querySelectorAll(".SubtitleItem");
+    const subItems = document.querySelectorAll(".subtitleItem");
     const searchTerm = subSearch.value.toLowerCase().trim();
     const matchingFingerprints = subtitleList.filter(sub => sub.title.toLowerCase().includes(searchTerm)).map(sub => sub._fingerprint);
 
