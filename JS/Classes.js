@@ -195,6 +195,7 @@ class MovableWindow {
     constructor(win) {
         this.win = win;
         this.bar = win.querySelector(".window-topbar");
+        this.onFocusCallback = null;
 
         if (!this.bar) return;
 
@@ -205,11 +206,17 @@ class MovableWindow {
         this.win.style.position = "absolute";
         this.bar.style.cursor = "grab";
 
+        this.win.addEventListener("pointerdown", this.onFocus);
+
         this.bar.addEventListener("pointerdown", this.onPointerDown);
         window.addEventListener("pointermove", this.onPointerMove);
         window.addEventListener("pointerup", this.onPointerUp);
         window.addEventListener("pointercancel", this.onPointerUp);
     }
+
+    onFocus = () => {
+        this.onFocusCallback?.(this);
+    };
 
     onPointerDown = (e) => {
         e.preventDefault();
@@ -222,6 +229,8 @@ class MovableWindow {
         const computed = window.getComputedStyle(this.win);
         const right = computed.right !== "auto";
         const bottom = computed.bottom !== "auto";
+
+        this.onFocus();
 
         if (right || bottom) {
             this.win.style.left = rect.left + "px";

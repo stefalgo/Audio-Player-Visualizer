@@ -200,41 +200,47 @@ const languageNames = new Intl.DisplayNames(["en"], {
 function buildEffectsUI() {
     effectsContainer.innerHTML = "";
     effectChain.forEach(({ name, effect }) => {
-        if (name === "eq") return;
+        if (!effect.getControls) return;
         const controls = effect.getControls();
         const label = document.createElement("label");
         label.className = "effectItem";
         controls.forEach(control => {
-            switch (control.type) {
-                case "checkbox": {
-                    const checkbox = document.createElement("input");
-                    checkbox.type = "checkbox";
-                    checkbox.className = "checkbox";
-                    checkbox.checked = control.value;
-                    checkbox.addEventListener("change", () =>
-                        control.onChange(checkbox.checked)
-                    );
-                    label.appendChild(checkbox);
-                    break;
-                }
-                case "slider": {
-                    const text = document.createElement("span");
-                    text.textContent = name;
-                    const slider = document.createElement("input");
-                    slider.type = "range";
-                    slider.className = "slider";
-                    slider.min = control.min;
-                    slider.max = control.max;
-                    slider.step = control.step;
-                    slider.value = control.value;
-                    slider.dataset.tip = control.value;
-                    slider.addEventListener("input", () => {
-                        control.onChange(Number(slider.value));
-                        slider.dataset.tip = slider.value;
-                    });
-                    label.append(text, slider);
-                    break;
-                }
+            if (control.type === "checkbox") {
+                const checkbox = document.createElement("input");
+                checkbox.type = "checkbox";
+                checkbox.className = "checkbox";
+                checkbox.checked = control.value;
+                checkbox.addEventListener("change", () =>
+                    control.onChange(checkbox.checked)
+                );
+                const text = document.createElement("span");
+                text.textContent = control.label;
+                label.append(
+                    checkbox,
+                    text
+                );
+            }
+
+            if (control.type === "slider") {
+                const text = document.createElement("span");
+                text.textContent = control.label;
+                const slider = document.createElement("input");
+                slider.type = "range";
+                slider.className = "slider";
+                slider.min = control.min;
+                slider.max = control.max;
+                slider.step = control.step;
+                slider.value = control.value;
+                slider.dataset.tip = control.value;
+                slider.addEventListener("input", () => {
+                    const value = Number(slider.value);
+                    control.onChange(value);
+                    slider.dataset.tip = value;
+                });
+                label.append(
+                    text,
+                    slider
+                );
             }
         });
         effectsContainer.appendChild(label);
@@ -278,6 +284,10 @@ function setupEffects() {
             2.5,
             3
         )
+    );
+    effectChain.add(
+        "compressor",
+        new CompressorEffect(audioCtx)
     );
     effectChain.connectOutput();
     createAnalyser(effectChain.output);
@@ -1822,6 +1832,15 @@ eqPresetSaveBtn.addEventListener("click", async () => {
         .replace(/\s+/g, "_")
         .replace(/[^\p{L}\p{N}_-]/gu, "")
         .slice(0, 50);
+
+    if (user_eq_presets[name]) {
+        const ok = await confirm(
+            `「${name}」プリセットを上書きしますか？`,
+            eqPresetSaveBtn,
+            1
+        );
+        if (!ok) return;
+    }
     saveEQPreset(name, values);
     eqPresetsDropdown();
     const option = [...eqPresetSelect.options].find(o => o.text === name);
@@ -1947,10 +1966,26 @@ equalizer.onChange(data => {
     });
 });
 //----------------------------------------------------------------------------------------------------------------------
+function createFocusHandler(movableWindows) {
+    return function focusWindow(window) {
+        const index = movableWindows.indexOf(window);
+        movableWindows.splice(index, 1);
+        movableWindows.push(window);
+        movableWindows.forEach((w, i) => {
+            w.win.style.zIndex = 1000 + i;
+        });
+    };
+}
+
 
 document.addEventListener('DOMContentLoaded', () => {
     const tooltips = new TooltipManager();
     const movableWindows = [...document.querySelectorAll(".movable-window")].map(win => new MovableWindow(win));
+    // const focusWindow = createFocusHandler(movableWindows);
+    // movableWindows.forEach(win => {
+    //     win.onFocusCallback = focusWindow;
+    // });
+
     const playModeToggle = new LoopToggle(
         document.getElementById("playModeBtn"),
         ["none", "playList", "random"],
