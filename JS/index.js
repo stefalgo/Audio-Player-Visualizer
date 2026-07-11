@@ -143,7 +143,7 @@ let user_eq_presets = JSON.parse(localStorage.getItem("USER_EQ_PRESETS") || "{}"
 
 let analyser, analyserL, analyserR, dataL, dataR;
 let source, gainNode, buffer, startTime;
-let eqFilters = [];
+let effectChain = null;
 let eqState = EQ_BANDS.map(() => 0);
 let files = [];
 let subtitleList = []; // {_fingerprint, title, subs}
@@ -194,6 +194,47 @@ const languageNames = new Intl.DisplayNames(["en"], {
 //const subtitleEditor = new SubtitleEditor("SubtitleEditorWindow");
 
 //------------------------------------------------------------------------------------------------
+function createAnalyser(node) {
+    if (analyser) {
+        try {
+            analyser.disconnect();
+        } catch { }
+    }
+    ({ analyserL, analyserR, dataL, dataR } = createSplitAnalyser(
+        node,
+        analyserffsize,
+        analyserSmoothing
+    ));
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = analyserffsize;
+    analyser.smoothingTimeConstant = analyserSmoothing;
+    node.connect(analyser);
+    analyser.connect(audioCtx.destination);
+    freqData = new Uint8Array(analyser.frequencyBinCount);
+    freqDataFloat = new Float32Array(analyser.frequencyBinCount);
+    timeData = new Uint8Array(analyser.fftSize);
+}
+
+function setupEffects() {
+    effectChain = new EffectChain(audioCtx);
+    effectChain.add(
+        "eq",
+        new EqualizerEffect(
+            audioCtx,
+            EQ_BANDS
+        )
+    );
+    // effectChain.add(
+    //     "reverb",
+    //     new ReverbEffect(
+    //         audioCtx,
+    //         2.5,
+    //         3
+    //     )
+    // );
+    effectChain.connectOutput();
+    createAnalyser(effectChain.output);
+}
 
 function getElapsedTime() {
     if (!audioCtx || !buffer) return 0;
@@ -417,12 +458,6 @@ function cleanupGraph() {
         try { source.stop(); } catch { }
         try { source.disconnect(); } catch { }
         source = null;
-    }
-    if (eqFilters.length) {
-        eqFilters.forEach(f => {
-            try { f.disconnect(); } catch { }
-        });
-        eqFilters = [];
     }
     if (playbackHPFilter) {
         try { playbackHPFilter.disconnect(); } catch { }
@@ -1124,25 +1159,6 @@ function createSplitAnalyser(sourceNode, fftSize = 1024, smoothing = 0) {
     return { analyserL, analyserR, dataL, dataR };
 }
 
-function createAnalyser(node) {
-    ({ analyserL, analyserR, dataL, dataR } = createSplitAnalyser(node, analyserffsize, analyserSmoothing));
-
-    analyser = audioCtx.createAnalyser();
-
-    analyser.fftSize = analyserffsize;
-    analyser.smoothingTimeConstant = analyserSmoothing;
-
-    //analyser.minDecibels = -90;
-    //analyser.maxDecibels = -20;
-
-    node.connect(analyser);
-    analyser.connect(audioCtx.destination);
-
-    freqData = new Uint8Array(analyser.frequencyBinCount);
-    freqDataFloat = new Float32Array(analyser.frequencyBinCount);
-    timeData = new Uint8Array(analyser.fftSize);
-}
-
 function updateAnalyser() {
     freqData = new Uint8Array(analyser.frequencyBinCount);
     freqDataFloat = new Float32Array(analyser.frequencyBinCount);
@@ -1165,18 +1181,7 @@ function playFrom(offset) {
     gainNode = audioCtx.createGain();
     gainNode.gain.value = volume;
 
-    eqFilters = EQ_BANDS.map((freq, i) => {
-        const f = audioCtx.createBiquadFilter();
-        f.type = 'peaking';
-        f.frequency.value = freq;
-        f.Q.value = 4.3;
-        f.gain.value = eqState[i];
-        return f;
-    });
-
     source.connect(gainNode);
-    let node = gainNode;
-    eqFilters.forEach(filt => { node.connect(filt); node = filt; });
 
     // some testing stuff
     // if (playbackLowFreq && playbackLowFreq > 0) {
@@ -1194,7 +1199,7 @@ function playFrom(offset) {
     //     node = playbackLPFilter;
     // }
 
-    createAnalyser(node);
+    effectChain.connectInput(gainNode);
 
     startTime = audioCtx.currentTime - (offset / Math.max(0.0001, playbackRate));
     source.start(0, offset);
@@ -1883,13 +1888,12 @@ document.querySelectorAll(".searchBar").forEach(searchBar => {
 });
 
 equalizer.onChange(data => {
+    const eq = effectChain.get("eq");
     data.forEach((band, i) => {
         eqState[i] = band.gain;
-        const filter = eqFilters.find(f => f.frequency.value === band.freq);
-        if (filter) filter.gain.value = band.gain;
+        eq.setBand(i, band.gain);
     });
 });
-
 //----------------------------------------------------------------------------------------------------------------------
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -2008,6 +2012,7 @@ document.addEventListener('DOMContentLoaded', () => {
     eqPresetsDropdown();
     resizeCanvas();
     volumeChanged();
+    setupEffects();
 
     audioCtx?.suspend();
 
