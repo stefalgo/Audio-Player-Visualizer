@@ -59,6 +59,9 @@ const subtitlesList = document.getElementById("subtitlesList");
 const songSearch = document.getElementById("songSearch");
 const subSearch = document.getElementById("subSearch");
 const eqSliderLinkQsize = document.getElementById("eqSliderLinkQsize");
+const effectsContainer = document.getElementById("effectsContainer");
+const otherEffectsBtn = document.getElementById("otherEffectsBtn");
+const otherEffectsDiv = document.getElementById("otherEffects");
 
 window.alert = async function (message, targetEl) {
     await TooltipDialog.info(targetEl, message);
@@ -194,6 +197,50 @@ const languageNames = new Intl.DisplayNames(["en"], {
 //const subtitleEditor = new SubtitleEditor("SubtitleEditorWindow");
 
 //------------------------------------------------------------------------------------------------
+function buildEffectsUI() {
+    effectsContainer.innerHTML = "";
+    effectChain.forEach(({ name, effect }) => {
+        if (name === "eq") return;
+        const controls = effect.getControls();
+        const label = document.createElement("label");
+        label.className = "effectItem";
+        controls.forEach(control => {
+            switch (control.type) {
+                case "checkbox": {
+                    const checkbox = document.createElement("input");
+                    checkbox.type = "checkbox";
+                    checkbox.className = "checkbox";
+                    checkbox.checked = control.value;
+                    checkbox.addEventListener("change", () =>
+                        control.onChange(checkbox.checked)
+                    );
+                    label.appendChild(checkbox);
+                    break;
+                }
+                case "slider": {
+                    const text = document.createElement("span");
+                    text.textContent = name;
+                    const slider = document.createElement("input");
+                    slider.type = "range";
+                    slider.className = "slider";
+                    slider.min = control.min;
+                    slider.max = control.max;
+                    slider.step = control.step;
+                    slider.value = control.value;
+                    slider.dataset.tip = control.value;
+                    slider.addEventListener("input", () => {
+                        control.onChange(Number(slider.value));
+                        slider.dataset.tip = slider.value;
+                    });
+                    label.append(text, slider);
+                    break;
+                }
+            }
+        });
+        effectsContainer.appendChild(label);
+    });
+}
+
 function createAnalyser(node) {
     if (analyser) {
         try {
@@ -224,16 +271,18 @@ function setupEffects() {
             EQ_BANDS
         )
     );
-    // effectChain.add(
-    //     "reverb",
-    //     new ReverbEffect(
-    //         audioCtx,
-    //         2.5,
-    //         3
-    //     )
-    // );
+    effectChain.add(
+        "reverb",
+        new ReverbEffect(
+            audioCtx,
+            2.5,
+            3
+        )
+    );
     effectChain.connectOutput();
     createAnalyser(effectChain.output);
+
+    buildEffectsUI();
 }
 
 function getElapsedTime() {
@@ -1722,12 +1771,15 @@ eqBtn.addEventListener("click", () => {
 });
 
 subBtn.addEventListener("click", () => {
-    subtitlesDiv.style.display =
-        subtitlesDiv.style.display === "none" ? "block" : "none";
+    subtitlesDiv.style.display = subtitlesDiv.style.display === "none" ? "block" : "none";
 });
 
 subOptionsBtn.addEventListener("click", () => {
     subtitlesOptionsDiv.style.display = subtitlesOptionsDiv.style.display === "none" ? "block" : "none";
+});
+
+otherEffectsBtn.addEventListener("click", () => {
+    otherEffectsDiv.style.display = otherEffectsDiv.style.display === "none" ? "block" : "none";
 });
 
 eqResetBtn.addEventListener("click", () => {
@@ -1970,7 +2022,7 @@ document.addEventListener('DOMContentLoaded', () => {
         {
             src: "./Media/PlayerWallpapers/playerWallpaper3.jpg",
             size: "1300px",
-            offset: "-300px"
+            offset: "-100px"
         },
         {
             src: "./Media/PlayerWallpapers/playerWallpaper4.png",

@@ -375,8 +375,8 @@ input[type="file"]+label {
 
 .checkbox {
     appearance: none;
-    width: 20px;
-    height: 20px;
+    min-width: 20px;
+    min-height: 20px;
     border: 2px solid var(--gray-200);
     cursor: pointer;
     position: relative;
@@ -453,6 +453,25 @@ input[type="file"]+label {
     right: 0;
     bottom: 0;
     overflow-y: auto;
+}
+
+/*------------------------------------------------*/
+
+#otherEffects {
+    right: 0;
+    bottom: 0;
+    overflow-y: auto;
+    width: 400px;
+}
+
+.effectItem {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.effectItem .slider {
+    width: 100%;
 }
 
 /*------------------------------------------------*/

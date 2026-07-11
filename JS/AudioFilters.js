@@ -47,7 +47,6 @@ class EffectChain {
         return effect;
     }
 
-
     get(name) {
         return this.effects.find(e => e.name === name)?.effect ?? null;
     }
@@ -62,6 +61,14 @@ class EffectChain {
 
     connectInput(node) {
         node.connect(this.input);
+    }
+
+    forEach(callback) {
+        this.effects.forEach(callback);
+    }
+
+    [Symbol.iterator]() {
+        return this.effects.values();
     }
 
     destroy() {
@@ -92,13 +99,11 @@ class EqualizerEffect extends AudioEffect {
         node.connect(this.output);
     }
 
-
     setBand(index, gain) {
         if (this.filters[index]) {
             this.filters[index].gain.value = gain;
         }
     }
-
 
     destroy() {
         this.filters.forEach(filter => {
@@ -128,12 +133,13 @@ class ReverbEffect extends AudioEffect {
         this.input.connect(this.convolver);
         this.convolver.connect(this.reverbGain);
         this.reverbGain.connect(this.output);
+
+        this.enabled = false;
+        this.amount = 50;
     }
 
     createImpulseResponse(ctx, duration, decay) {
         const length = ctx.sampleRate * duration;
-
-
         const impulse = ctx.createBuffer(
             2,
             length,
@@ -153,8 +159,33 @@ class ReverbEffect extends AudioEffect {
     }
 
     setAmount(percent) {
-        this.reverbGain.gain.value = Math.max(0, Math.min(100, percent)) / 100;
+        this.amount = percent;
+        if (this.enabled) {
+            this.reverbGain.gain.value = percent / 100;
+        }
+    }
 
+    setEnabled(enabled) {
+        this.enabled = enabled;
+        this.reverbGain.gain.value = enabled ? this.amount / 100 : 0;
+    }
+
+    getControls() {
+        return [
+            {
+                type: "checkbox",
+                value: this.enabled,
+                onChange: value => this.setEnabled(value)
+            },
+            {
+                type: "slider",
+                min: 0,
+                max: 100,
+                step: 1,
+                value: this.amount,
+                onChange: value => this.setAmount(value)
+            }
+        ];
     }
 
     destroy() {
