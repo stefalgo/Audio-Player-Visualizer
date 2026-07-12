@@ -285,10 +285,6 @@ function setupEffects() {
             3
         )
     );
-    effectChain.add(
-        "compressor",
-        new CompressorEffect(audioCtx)
-    );
     effectChain.connectOutput();
     createAnalyser(effectChain.output);
 
