@@ -1973,6 +1973,22 @@ function createFocusHandler(movableWindows) {
     };
 }
 
+// function isBrowserFullscreen() {
+//     return (
+//         window.innerWidth === screen.width &&
+//         window.innerHeight === screen.height
+//     );
+// }
+// const showControlsBtn = document.getElementById('showControlsBtn');
+// window.addEventListener("resize", () => {
+//     if (isBrowserFullscreen()) {
+//         controlsEl.classList.add("hidden");
+//         showControlsBtn.hidden = false;
+//     } else {
+//         controlsEl.classList.remove("hidden");
+//         showControlsBtn.hidden = true;
+//     }
+// });
 
 document.addEventListener('DOMContentLoaded', () => {
     const tooltips = new TooltipManager();
