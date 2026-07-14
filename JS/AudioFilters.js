@@ -43,7 +43,6 @@ class EffectChain {
             name,
             effect
         });
-        effect.output.disconnect();
         return effect;
     }
 
@@ -192,6 +191,50 @@ class ReverbEffect extends AudioEffect {
     destroy() {
         try { this.convolver.disconnect(); } catch { }
         try { this.reverbGain.disconnect(); } catch { }
+        super.destroy();
+    }
+}
+
+class CompressorEffect extends AudioEffect {
+    constructor(ctx) {
+        super(ctx);
+
+        this.compressor = ctx.createDynamicsCompressor();
+        this.compressor.threshold.value = -12;
+        this.compressor.knee.value = 20;
+        this.compressor.ratio.value = 8;
+        this.compressor.attack.value = 0.003;
+        this.compressor.release.value = 0.25;
+
+        this.enabled = true;
+        this.setEnabled(this.enabled);
+    }
+
+    setEnabled(enabled) {
+        this.enabled = enabled;
+        this.input.disconnect();
+        this.compressor.disconnect();
+        if (enabled) {
+            this.input.connect(this.compressor);
+            this.compressor.connect(this.output);
+        } else {
+            this.input.connect(this.output);
+        }
+    }
+
+    getControls() {
+        return [
+            {
+                type: "checkbox",
+                label: "Compressor",
+                value: this.enabled,
+                onChange: value => this.setEnabled(value)
+            }
+        ];
+    }
+
+    destroy() {
+        try { this.compressor.disconnect(); } catch { }
         super.destroy();
     }
 }

@@ -278,6 +278,10 @@ function setupEffects() {
         )
     );
     effectChain.add(
+        "compressor",
+        new CompressorEffect(audioCtx)
+    );
+    effectChain.add(
         "reverb",
         new ReverbEffect(
             audioCtx,
@@ -285,6 +289,7 @@ function setupEffects() {
             3
         )
     );
+
     effectChain.connectOutput();
     createAnalyser(effectChain.output);
 
@@ -1237,6 +1242,16 @@ function playFrom(offset) {
     gainNode.gain.value = volume;
 
     source.connect(gainNode);
+    //------------------------------------------------------------
+    // const compressor = audioCtx.createDynamicsCompressor();
+    // compressor.threshold.value = -12;
+    // compressor.knee.value = 20;
+    // compressor.ratio.value = 8;
+    // compressor.attack.value = 0.003;
+    // compressor.release.value = 0.25;
+    // source.connect(gainNode);
+    // gainNode.connect(compressor);
+    //------------------------------------------------------------
 
     // some testing stuff
     // if (playbackLowFreq && playbackLowFreq > 0) {
@@ -1255,6 +1270,7 @@ function playFrom(offset) {
     // }
 
     effectChain.connectInput(gainNode);
+    //effectChain.connectInput(compressor);
 
     startTime = audioCtx.currentTime - (offset / Math.max(0.0001, playbackRate));
     source.start(0, offset);
