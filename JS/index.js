@@ -62,6 +62,7 @@ const eqSliderLinkQsize = document.getElementById("eqSliderLinkQsize");
 const effectsContainer = document.getElementById("effectsContainer");
 const otherEffectsBtn = document.getElementById("otherEffectsBtn");
 const otherEffectsDiv = document.getElementById("otherEffects");
+const eqMaxDbInput = document.getElementById("eqMaxDbInput");
 
 window.alert = async function (message, targetEl) {
     await TooltipDialog.info(targetEl, message);
@@ -1968,6 +1969,16 @@ document.querySelectorAll(".searchBar").forEach(searchBar => {
     searchBar.addEventListener("keydown", e => {
         if (e.key === "Enter") e.target.blur();
     });
+});
+
+eqMaxDbInput.addEventListener("change", () => {
+    const min = Number(eqMaxDbInput.min);
+    const max = Number(eqMaxDbInput.max);
+    let value = Number(eqMaxDbInput.value);
+    if (Number.isNaN(value)) return;
+    value = Math.max(min, Math.min(max, value));
+    eqMaxDbInput.value = value;
+    equalizer.range = value;
 });
 
 equalizer.onChange(data => {

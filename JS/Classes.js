@@ -491,13 +491,17 @@ class CanvasEQ {
     get centerIndex() { return this.range; }
 
     gainToY(g) {
-        const mid = this.height / 2;
-        return mid - (g / this.range) * (this.sliderH / 2);
+        const leds = this.leds;
+        const step = this.sliderH / leds;
+        const index = this.centerIndex - g;
+        return this.top() + index * step + step / 2;
     }
 
     yToGain(y) {
-        const mid = this.height / 2;
-        return -((y - mid) / (this.sliderH / 2)) * this.range;
+        const leds = this.leds;
+        const step = this.sliderH / leds;
+        const index = Math.round((y - this.top() - step / 2) / step);
+        return this.centerIndex - index;
     }
 
     formatFreq(f) {

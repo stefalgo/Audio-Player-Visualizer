@@ -89,7 +89,7 @@ class EqualizerEffect extends AudioEffect {
             const filter = ctx.createBiquadFilter();
             filter.type = "peaking";
             filter.frequency.value = freq;
-            filter.Q.value = 4.3;
+            filter.Q.value = 2;
             filter.gain.value = gains[i] ?? 0;
             node.connect(filter);
             node = filter;
