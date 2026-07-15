@@ -468,14 +468,16 @@ class RetroRenderer extends Renderer {
 
         ctx.clearRect(0, 0, cw, ch);
 
+        const TARGET_LED_HEIGHT = 10;
+
         const BANDS = this.config.retroCenterFreqs.length;
-        const LEDS = 50;
+        const headerH = 22;
+        const ledAreaH = ch - headerH;
+        const LEDS = Math.max(20, Math.floor(ledAreaH / TARGET_LED_HEIGHT));
         const nyquist = analyser.context.sampleRate / 2;
         const moduleW = cw / BANDS;
         const padX = 10;
-        const headerH = 22;
         const dBGutter = 30;
-        const ledAreaH = ch - headerH;
         const ledH = ledAreaH / LEDS;
         if (!this.peakHold) this.peakHold = new Array(BANDS).fill(0);
 

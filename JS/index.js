@@ -63,6 +63,7 @@ const effectsContainer = document.getElementById("effectsContainer");
 const otherEffectsBtn = document.getElementById("otherEffectsBtn");
 const otherEffectsDiv = document.getElementById("otherEffects");
 const eqMaxDbInput = document.getElementById("eqMaxDbInput");
+const canvasContainer = document.getElementById("canvasContainer");
 
 window.alert = async function (message, targetEl) {
     await TooltipDialog.info(targetEl, message);
@@ -1192,10 +1193,10 @@ function forceFindSub() {
 //----------------------------------------------------------------------------------------------------------------------
 
 function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight - (controlsEl ? controlsEl.offsetHeight : 0);
+    const rect = canvasContainer.getBoundingClientRect();
+    canvas.width = Math.round(rect.width);
+    canvas.height = Math.round(rect.height);
 }
-
 //----------------------------------------------------------------------------------------------------------------------
 
 function createSplitAnalyser(sourceNode, fftSize = 1024, smoothing = 0) {
@@ -2000,22 +2001,44 @@ function createFocusHandler(movableWindows) {
     };
 }
 
-// function isBrowserFullscreen() {
-//     return (
-//         window.innerWidth === screen.width &&
-//         window.innerHeight === screen.height
-//     );
-// }
-// const showControlsBtn = document.getElementById('showControlsBtn');
-// window.addEventListener("resize", () => {
-//     if (isBrowserFullscreen()) {
-//         controlsEl.classList.add("hidden");
-//         showControlsBtn.hidden = false;
-//     } else {
-//         controlsEl.classList.remove("hidden");
-//         showControlsBtn.hidden = true;
-//     }
-// });
+function isBrowserFullscreen() {
+    return (
+        window.innerWidth === screen.width &&
+        window.innerHeight === screen.height
+    );
+}
+const showControlsBtn = document.getElementById('showControlsBtn');
+window.addEventListener("resize", () => {
+    if (isBrowserFullscreen()) {
+        controlsEl.classList.add("hidden");
+        controlsEl.style.cssText = 'position: absolute;';
+        showControlsBtn.hidden = false;
+    } else {
+        controlsEl.classList.remove("hidden");
+        controlsEl.style.cssText = '';
+        showControlsBtn.hidden = true;
+    }
+});
+showControlsBtn.addEventListener('click', () => {
+    controlsEl.classList.toggle("hidden");
+})
+
+window.addEventListener("mousemove", (e) => {
+    if (!isBrowserFullscreen()) return;
+
+    if (e.clientY <= 20) {
+        controlsEl.classList.remove("hidden");
+    }
+
+    const rect = controlsEl.getBoundingClientRect();
+
+    const insideWithBuffer = e.clientY <= rect.bottom + 20;
+
+    if (!insideWithBuffer && !controlsEl.classList.contains("hidden")) {
+        controlsEl.classList.add("hidden");
+    }
+});
+
 
 document.addEventListener('DOMContentLoaded', () => {
     const tooltips = new TooltipManager();
@@ -2142,7 +2165,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     audioCtx?.suspend();
 
-    window.addEventListener('resize', () => { clearTimeout(resizeTimeout); resizeTimeout = setTimeout(resizeCanvas, 100); });
+    //window.addEventListener('resize', () => { clearTimeout(resizeTimeout); resizeTimeout = setTimeout(resizeCanvas, 100); });
+
+    const observer = new ResizeObserver(() => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(resizeCanvas, 100);
+    });
+    observer.observe(document.getElementById("canvasContainer"));
 
     setInterval(() => {
         wallpaperswitch.nextRandom(wallpapers);

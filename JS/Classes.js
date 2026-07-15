@@ -194,6 +194,7 @@ class TooltipManager {
 class MovableWindow {
     constructor(win) {
         this.win = win;
+        this.content = win.querySelector(".window-content");
         this.bar = win.querySelector(".window-topbar");
         this.onFocusCallback = null;
 
@@ -208,50 +209,82 @@ class MovableWindow {
 
         this.win.addEventListener("pointerdown", this.onFocus);
 
+        this.bar.insertAdjacentHTML("beforeend", `
+            <span>
+                <button class="button minimize">-</button>
+                <button class="button close">X</button>
+            </span>
+        `);
+
+        this.minimizeBtn = this.bar.querySelector(".minimize");
+        this.closeBtn = this.bar.querySelector(".close");
+
+        this.minimizeBtn.addEventListener("click", this.onMinimize);
+        this.closeBtn.addEventListener("click", this.onClose);
+
         this.bar.addEventListener("pointerdown", this.onPointerDown);
         window.addEventListener("pointermove", this.onPointerMove);
         window.addEventListener("pointerup", this.onPointerUp);
         window.addEventListener("pointercancel", this.onPointerUp);
+        window.addEventListener("resize", this.keepInsideViewport);
     }
+
+    keepInsideViewport = () => {
+        if (getComputedStyle(this.win).display === "none") return;
+        const rect = this.win.getBoundingClientRect();
+        let x = rect.left;
+        let y = rect.top;
+        const maxX = window.innerWidth - this.win.offsetWidth;
+        const maxY = window.innerHeight - this.win.offsetHeight;
+        x = Math.max(0, Math.min(maxX, x));
+        y = Math.max(0, Math.min(maxY, y));
+        this.win.style.left = `${x}px`;
+        this.win.style.top = `${y}px`;
+        this.win.style.right = "auto";
+        this.win.style.bottom = "auto";
+    };
+
+    onMinimize = () => {
+        const hidden = getComputedStyle(this.content).display === "none";
+        this.content.style.display = hidden ? "" : "none";
+        this.minimizeBtn.innerText = hidden ? "-" : "+";
+        if (hidden) {
+            this.keepInsideViewport();
+        }
+    };
+
+    onClose = () => {
+        this.win.style.display = "none";
+    };
 
     onFocus = () => {
         this.onFocusCallback?.(this);
     };
 
     onPointerDown = (e) => {
+        if (e.target.closest(".minimize, .close")) return;
         e.preventDefault();
-        this.dragging = true;
         const rect = this.win.getBoundingClientRect();
+        this.win.style.left = `${rect.left}px`;
+        this.win.style.top = `${rect.top}px`;
+        this.win.style.right = "auto";
+        this.win.style.bottom = "auto";
+        this.dragging = true;
         this.offsetX = e.clientX - rect.left;
         this.offsetY = e.clientY - rect.top;
         this.bar.style.cursor = "grabbing";
         this.bar.setPointerCapture(e.pointerId);
-        const computed = window.getComputedStyle(this.win);
-        const right = computed.right !== "auto";
-        const bottom = computed.bottom !== "auto";
-
         this.onFocus();
-
-        if (right || bottom) {
-            this.win.style.left = rect.left + "px";
-            this.win.style.top = rect.top + "px";
-            this.win.style.right = "auto";
-            this.win.style.bottom = "auto";
-        }
-
         document.body.style.userSelect = "none";
     };
 
     onPointerMove = (e) => {
         if (!this.dragging) return;
-        const w = this.win.offsetWidth;
-        const h = this.win.offsetHeight;
         let x = e.clientX - this.offsetX;
         let y = e.clientY - this.offsetY;
-        x = Math.max(0, Math.min(window.innerWidth - w, x));
-        y = Math.max(0, Math.min(window.innerHeight - h, y));
         this.win.style.left = `${x}px`;
         this.win.style.top = `${y}px`;
+        this.keepInsideViewport();
     };
 
     onPointerUp = () => {
@@ -262,9 +295,14 @@ class MovableWindow {
     };
 
     destroy() {
-        this.bar.removeEventListener("mousedown", this.onMouseDown);
-        window.removeEventListener("mousemove", this.onMouseMove);
-        window.removeEventListener("mouseup", this.onMouseUp);
+        this.win.removeEventListener("pointerdown", this.onFocus);
+        this.bar.removeEventListener("pointerdown", this.onPointerDown);
+        window.removeEventListener("pointermove", this.onPointerMove);
+        window.removeEventListener("pointerup", this.onPointerUp);
+        window.removeEventListener("pointercancel", this.onPointerUp);
+        this.minimizeBtn.removeEventListener("click", this.onMinimize);
+        this.closeBtn.removeEventListener("click", this.onClose);
+        window.removeEventListener("resize", this.keepInsideViewport);
     }
 }
 

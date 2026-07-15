@@ -66,149 +66,161 @@
             <img src="./Media/GitHub_Invertocat_White.png">
             Project Page
         </a>
+        <button id="showControlsBtn" class="button" hidden>Controls</button>
     </div>
 
-    <div id="eq-sliders" class="movable-window" style="display: none;">
+    <div id="eq-sliders" class="movable-window" style="display: none; min-width: 300px;">
         <div class="window-topbar">イコライザーエディター</div>
-        <div style="display: flex; flex-direction: column; align-items: flex-start;">
-            <div style="margin-left: 10px;">
-                <button class="button" id="eqResetBtn">Flat</button>
-                <select id="eqPresetSelect" data-tip="Presets" style="margin-left: 10px;"></select>
-                <button class="button" id="eqPresetSetBtn">Set preset</button>
-                <button class="button" id="eqPresetSaveBtn" style="margin-left: 10px;">Save preset</button>
-                <button class="button" id="eqPresetRemoveBtn">Delete preset</button>
-            </div>
+        <div class="window-content">
+            <div style="display: flex; flex-direction: column; align-items: flex-start;">
+                <div style="margin-left: 10px;">
+                    <button class="button" id="eqResetBtn">Flat</button>
+                    <select id="eqPresetSelect" data-tip="Presets" style="margin-left: 10px;"></select>
+                    <button class="button" id="eqPresetSetBtn">Set preset</button>
+                    <button class="button" id="eqPresetSaveBtn" style="margin-left: 10px;">Save preset</button>
+                    <button class="button" id="eqPresetRemoveBtn">Delete preset</button>
+                </div>
 
-            <div style="margin-left: 10px; display: flex; flex-direction: row; align-items: center;">
-                <label for="eqSliderLink">Smooth EQ</label>
-                <input class="checkbox" type="checkbox" id="eqSliderLink">
-                <select id="eqSliderLinkModes" data-tip="Band link curve shape" style="margin-left: 10px;">
-                    <option value="linear">Linear</option>
-                    <option value="sine">Smooth (Sine)</option>
-                    <option value="quad" selected>Soft (Quadratic)</option>
-                    <option value="cubic">Balanced (Cubic)</option>
-                    <option value="quart">Focused (Quartic)</option>
-                    <option value="expo">Sharp (Exponential)</option>
-                    <option value="back">Wide (Back)</option>
-                </select>
-                <label style="margin-left: 10px;" for="eqSliderLinkQsize">Sliders</label>
-                <input type="range" id="eqSliderLinkQsize" min="2" max="10" step="1" value="4" data-tip="4">
-                <div>
-                    <input type="number" class="button" id="eqMaxDbInput" min="12" max="20" value="12">
-                    <span>dB</span>
+                <div style="margin-left: 10px; display: flex; flex-direction: row; align-items: center;">
+                    <label for="eqSliderLink">Smooth EQ</label>
+                    <input class="checkbox" type="checkbox" id="eqSliderLink">
+                    <select id="eqSliderLinkModes" data-tip="Band link curve shape" style="margin-left: 10px;">
+                        <option value="linear">Linear</option>
+                        <option value="sine">Smooth (Sine)</option>
+                        <option value="quad" selected>Soft (Quadratic)</option>
+                        <option value="cubic">Balanced (Cubic)</option>
+                        <option value="quart">Focused (Quartic)</option>
+                        <option value="expo">Sharp (Exponential)</option>
+                        <option value="back">Wide (Back)</option>
+                    </select>
+                    <label style="margin-left: 10px;" for="eqSliderLinkQsize">Range</label>
+                    <input type="range" id="eqSliderLinkQsize" min="2" max="10" step="1" value="4" data-tip="4">
+                    <div>
+                        <input type="number" class="button" id="eqMaxDbInput" min="12" max="20" value="12">
+                        <span>dB</span>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div style="padding: 3px;">
-            <canvas id="eq"></canvas>
+            <div style="padding: 3px;">
+                <canvas id="eq"></canvas>
+            </div>
         </div>
     </div>
 
     <div id="otherEffects" class="movable-window" style="display: none;">
         <div class="window-topbar">オーディオエフェクト</div>
-        <div style="display: flex; flex-direction: column; align-items: flex-start;">
-            <div style="display: flex; flex-direction: column; width: 100%;" id="effectsContainer"></div>
+        <div class="window-content">
+            <div style="display: flex; flex-direction: column; align-items: flex-start;">
+                <div style="display: flex; flex-direction: column; width: 100%;" id="effectsContainer"></div>
+            </div>
         </div>
     </div>
 
     <div id="SubtitleEditorWindow" class="movable-window" style="display:none;">
         <div class="window-topbar">字幕エディタ</div>
-
-        <div style="display:flex; gap:5px; padding:5px;">
-            <button class="button" id="subAddBtn">追加</button>
-            <button class="button" id="subRemoveBtn">削除</button>
-            <button class="button" id="subClearBtn">クリア</button>
-            <button class="button" id="subExportBtn">コピー</button>
-        </div>
-
-        <div style="display:flex; height:300px; border-top:1px solid #333;">
-            <div id="subList" style="width:40%; overflow:auto; padding:5px; border-right:1px solid #333;"></div>
-            <div style="flex:1; padding:5px;">
-                <input type="number" class="button" id="subStart" style="width:50%;" placeholder="Start Time (Sec)">
-                <input type="number" class="button" id="subEnd" style="width:50%;" placeholder="End Time (Sec)">
-                <textarea class="button" id="subText" style="width:100%; height:120px;" placeholder="Text"></textarea>
-
-                <button class="button" id="subSaveBtn">保存</button>
+        <div class="window-content">
+            <div style="display:flex; gap:5px; padding:5px;">
+                <button class="button" id="subAddBtn">追加</button>
+                <button class="button" id="subRemoveBtn">削除</button>
+                <button class="button" id="subClearBtn">クリア</button>
+                <button class="button" id="subExportBtn">コピー</button>
             </div>
+
+            <div style="display:flex; height:300px; border-top:1px solid #333;">
+                <div id="subList" style="width:40%; overflow:auto; padding:5px; border-right:1px solid #333;"></div>
+                <div style="flex:1; padding:5px;">
+                    <input type="number" class="button" id="subStart" style="width:50%;" placeholder="Start Time (Sec)">
+                    <input type="number" class="button" id="subEnd" style="width:50%;" placeholder="End Time (Sec)">
+                    <textarea class="button" id="subText" style="width:100%; height:120px;" placeholder="Text"></textarea>
+
+                    <button class="button" id="subSaveBtn">保存</button>
+                </div>
+            </div>
+            <textarea class="button" id="subOut" readonly style="width:100%; height:120px;" placeholder="Output"></textarea>
         </div>
-        <textarea class="button" id="subOut" readonly style="width:100%; height:120px;" placeholder="Output"></textarea>
     </div>
 
     <div id="subtitlesList" class="movable-window" style="display: none;">
         <div class="window-topbar">字幕トラック</div>
-        <div style="display: flex; flex-direction: row; justify-content: space-between;">
-            <button class="button" id="subUnloadSubBtn">字幕トラックをオフ</button>
-            <button class="button" id="subAutoFindBtn">字幕トラックを自動選択</button>
-            <input type="file" id="subtitleFile" multiple accept=".srt,.vtt,.ass,.ssa">
-            <label for="subtitleFile" id="ChoosesubtitleFileLabel" class="button" data-tip="srt/vtt/ass/ssa">Choose a file...</label>
-            <button id="removeAllSubtitles" class="button" style="margin-right: 10px;">クリア</button>
+        <div class="window-content">
+            <div style="display: flex; flex-direction: row; justify-content: space-between;">
+                <button class="button" id="subUnloadSubBtn">字幕トラックをオフ</button>
+                <button class="button" id="subAutoFindBtn">字幕トラックを自動選択</button>
+                <input type="file" id="subtitleFile" multiple accept=".srt,.vtt,.ass,.ssa">
+                <label for="subtitleFile" id="ChoosesubtitleFileLabel" class="button" data-tip="srt/vtt/ass/ssa">Choose a file...</label>
+                <button id="removeAllSubtitles" class="button" style="margin-right: 10px;">クリア</button>
+            </div>
+            <input style="margin: 3px;" type="text" id="subSearch" class="button searchBar" placeholder="字幕検索">
+            <div style="padding: 3px; margin-top: 5px;" id="subtitlesList-Container"></div>
         </div>
-        <input style="margin: 3px;" type="text" id="subSearch" class="button searchBar" placeholder="字幕検索">
-        <div style="padding: 3px; margin-top: 5px;" id="subtitlesList-Container"></div>
     </div>
 
     <div id="songList" class="movable-window" style="display: none;">
         <div class="window-topbar">オーディオトラック</div>
-        <div style="display: flex; flex-direction: row; justify-content: space-between;">
-            <span style="padding: 3px;" id="songList-totalPlayTime">Total: 00:00:00 | Avg: 00:00:00</span>
-            <button id="removeAllSounds" class="button" style="margin-right: 10px;">クリア</button>
+        <div class="window-content">
+            <div style="display: flex; flex-direction: row; justify-content: space-between;">
+                <span style="padding: 3px;" id="songList-totalPlayTime">Total: 00:00:00 | Avg: 00:00:00</span>
+                <button id="removeAllSounds" class="button" style="margin-right: 10px;">クリア</button>
+            </div>
+            <input style="margin: 3px;" type="text" id="songSearch" class="button searchBar" placeholder="オーディオ検索">
+            <div style="padding: 3px; margin-top: 5px;" id="songList-Container"></div>
         </div>
-        <input style="margin: 3px;" type="text" id="songSearch" class="button searchBar" placeholder="オーディオ検索">
-        <div style="padding: 3px; margin-top: 5px;" id="songList-Container"></div>
     </div>
 
     <div id="SubtitlesOptions" class="movable-window" style="display: none;">
         <div class="window-topbar">字幕設定</div>
-        <div style="padding: 10px;">
-            <div style="padding:5px; color:#aaa; font-size:12px;">
-                ※「.ASS」字幕には設定が適用されません
-            </div>
-            <div style="margin-bottom: 12px;">
-                <label for="subtitleOffset">字幕オフセット (ms)</label><br>
-                <input class="button" type="number" id="subtitleOffset" value="0" step="100" style="width: 120px;">
-                <div style="font-size: 12px;">
-                    Positive values delay subtitles, negative values show them earlier.
+        <div class="window-content">
+            <div style="padding: 10px;">
+                <div style="padding:5px; color:#aaa; font-size:12px;">
+                    ※「.ASS」字幕には設定が適用されません
                 </div>
-            </div>
-            <div style="margin-bottom: 12px;">
-                <label for="subtitleFont">フォント</label><br>
-                <select id="subtitleFont">
-                    <option value="default" selected>Default</option>
-                    <option value="Arial, sans-serif">Arial</option>
-                    <option value="Verdana, sans-serif">Verdana</option>
-                    <option value="Tahoma, sans-serif">Tahoma</option>
-                    <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
-                    <option value="'Times New Roman', serif">Times New Roman</option>
-                    <option value="Georgia, serif">Georgia</option>
-                    <option value="'Courier New', monospace">Courier New</option>
+                <div style="margin-bottom: 12px;">
+                    <label for="subtitleOffset">字幕オフセット (ms)</label><br>
+                    <input class="button" type="number" id="subtitleOffset" value="0" step="100" style="width: 120px;">
+                    <div style="font-size: 12px;">
+                        Positive values delay subtitles, negative values show them earlier.
+                    </div>
+                </div>
+                <div style="margin-bottom: 12px;">
+                    <label for="subtitleFont">フォント</label><br>
+                    <select id="subtitleFont">
+                        <option value="default" selected>Default</option>
+                        <option value="Arial, sans-serif">Arial</option>
+                        <option value="Verdana, sans-serif">Verdana</option>
+                        <option value="Tahoma, sans-serif">Tahoma</option>
+                        <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
+                        <option value="'Times New Roman', serif">Times New Roman</option>
+                        <option value="Georgia, serif">Georgia</option>
+                        <option value="'Courier New', monospace">Courier New</option>
 
-                    <option value="system-ui, 'Noto Sans JP', sans-serif">System UI Noto Sans JP</option>
-                    <option value="'Noto Sans JP', sans-serif">Noto Sans JP</option>
-                    <option value="'Hiragino Sans', 'Noto Sans JP', sans-serif">Hiragino Sans</option>
-                </select>
-            </div>
-            <div style="margin-bottom: 12px;">
-                <label for="subtitleFontSize">フォントサイズ</label><br>
-                <input class="button" type="number" id="subtitleFontSize" value="18" min="8" max="100">
-                px
-            </div>
-            <div style="margin-bottom: 12px;">
-                <label style="display: flex;">
-                    <input class="checkbox" type="checkbox" id="subtitlePlainStyle">
-                    標準スタイルを使用（HTMLタグを無効化）
-                </label>
+                        <option value="system-ui, 'Noto Sans JP', sans-serif">System UI Noto Sans JP</option>
+                        <option value="'Noto Sans JP', sans-serif">Noto Sans JP</option>
+                        <option value="'Hiragino Sans', 'Noto Sans JP', sans-serif">Hiragino Sans</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 12px;">
+                    <label for="subtitleFontSize">フォントサイズ</label><br>
+                    <input class="button" type="number" id="subtitleFontSize" value="18" min="8" max="100">
+                    px
+                </div>
+                <div style="margin-bottom: 12px;">
+                    <label style="display: flex;">
+                        <input class="checkbox" type="checkbox" id="subtitlePlainStyle">
+                        標準スタイルを使用（HTMLタグを無効化）
+                    </label>
+                </div>
             </div>
         </div>
     </div>
 
     <div id="Subtitles" class="movable-window" style="display: none;">
         <div class="window-topbar" id="subtitle-title">字幕</div>
-        <div style="padding: 3px;" class="subtitle-container">
-            <h3 id="subtitleText" style="font-size: 18px;">Subtitle text will apear here</h3>
+        <div class="window-content">
+            <div style="padding: 3px;" class="subtitle-container">
+                <h3 id="subtitleText" style="font-size: 18px;">Subtitle text will apear here</h3>
+            </div>
         </div>
     </div>
-
-    <button id="showControlsBtn" class="button" hidden>Controls</button>
 
     <div id="controls">
         <div id="wallpaper">
@@ -277,7 +289,11 @@
         </div>
     </div>
 
-    <div id="container">
+    <div class="showHitbox">
+
+    </div>
+
+    <div id="canvasContainer">
         <canvas id="visualizer"></canvas>
     </div>
 </body>
