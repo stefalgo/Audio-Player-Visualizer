@@ -2002,10 +2002,11 @@ function createFocusHandler(movableWindows) {
 }
 
 function isBrowserFullscreen() {
-    return (
-        window.innerWidth === screen.width &&
-        window.innerHeight === screen.height
-    );
+    // return (
+    //     window.innerWidth === screen.width &&
+    //     window.innerHeight === screen.height
+    // );
+    return window.matchMedia('(display-mode: fullscreen)').matches;
 }
 const showControlsBtn = document.getElementById('showControlsBtn');
 window.addEventListener("resize", () => {
@@ -2019,21 +2020,18 @@ window.addEventListener("resize", () => {
         showControlsBtn.hidden = true;
     }
 });
+
 showControlsBtn.addEventListener('click', () => {
     controlsEl.classList.toggle("hidden");
 })
 
 window.addEventListener("mousemove", (e) => {
     if (!isBrowserFullscreen()) return;
-
     if (e.clientY <= 20) {
         controlsEl.classList.remove("hidden");
     }
-
     const rect = controlsEl.getBoundingClientRect();
-
     const insideWithBuffer = e.clientY <= rect.bottom + 20;
-
     if (!insideWithBuffer && !controlsEl.classList.contains("hidden")) {
         controlsEl.classList.add("hidden");
     }
