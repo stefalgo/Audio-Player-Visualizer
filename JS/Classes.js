@@ -204,6 +204,8 @@ class MovableWindow {
         this.offsetX = 0;
         this.offsetY = 0;
 
+        this.minimized = false;
+
         this.win.style.position = "absolute";
         this.bar.style.cursor = "grab";
 
@@ -246,9 +248,10 @@ class MovableWindow {
 
     onMinimize = () => {
         const hidden = getComputedStyle(this.content).display === "none";
-        this.content.style.display = hidden ? "" : "none";
-        this.minimizeBtn.innerText = hidden ? "-" : "+";
-        if (hidden) {
+        this.minimized = hidden;
+        this.content.style.display = this.minimized ? "" : "none";
+        this.minimizeBtn.innerText = this.minimized ? "-" : "+";
+        if (this.minimized) {
             this.keepInsideViewport();
         }
     };
