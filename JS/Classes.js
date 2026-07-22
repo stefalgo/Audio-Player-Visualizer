@@ -57,11 +57,8 @@ class SliderProgress {
         }
 
         this.slider = slider;
-
         if (this.getMax() <= this.getMin()) return;
-
         this.update = this.update.bind(this);
-
         this.init();
     }
 
@@ -96,11 +93,8 @@ class SliderProgress {
         const min = this.getMin();
         const max = this.getMax();
         const value = Number(this.slider.value);
-
         if (max <= min) return;
-
         const percent = ((value - min) / (max - min)) * 100;
-
         this.slider.style.setProperty("--value", `${percent}%`);
     }
 }

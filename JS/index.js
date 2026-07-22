@@ -334,14 +334,14 @@ function setupEffects() {
 }
 
 function finishSeek() {
+    isSeeking = false;
     if (!videoEl.duration) return;
     videoEl.currentTime = pendingSeek;
-    isSeeking = false;
 }
 
-function getElapsedTime() {
+function getElapsedTime(ignoreSeek) {
     if (!videoEl || !videoEl.duration) return 0;
-    return isSeeking ? pendingSeek : videoEl.currentTime;
+    return isSeeking && !ignoreSeek ? pendingSeek : videoEl.currentTime;
 }
 
 function getMediaDuration(file) {
@@ -528,8 +528,8 @@ async function fileFingerprint(file) {
     for (const b of tailBytes) mix(b);
     const sizeBig = BigInt(size);
     const lmBig = BigInt(file.lastModified || 0);
-    for (let shift = 0; shift < 8; shift++) {mix(Number((sizeBig >> BigInt(shift * 8)) & 0xffn));}
-    for (let shift = 0; shift < 8; shift++) {mix(Number((lmBig >> BigInt(shift * 8)) & 0xffn));}
+    for (let shift = 0; shift < 8; shift++) { mix(Number((sizeBig >> BigInt(shift * 8)) & 0xffn)); }
+    for (let shift = 0; shift < 8; shift++) { mix(Number((lmBig >> BigInt(shift * 8)) & 0xffn)); }
     return `${size}-${file.lastModified || 0}-${(hash >>> 0).toString(16)}`;
 }
 
@@ -1475,7 +1475,7 @@ function commonLoop() {
 function renderLoop() {
     requestAnimationFrame(renderLoop);
     if (!analyser || !audioCtx) return;
-    const elapsed = getElapsedTime();
+    const elapsed = getElapsedTime(true);
 
     if (!window._lastSubtitleCheck) window._lastSubtitleCheck = 0;
     const SUBTITLE_CHECK_INTERVAL = 50; // ms
@@ -1485,7 +1485,7 @@ function renderLoop() {
         showSubtitle(elapsed, selectedSubtitle);
     }
 
-    const timeText = formatTime(elapsed) + ' / ' + formatTime(videoEl.duration);
+    const timeText = formatTime(getElapsedTime()) + ' / ' + formatTime(videoEl.duration);
     if (audioTimeText.textContent !== timeText) {
         audioTimeText.textContent = timeText
     }
@@ -1497,10 +1497,11 @@ function renderLoop() {
 
     let lastProgress = -1;
 
-    const progress = Math.round((elapsed / videoEl.duration) * 1000) / 10;
+    const progress = Math.round(((elapsed / (videoEl.duration || 1)) * 1000)) / 10;
 
     if (progress !== lastProgress) {
         songListContainer.style.setProperty('--audioElapsed', progress + '%');
+        timeSlider.style.setProperty("--progress", progress + '%');
         lastProgress = progress;
     }
 
