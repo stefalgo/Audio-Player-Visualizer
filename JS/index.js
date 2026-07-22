@@ -64,6 +64,7 @@ const otherEffectsBtn = document.getElementById("otherEffectsBtn");
 const otherEffectsDiv = document.getElementById("otherEffects");
 const eqMaxDbInput = document.getElementById("eqMaxDbInput");
 const canvasContainer = document.getElementById("canvasContainer");
+const showControlsBtn = document.getElementById('showControlsBtn');
 
 window.alert = async function (message, targetEl) {
     await TooltipDialog.info(targetEl, message);
@@ -148,6 +149,9 @@ const RETRO_CENTER_FREQS = [
 ];
 
 let user_eq_presets = JSON.parse(localStorage.getItem("USER_EQ_PRESETS") || "{}");
+
+let isSeeking = false;
+let pendingSeek = 0;
 
 let analyser, analyserL, analyserR, dataL, dataR;
 let gainNode;
@@ -329,9 +333,15 @@ function setupEffects() {
     buildEffectsUI();
 }
 
+function finishSeek() {
+    if (!videoEl.duration) return;
+    videoEl.currentTime = pendingSeek;
+    isSeeking = false;
+}
+
 function getElapsedTime() {
     if (!videoEl || !videoEl.duration) return 0;
-    return videoEl.currentTime;
+    return isSeeking ? pendingSeek : videoEl.currentTime;
 }
 
 function getMediaDuration(file) {
@@ -455,6 +465,7 @@ function timeToSeconds(t) {
 }
 
 function formatTime(s, format = '{hh} : {mm} : {ss} . {mls}') {
+    s = Number.isFinite(Number(s)) ? Number(s) : 0;
     const t = Math.floor(s);
     const hh = String(Math.floor(t / 3600)).padStart(2, '0');
     const mm = String(Math.floor(t / 60) % 60).padStart(2, '0');
@@ -1244,16 +1255,11 @@ function playFrom(offset) {
     videoEl.play().catch(err => {
         console.warn("Video play failed:", err);
     });
-
-    pausePlayButton.dataset.state = 'pause';
 }
 
 // Stops the audio
 function stopAudio(clearCanvas, pauseCtx) {
     videoEl.pause();
-    if (pauseCtx) {
-        pausePlayButton.dataset.state = 'play';
-    }
     if (clearCanvas) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
@@ -1310,10 +1316,9 @@ function togglePlayPause() {
         videoEl.play().catch(err => {
             console.warn(err);
         });
-
-        pausePlayButton.dataset.state = 'pause';
     }
 }
+
 function playNext(jump = 1, loop = true) {
     if (!audioCtx || !videoEl.src) return;
     let idx = findIndexByIdentifier(currentSelectedFile);
@@ -1422,7 +1427,7 @@ function commonLoop() {
 
     const elapsed = getElapsedTime();
 
-    if (!videoEl.paused) {
+    if (!videoEl.paused || isSeeking) {
         if (elapsed < videoEl.duration) {
             timeSlider.value = elapsed / videoEl.duration;
         }
@@ -1689,11 +1694,18 @@ volumeSlider.addEventListener('input', () => {
     volumeChanged();
 });
 
-timeSlider.addEventListener('input', () => {
-    if (!audioCtx || !videoEl.duration) return;
-    const t = +timeSlider.value * videoEl.duration;
-    videoEl.currentTime = t;
+timeSlider.addEventListener('pointerdown', () => {
+    isSeeking = true;
+    pendingSeek = videoEl.currentTime;
 });
+
+timeSlider.addEventListener('input', () => {
+    if (!videoEl.duration) return;
+    pendingSeek = Number(timeSlider.value) * videoEl.duration;
+});
+
+timeSlider.addEventListener('pointerup', finishSeek);
+timeSlider.addEventListener('pointercancel', finishSeek);
 
 playbackSpeedInput.addEventListener('input', () => {
     setPlaybackRate(Number(playbackSpeedInput.value) || 1);
@@ -1916,6 +1928,41 @@ equalizer.onChange(data => {
     });
 });
 //----------------------------------------------------------------------------------------------------------------------
+function updatePlayButton() {
+    if (!pausePlayButton) return;
+
+    pausePlayButton.dataset.state = videoEl.paused ? "play" : "pause";
+}
+
+function setupMediaSession() {
+    if (!('mediaSession' in navigator)) return;
+    navigator.mediaSession.setActionHandler('play', () => {
+        videoEl.play();
+    });
+    navigator.mediaSession.setActionHandler('pause', () => {
+        videoEl.pause();
+    });
+    navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+        const offset = details.seekOffset || 10;
+        jumpAt(-offset);
+    });
+    navigator.mediaSession.setActionHandler('seekforward', (details) => {
+        const offset = details.seekOffset || 10;
+        jumpAt(offset);
+    });
+    navigator.mediaSession.setActionHandler('previoustrack', () => {
+        playNext(-1);
+    });
+    navigator.mediaSession.setActionHandler('nexttrack', () => {
+        playNext(1);
+    });
+}
+
+
+videoEl.addEventListener("play", updatePlayButton);
+videoEl.addEventListener("pause", updatePlayButton);
+videoEl.addEventListener("ended", updatePlayButton);
+
 function createFocusHandler(movableWindows) {
     return function focusWindow(window) {
         const index = movableWindows.indexOf(window);
@@ -1934,7 +1981,6 @@ function isBrowserFullscreen() {
     // );
     return window.matchMedia('(display-mode: fullscreen)').matches;
 }
-const showControlsBtn = document.getElementById('showControlsBtn');
 window.addEventListener("resize", () => {
     if (isBrowserFullscreen()) {
         controlsEl.classList.add("hidden");
@@ -2086,6 +2132,7 @@ document.addEventListener('DOMContentLoaded', () => {
     resizeCanvas();
     volumeChanged();
     setupEffects();
+    setupMediaSession();
 
     audioCtx?.suspend();
 

@@ -595,7 +595,7 @@ class VideoRender extends Renderer {
             this.ctx.font = `${Math.floor(canvasH * 0.08)}px Arial`;
             this.ctx.fillStyle = "white";
             this.ctx.fillText(
-                videoEl.currentSrc ? "♪ オーディオのみ ♪" : "No Media",
+                videoEl.src ? "♪ オーディオのみ ♪" : "No Media",
                 canvasW / 2,
                 canvasH / 2
             );
@@ -625,11 +625,21 @@ class VideoRender extends Renderer {
         this.ctx.drawImage(this.bgCanvas, 0, 0, canvasW, canvasH);
         this.ctx.restore();
 
-        const fgScale = canvasH / videoH;
-        const fgW = videoW * fgScale;
-        const fgX = (canvasW - fgW) / 2;
+        let fgScale;
 
-        this.ctx.drawImage(videoEl, fgX, 0, fgW, canvasH);
+        if (videoW / videoH > canvasW / canvasH) {
+            fgScale = canvasW / videoW;
+        } else {
+            fgScale = canvasH / videoH;
+        }
+
+        const fgW = videoW * fgScale;
+        const fgH = videoH * fgScale;
+
+        const fgX = (canvasW - fgW) / 2;
+        const fgY = (canvasH - fgH) / 2;
+
+        this.ctx.drawImage(videoEl, fgX, fgY, fgW, fgH);
 
         if (subtitleData?.subs) {
             this.renderASS(subtitleData, videoEl.currentTime);
