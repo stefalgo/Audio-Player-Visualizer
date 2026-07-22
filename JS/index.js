@@ -333,6 +333,24 @@ function setupEffects() {
     buildEffectsUI();
 }
 
+async function updateMediaSession({
+    title = "",
+    artist = "",
+    album = "",
+} = {}) {
+    if (!("mediaSession" in navigator)) return;
+    navigator.mediaSession.metadata = new MediaMetadata({
+        title,
+        artist,
+        album,
+        // artwork: [{
+        //     src: "../Media/Affinity_sound_ico.png",
+        //     sizes: "512x512",
+        //     type: "image/png"
+        // }]
+    });
+}
+
 function finishSeek() {
     isSeeking = false;
     if (!videoEl.duration) return;
@@ -1304,6 +1322,8 @@ function loadFile(file) {
         chooseAudioLabel.textContent = file.name;
         document.title = `${file.name} - ${pageOriginalTitle}`;
         playFrom(0);
+
+        updateMediaSession({title: file.name});
     }, { once: true });
 }
 
@@ -1959,7 +1979,6 @@ function setupMediaSession() {
         playNext(1);
     });
 }
-
 
 videoEl.addEventListener("play", updatePlayButton);
 videoEl.addEventListener("pause", updatePlayButton);
