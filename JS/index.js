@@ -1262,53 +1262,42 @@ function stopAudio(clearCanvas, pauseCtx) {
 function loadFile(file) {
     if (!file) return;
     const loadToken = ++currentLoadToken;
-    const reader = new FileReader();
     const songElement = document.querySelector(`.songItem[data-file-name="${file._fingerprint}"]`);
-
     document.querySelectorAll('.songItem').forEach(el => {
         el.classList.remove('loading');
     });
-
     songElement?.classList.add('loading');
     songElement?.classList.remove('error');
     chooseAudioLabel.textContent = `Loading ${file.name}...`;
 
-    reader.onerror = () => {
+    videoEl.pause();
+    videoEl.removeAttribute("src");
+    videoEl.load();
+
+    if (videoEl._objectURL) {
+        URL.revokeObjectURL(videoEl._objectURL);
+        videoEl._objectURL = null;
+    }
+    const url = URL.createObjectURL(file);
+    videoEl.src = url;
+    videoEl._objectURL = url;
+    videoEl.load();
+    videoEl.addEventListener("loadeddata", () => {
         if (loadToken !== currentLoadToken) return;
-        songElement?.classList.remove('active', 'loading');
-        songElement?.classList.add('error');
-        console.error(`Failed to read ${file.name}`, reader.error);
-    };
-
-    reader.onload = () => {
-        if (loadToken !== currentLoadToken) return;
-        videoEl.src = URL.createObjectURL(file);
-        videoEl.load();
-        videoEl.addEventListener("loadeddata", () => {
-
-            videoEl.currentTime = 0;
-
-            document.querySelectorAll('.songItem').forEach(el => {
-                el.classList.remove('active', 'loading');
-            });
-
-            songElement?.classList.add('active');
-
-            currentSelectedFile = file._fingerprint;
-            selectedSubtitle = getSubtitle(file);
-            subtitleLastIndex = 0;
-            loopCounter = 0;
-
-            randomSongs.remember(file);
-
-            chooseAudioLabel.textContent = file.name;
-            document.title = `${file.name} - ${pageOriginalTitle}`;
-
-            playFrom(0);
-
-        }, { once:true });
-    };
-    reader.readAsArrayBuffer(file);
+        videoEl.currentTime = 0;
+        document.querySelectorAll('.songItem').forEach(el => {
+            el.classList.remove('active', 'loading');
+        });
+        songElement?.classList.add('active');
+        currentSelectedFile = file._fingerprint;
+        selectedSubtitle = getSubtitle(file);
+        subtitleLastIndex = 0;
+        loopCounter = 0;
+        randomSongs.remember(file);
+        chooseAudioLabel.textContent = file.name;
+        document.title = `${file.name} - ${pageOriginalTitle}`;
+        playFrom(0);
+    }, { once: true });
 }
 
 function togglePlayPause() {
@@ -1318,7 +1307,7 @@ function togglePlayPause() {
     } else {
         audioCtx.resume();
 
-        videoEl.play().catch(err=>{
+        videoEl.play().catch(err => {
             console.warn(err);
         });
 
@@ -1348,7 +1337,7 @@ function jumpAt(time = 5) {
     if (t < 0) t = 0;
     if (t >= videoEl.duration) {
         if (!playSoundList) {
-            playNext(1,true);
+            playNext(1, true);
         }
         return;
     }
@@ -1397,25 +1386,27 @@ function removeFile(file) {
     if (!file) return;
     const index = files.findIndex(f => f._fingerprint === file._fingerprint);
     const el = document.querySelector(`[data-file-name="${file._fingerprint}"]`);
-
     if (index !== -1) files.splice(index, 1);
     if (el) el.remove();
-
     randomSongs.forget(file);
-
-    if (currentSelectedFile === file._fingerprint) {
+    const isCurrent = currentSelectedFile === file._fingerprint;
+    if (isCurrent) {
+        currentLoadToken++;
         stopAudio(true, true);
-
+        if (videoEl._objectURL) {
+            URL.revokeObjectURL(videoEl._objectURL);
+            videoEl._objectURL = null;
+        }
         videoEl.removeAttribute("src");
         videoEl.load();
-
+        currentSelectedFile = '';
         selectedSubtitle = '';
+        subtitleLastIndex = 0;
+        soundEnded = false;
         timeSlider.value = 0;
-
         if (chooseAudioLabel) {
             chooseAudioLabel.textContent = 'No file selected';
         }
-
         document.title = pageOriginalTitle;
     }
 

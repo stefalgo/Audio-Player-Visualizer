@@ -585,6 +585,25 @@ class VideoRender extends Renderer {
         const videoW = videoEl.videoWidth;
         const videoH = videoEl.videoHeight;
 
+        if (videoW === 0 || videoH === 0) {
+            this.ctx.fillStyle = "black";
+            this.ctx.fillRect(0, 0, canvasW, canvasH);
+
+            this.ctx.save();
+            this.ctx.textAlign = "center";
+            this.ctx.textBaseline = "middle";
+            this.ctx.font = `${Math.floor(canvasH * 0.08)}px Arial`;
+            this.ctx.fillStyle = "white";
+            this.ctx.fillText(
+                videoEl.currentSrc ? "♪ オーディオのみ ♪" : "No Media",
+                canvasW / 2,
+                canvasH / 2
+            );
+            this.ctx.restore();
+
+            return;
+        }
+
         if (videoEl.readyState < 2) return;
 
         this.bgCanvas ??= document.createElement("canvas");
