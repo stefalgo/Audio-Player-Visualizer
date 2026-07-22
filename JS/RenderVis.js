@@ -580,23 +580,30 @@ class VideoRender extends Renderer {
     render(videoEl, subtitleData = null) {
         if (!videoEl) return;
 
-        const elapsed = getElapsedTime();
-        const drift = videoEl.currentTime - elapsed;
         const canvasW = this.canvas.width;
         const canvasH = this.canvas.height;
         const videoW = videoEl.videoWidth;
         const videoH = videoEl.videoHeight;
 
-        if (Math.abs(drift) > 0.25 && performance.now() - this.lastHardSync > 500) {
-            videoEl.currentTime = elapsed;
-            this.lastHardSync = performance.now();
+        if (videoW === 0 || videoH === 0) {
+            this.ctx.fillStyle = "black";
+            this.ctx.fillRect(0, 0, canvasW, canvasH);
+
+            this.ctx.save();
+            this.ctx.textAlign = "center";
+            this.ctx.textBaseline = "middle";
+            this.ctx.font = `${Math.floor(canvasH * 0.08)}px Arial`;
+            this.ctx.fillStyle = "white";
+            this.ctx.fillText(
+                videoEl.src ? "♪ オーディオのみ ♪" : "No Media",
+                canvasW / 2,
+                canvasH / 2
+            );
+            this.ctx.restore();
+
+            return;
         }
 
-        if (this.audioCtx?.state === "running") {
-            if (videoEl.paused) videoEl.play().catch(() => { });
-        } else if (!videoEl.paused) {
-            videoEl.pause();
-        }
         if (videoEl.readyState < 2) return;
 
         this.bgCanvas ??= document.createElement("canvas");
@@ -618,11 +625,21 @@ class VideoRender extends Renderer {
         this.ctx.drawImage(this.bgCanvas, 0, 0, canvasW, canvasH);
         this.ctx.restore();
 
-        const fgScale = canvasH / videoH;
-        const fgW = videoW * fgScale;
-        const fgX = (canvasW - fgW) / 2;
+        let fgScale;
 
-        this.ctx.drawImage(videoEl, fgX, 0, fgW, canvasH);
+        if (videoW / videoH > canvasW / canvasH) {
+            fgScale = canvasW / videoW;
+        } else {
+            fgScale = canvasH / videoH;
+        }
+
+        const fgW = videoW * fgScale;
+        const fgH = videoH * fgScale;
+
+        const fgX = (canvasW - fgW) / 2;
+        const fgY = (canvasH - fgH) / 2;
+
+        this.ctx.drawImage(videoEl, fgX, fgY, fgW, fgH);
 
         if (subtitleData?.subs) {
             this.renderASS(subtitleData, videoEl.currentTime);

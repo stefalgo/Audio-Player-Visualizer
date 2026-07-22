@@ -64,6 +64,7 @@ const otherEffectsBtn = document.getElementById("otherEffectsBtn");
 const otherEffectsDiv = document.getElementById("otherEffects");
 const eqMaxDbInput = document.getElementById("eqMaxDbInput");
 const canvasContainer = document.getElementById("canvasContainer");
+const showControlsBtn = document.getElementById('showControlsBtn');
 
 window.alert = async function (message, targetEl) {
     await TooltipDialog.info(targetEl, message);
@@ -86,10 +87,13 @@ const SAMPLE_BYTES = 64 * 1024;
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 const videoEl = document.createElement("video");
-videoEl.muted = true;
+videoEl.muted = false;
 videoEl.playsInline = true;
+videoEl.preservesPitch = false;
 videoEl.style.display = "none";
 document.body.appendChild(videoEl);
+
+const mediaSource = audioCtx.createMediaElementSource(videoEl);
 
 // dont question it
 const pageOriginalTitle = document.title;
@@ -146,8 +150,11 @@ const RETRO_CENTER_FREQS = [
 
 let user_eq_presets = JSON.parse(localStorage.getItem("USER_EQ_PRESETS") || "{}");
 
+let isSeeking = false;
+let pendingSeek = 0;
+
 let analyser, analyserL, analyserR, dataL, dataR;
-let source, gainNode, buffer, startTime;
+let gainNode;
 let effectChain = null;
 let eqState = EQ_BANDS.map(() => 0);
 let files = [];
@@ -178,6 +185,11 @@ let analyserSmoothing = visualizerSL.value;
 let subtitleLastIndex = 0;
 let fftChangeTimeout = null; // debounce when changing the fftsize
 let resizeTimeout = null; // debounce thing for updateing the canvas on window resize or something like that
+
+gainNode = audioCtx.createGain();
+gainNode.gain.value = volume;
+
+mediaSource.connect(gainNode);
 
 //------------------------------------------------------------------------------------------------
 
@@ -249,6 +261,28 @@ function buildEffectsUI() {
     });
 }
 
+function createSplitAnalyser(sourceNode, fftSize = 1024, smoothing = 0) {
+    const splitter = audioCtx.createChannelSplitter(2);
+
+    sourceNode.connect(splitter);
+
+    const analyserL = audioCtx.createAnalyser();
+    const analyserR = audioCtx.createAnalyser();
+
+    analyserL.fftSize = fftSize;
+    analyserR.fftSize = fftSize;
+    analyserL.smoothingTimeConstant = smoothing;
+    analyserR.smoothingTimeConstant = smoothing;
+
+    splitter.connect(analyserL, 0);
+    splitter.connect(analyserR, 1);
+
+    const dataL = new Float32Array(analyserL.fftSize);
+    const dataR = new Float32Array(analyserR.fftSize);
+
+    return { analyserL, analyserR, dataL, dataR };
+}
+
 function createAnalyser(node) {
     if (analyser) {
         try {
@@ -292,18 +326,22 @@ function setupEffects() {
         )
     );
 
+    effectChain.connectInput(gainNode);
     effectChain.connectOutput();
     createAnalyser(effectChain.output);
 
     buildEffectsUI();
 }
 
+function finishSeek() {
+    if (!videoEl.duration) return;
+    videoEl.currentTime = pendingSeek;
+    isSeeking = false;
+}
+
 function getElapsedTime() {
-    if (!audioCtx || !buffer) return 0;
-    if (audioCtx.state === 'running' && source && startTime !== undefined && startTime !== null) {
-        return (audioCtx.currentTime - startTime) * playbackRate;
-    }
-    return Number(timeSlider.value * buffer.duration) || 0;
+    if (!videoEl || !videoEl.duration) return 0;
+    return isSeeking ? pendingSeek : videoEl.currentTime;
 }
 
 function getMediaDuration(file) {
@@ -396,11 +434,9 @@ function getSupportedMediaFormats() {
 // e
 function setPlaybackRate(rate) {
     rate = Number(rate) || 1.0;
-    const cur = getElapsedTime();
     playbackRate = rate;
-    if (source && source.playbackRate) {
-        try { source.playbackRate.value = playbackRate; videoEl.playbackRate = playbackRate; } catch (e) { }
-        if (audioCtx) startTime = audioCtx.currentTime - cur / playbackRate;
+    if (videoEl) {
+        videoEl.playbackRate = playbackRate;
     }
     return playbackRate;
 }
@@ -429,6 +465,7 @@ function timeToSeconds(t) {
 }
 
 function formatTime(s, format = '{hh} : {mm} : {ss} . {mls}') {
+    s = Number.isFinite(Number(s)) ? Number(s) : 0;
     const t = Math.floor(s);
     const hh = String(Math.floor(t / 3600)).padStart(2, '0');
     const mm = String(Math.floor(t / 60) % 60).padStart(2, '0');
@@ -487,12 +524,13 @@ async function fileFingerprint(file) {
         hash ^= b;
         hash = Math.imul(hash, 16777619);
     };
-    for (let i = 0; i < headBytes.length; i++) mix(headBytes[i]);
-    for (let i = 0; i < tailBytes.length; i++) mix(tailBytes[i]);
-    const lm = file.lastModified || 0;
-    for (let shift = 0; shift < 4; shift++) mix((size >> (shift * 8)) & 0xff);
-    for (let shift = 0; shift < 4; shift++) mix((lm >> (shift * 8)) & 0xff);
-    return (hash >>> 0).toString(16);
+    for (const b of headBytes) mix(b);
+    for (const b of tailBytes) mix(b);
+    const sizeBig = BigInt(size);
+    const lmBig = BigInt(file.lastModified || 0);
+    for (let shift = 0; shift < 8; shift++) {mix(Number((sizeBig >> BigInt(shift * 8)) & 0xffn));}
+    for (let shift = 0; shift < 8; shift++) {mix(Number((lmBig >> BigInt(shift * 8)) & 0xffn));}
+    return `${size}-${file.lastModified || 0}-${(hash >>> 0).toString(16)}`;
 }
 
 function getFileByIdentifier(id) {
@@ -1199,28 +1237,6 @@ function resizeCanvas() {
 }
 //----------------------------------------------------------------------------------------------------------------------
 
-function createSplitAnalyser(sourceNode, fftSize = 1024, smoothing = 0) {
-    const splitter = audioCtx.createChannelSplitter(2);
-
-    sourceNode.connect(splitter);
-
-    const analyserL = audioCtx.createAnalyser();
-    const analyserR = audioCtx.createAnalyser();
-
-    analyserL.fftSize = fftSize;
-    analyserR.fftSize = fftSize;
-    analyserL.smoothingTimeConstant = smoothing;
-    analyserR.smoothingTimeConstant = smoothing;
-
-    splitter.connect(analyserL, 0);
-    splitter.connect(analyserR, 1);
-
-    const dataL = new Float32Array(analyserL.fftSize);
-    const dataR = new Float32Array(analyserR.fftSize);
-
-    return { analyserL, analyserR, dataL, dataR };
-}
-
 function updateAnalyser() {
     freqData = new Uint8Array(analyser.frequencyBinCount);
     freqDataFloat = new Float32Array(analyser.frequencyBinCount);
@@ -1232,143 +1248,80 @@ function updateAnalyser() {
 //----------------------------------------------------------------------------------------------------------------------
 
 function playFrom(offset) {
-    cleanupGraph();
-    source?.stop();
     audioCtx.resume();
-    source = audioCtx.createBufferSource();
-    source.buffer = buffer;
 
-    setPlaybackRate(playbackRate);
-
-    gainNode = audioCtx.createGain();
-    gainNode.gain.value = volume;
-
-    source.connect(gainNode);
-    //------------------------------------------------------------
-    // const compressor = audioCtx.createDynamicsCompressor();
-    // compressor.threshold.value = -12;
-    // compressor.knee.value = 20;
-    // compressor.ratio.value = 8;
-    // compressor.attack.value = 0.003;
-    // compressor.release.value = 0.25;
-    // source.connect(gainNode);
-    // gainNode.connect(compressor);
-    //------------------------------------------------------------
-
-    // some testing stuff
-    // if (playbackLowFreq && playbackLowFreq > 0) {
-    //     playbackHPFilter = audioCtx.createBiquadFilter();
-    //     playbackHPFilter.type = 'highpass';
-    //     playbackHPFilter.frequency.value = playbackLowFreq;
-    //     node.connect(playbackHPFilter);
-    //     node = playbackHPFilter;
-    // }
-    // if (playbackHighFreq && playbackHighFreq > 0) {
-    //     playbackLPFilter = audioCtx.createBiquadFilter();
-    //     playbackLPFilter.type = 'lowpass';
-    //     playbackLPFilter.frequency.value = playbackHighFreq;
-    //     node.connect(playbackLPFilter);
-    //     node = playbackLPFilter;
-    // }
-
-    effectChain.connectInput(gainNode);
-    //effectChain.connectInput(compressor);
-
-    startTime = audioCtx.currentTime - (offset / Math.max(0.0001, playbackRate));
-    source.start(0, offset);
     videoEl.currentTime = offset;
-    //videoEl.play().catch(() => { });
-    pausePlayButton.dataset.state = 'pause';
+    videoEl.playbackRate = playbackRate;
+
+    videoEl.play().catch(err => {
+        console.warn("Video play failed:", err);
+    });
 }
 
 // Stops the audio
 function stopAudio(clearCanvas, pauseCtx) {
-    if (source) {
-        source.stop();
-        //videoEl.pause();
-        if (pauseCtx) {
-            audioCtx.suspend();
-            pausePlayButton.dataset.state = 'play';
-        }
-        if (clearCanvas) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    videoEl.pause();
+    if (clearCanvas) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
 }
 
 function loadFile(file) {
     if (!file) return;
     const loadToken = ++currentLoadToken;
-    const reader = new FileReader();
     const songElement = document.querySelector(`.songItem[data-file-name="${file._fingerprint}"]`);
-
     document.querySelectorAll('.songItem').forEach(el => {
         el.classList.remove('loading');
     });
-
     songElement?.classList.add('loading');
     songElement?.classList.remove('error');
     chooseAudioLabel.textContent = `Loading ${file.name}...`;
 
-    reader.onerror = () => {
+    videoEl.pause();
+    videoEl.removeAttribute("src");
+    videoEl.load();
+
+    if (videoEl._objectURL) {
+        URL.revokeObjectURL(videoEl._objectURL);
+        videoEl._objectURL = null;
+    }
+    const url = URL.createObjectURL(file);
+    videoEl.src = url;
+    videoEl._objectURL = url;
+    videoEl.load();
+    videoEl.addEventListener("loadeddata", () => {
         if (loadToken !== currentLoadToken) return;
-        songElement?.classList.remove('active', 'loading');
-        songElement?.classList.add('error');
-        console.error(`Failed to read ${file.name}`, reader.error);
-    };
-
-    reader.onload = () => {
-        audioCtx.decodeAudioData(
-            reader.result,
-            buf => {
-                if (loadToken !== currentLoadToken) return;
-                videoEl.src = URL.createObjectURL(file);
-                videoEl.load();
-                videoEl.addEventListener("loadeddata", () => {
-                    videoEl.currentTime = 0;
-                }, { once: true });
-
-                document.querySelectorAll('.songItem').forEach(el => {
-                    el.classList.remove('active', 'loading');
-                });
-
-                songElement?.classList.add('active');
-
-                buffer = buf;
-                currentSelectedFile = file._fingerprint;
-                selectedSubtitle = getSubtitle(file);
-                subtitleLastIndex = 0;
-                loopCounter = 0;
-                randomSongs.remember(file);
-                chooseAudioLabel.textContent = file.name;
-                document.title = `${file.name} - ${pageOriginalTitle}`;
-                playFrom(0);
-            },
-            err => {
-                if (loadToken !== currentLoadToken) return;
-                songElement?.classList.remove('active', 'loading');
-                songElement?.classList.add('error');
-                console.error(`Failed decoding ${file.name}`, err);
-            }
-        );
-    };
-    reader.readAsArrayBuffer(file);
+        videoEl.currentTime = 0;
+        document.querySelectorAll('.songItem').forEach(el => {
+            el.classList.remove('active', 'loading');
+        });
+        songElement?.classList.add('active');
+        currentSelectedFile = file._fingerprint;
+        selectedSubtitle = getSubtitle(file);
+        subtitleLastIndex = 0;
+        loopCounter = 0;
+        randomSongs.remember(file);
+        chooseAudioLabel.textContent = file.name;
+        document.title = `${file.name} - ${pageOriginalTitle}`;
+        playFrom(0);
+    }, { once: true });
 }
 
 function togglePlayPause() {
-    if (!audioCtx || !buffer) return;
-    const elapsed = getElapsedTime();
-    const sliderAtEnd = Math.abs(+timeSlider.value * buffer.duration - buffer.duration) < 0.1;
-    if (audioCtx.state === 'running') {
+    if (!videoEl.duration) return;
+    if (!videoEl.paused) {
         stopAudio(false, true);
-        timeSlider.value = elapsed / buffer.duration;
     } else {
         audioCtx.resume();
-        playFrom(+timeSlider.value * buffer.duration);
+
+        videoEl.play().catch(err => {
+            console.warn(err);
+        });
     }
-    if (elapsed >= buffer.duration - 0.5 && sliderAtEnd) playFrom(0);
 }
 
 function playNext(jump = 1, loop = true) {
-    if (!audioCtx || !buffer) return;
+    if (!audioCtx || !videoEl.src) return;
     let idx = findIndexByIdentifier(currentSelectedFile);
     if (idx === -1) idx = 0;
     const nextIdx = idx + jump;
@@ -1385,18 +1338,16 @@ function loadRandom() {
 }
 
 function jumpAt(time = 5) {
-    if (!audioCtx || !buffer) return;
-    let t = getElapsedTime() + time;
-    t = t >= 0 ? t : 0
-    if (t >= buffer.duration && !playSoundList) playNext(1, true);
-    else {
-        if (audioCtx.state === 'running') playFrom(t);
-        else {
-            stopAudio(false, true);
-            audioTimeText.textContent = formatTime(t) + ' / ' + formatTime(buffer.duration);
-            timeSlider.value = t / buffer.duration
+    if (!videoEl.duration) return;
+    let t = videoEl.currentTime + time;
+    if (t < 0) t = 0;
+    if (t >= videoEl.duration) {
+        if (!playSoundList) {
+            playNext(1, true);
         }
+        return;
     }
+    videoEl.currentTime = t;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -1417,20 +1368,16 @@ async function addFiles(filesARG) {
     const uniqueNewFiles = newFiles.filter(file => { return !files.some(existing => existing._fingerprint === file._fingerprint); });
 
     if (uniqueNewFiles.length === 0) return;
-
     files = files.concat(uniqueNewFiles);
-
     addFilesToSongList(uniqueNewFiles);
-
     randomSongs.setMemory(files.length)
-
     const file = uniqueNewFiles[0];
     if (!file) {
         console.warn('This file does not exist in the array.');
         return;
     }
 
-    if (!audioCtx || audioCtx.state !== 'running') {
+    if (!audioCtx || videoEl.paused) {
         loadFile(file);
     }
 
@@ -1445,34 +1392,28 @@ function removeFile(file) {
     if (!file) return;
     const index = files.findIndex(f => f._fingerprint === file._fingerprint);
     const el = document.querySelector(`[data-file-name="${file._fingerprint}"]`);
-
     if (index !== -1) files.splice(index, 1);
     if (el) el.remove();
-
     randomSongs.forget(file);
-
-    if (currentSelectedFile === file._fingerprint) {
+    const isCurrent = currentSelectedFile === file._fingerprint;
+    if (isCurrent) {
+        currentLoadToken++;
         stopAudio(true, true);
-
-        buffer = null;
-        startTime = 0;
+        if (videoEl._objectURL) {
+            URL.revokeObjectURL(videoEl._objectURL);
+            videoEl._objectURL = null;
+        }
+        videoEl.removeAttribute("src");
+        videoEl.load();
+        currentSelectedFile = '';
         selectedSubtitle = '';
+        subtitleLastIndex = 0;
+        soundEnded = false;
         timeSlider.value = 0;
-
         if (chooseAudioLabel) {
             chooseAudioLabel.textContent = 'No file selected';
         }
-
         document.title = pageOriginalTitle;
-
-        if (source) {
-            try {
-                source.stop();
-                source.disconnect();
-            } catch { }
-
-            source = null;
-        }
     }
 
     updateTotalDurationText();
@@ -1483,24 +1424,27 @@ function removeFile(file) {
 
 // Main loop
 function commonLoop() {
-    if (!audioCtx || !buffer) return;
+    if (!audioCtx || !videoEl.duration) return;
+
     const elapsed = getElapsedTime();
 
-    if (audioCtx.state === 'running') {
-        if (elapsed < buffer.duration) {
-            timeSlider.value = elapsed / buffer.duration;
+    if (!videoEl.paused || isSeeking) {
+        if (elapsed < videoEl.duration) {
+            timeSlider.value = elapsed / videoEl.duration;
         }
     }
 
-    if ((!audioCtx || elapsed >= buffer.duration) && !soundEnded) {
+    if (elapsed >= videoEl.duration && !soundEnded) {
         soundEnded = true;
         stopAudio(false, true);
+
         if (loopMode === 1) {
             if (loopCounter === 0) {
                 loopCounter = 1;
                 playFrom(0);
             } else {
                 loopCounter = 0;
+
                 if (playRandom) {
                     loadRandom();
                 } else if (playSoundList) {
@@ -1522,7 +1466,7 @@ function commonLoop() {
         }
     }
 
-    if (elapsed < buffer.duration && soundEnded) {
+    if (elapsed < videoEl.duration && soundEnded) {
         soundEnded = false;
     }
 }
@@ -1530,7 +1474,7 @@ function commonLoop() {
 // Render stuff loop
 function renderLoop() {
     requestAnimationFrame(renderLoop);
-    if (!analyser || !audioCtx || !buffer) return;
+    if (!analyser || !audioCtx) return;
     const elapsed = getElapsedTime();
 
     if (!window._lastSubtitleCheck) window._lastSubtitleCheck = 0;
@@ -1541,7 +1485,7 @@ function renderLoop() {
         showSubtitle(elapsed, selectedSubtitle);
     }
 
-    const timeText = formatTime(elapsed / playbackRate) + ' / ' + formatTime(buffer.duration / playbackRate);
+    const timeText = formatTime(elapsed) + ' / ' + formatTime(videoEl.duration);
     if (audioTimeText.textContent !== timeText) {
         audioTimeText.textContent = timeText
     }
@@ -1553,7 +1497,7 @@ function renderLoop() {
 
     let lastProgress = -1;
 
-    const progress = Math.round((elapsed / buffer.duration) * 1000) / 10;
+    const progress = Math.round((elapsed / videoEl.duration) * 1000) / 10;
 
     if (progress !== lastProgress) {
         songListContainer.style.setProperty('--audioElapsed', progress + '%');
@@ -1561,7 +1505,7 @@ function renderLoop() {
     }
 
 
-    if (audioCtx.state === 'running') {
+    if (!videoEl.paused) {
         analyser.getByteFrequencyData(freqData);
         analyser.getFloatFrequencyData(freqDataFloat);
         analyser.getByteTimeDomainData(timeData);
@@ -1626,14 +1570,6 @@ function volumeChanged() {
 
     document.getElementById("audio-volume").innerText = `Volume: ${dB > 0 ? '+' : ''}${dbDisplay}`;
     volumeSlider.dataset.tip = `Volume: ${Math.floor(volumeSlider.value * 100)}%`
-}
-
-function setPlaybackFreqRange(lowHz = 0, highHz = 0) {
-    playbackLowFreq = Number(lowHz) || 0;
-    playbackHighFreq = Number(highHz) || 0;
-    if (audioCtx && buffer && audioCtx.state === 'running') {
-        playFrom(getElapsedTime());
-    }
 }
 
 function isTypingOrEditing() {
@@ -1759,15 +1695,18 @@ volumeSlider.addEventListener('input', () => {
     volumeChanged();
 });
 
-timeSlider.addEventListener('input', () => {
-    if (!audioCtx || !buffer) return;
-    const t = +timeSlider.value * buffer.duration;
-    if (audioCtx.state === 'running') playFrom(t);
-    else {
-        stopAudio(false, true);
-        audioTimeText.textContent = formatTime(t) + ' / ' + formatTime(buffer.duration);
-    }
+timeSlider.addEventListener('pointerdown', () => {
+    isSeeking = true;
+    pendingSeek = videoEl.currentTime;
 });
+
+timeSlider.addEventListener('input', () => {
+    if (!videoEl.duration) return;
+    pendingSeek = Number(timeSlider.value) * videoEl.duration;
+});
+
+timeSlider.addEventListener('pointerup', finishSeek);
+timeSlider.addEventListener('pointercancel', finishSeek);
 
 playbackSpeedInput.addEventListener('input', () => {
     setPlaybackRate(Number(playbackSpeedInput.value) || 1);
@@ -1990,6 +1929,41 @@ equalizer.onChange(data => {
     });
 });
 //----------------------------------------------------------------------------------------------------------------------
+function updatePlayButton() {
+    if (!pausePlayButton) return;
+
+    pausePlayButton.dataset.state = videoEl.paused ? "play" : "pause";
+}
+
+function setupMediaSession() {
+    if (!('mediaSession' in navigator)) return;
+    navigator.mediaSession.setActionHandler('play', () => {
+        videoEl.play();
+    });
+    navigator.mediaSession.setActionHandler('pause', () => {
+        videoEl.pause();
+    });
+    navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+        const offset = details.seekOffset || 10;
+        jumpAt(-offset);
+    });
+    navigator.mediaSession.setActionHandler('seekforward', (details) => {
+        const offset = details.seekOffset || 10;
+        jumpAt(offset);
+    });
+    navigator.mediaSession.setActionHandler('previoustrack', () => {
+        playNext(-1);
+    });
+    navigator.mediaSession.setActionHandler('nexttrack', () => {
+        playNext(1);
+    });
+}
+
+
+videoEl.addEventListener("play", updatePlayButton);
+videoEl.addEventListener("pause", updatePlayButton);
+videoEl.addEventListener("ended", updatePlayButton);
+
 function createFocusHandler(movableWindows) {
     return function focusWindow(window) {
         const index = movableWindows.indexOf(window);
@@ -2008,7 +1982,6 @@ function isBrowserFullscreen() {
     // );
     return window.matchMedia('(display-mode: fullscreen)').matches;
 }
-const showControlsBtn = document.getElementById('showControlsBtn');
 window.addEventListener("resize", () => {
     if (isBrowserFullscreen()) {
         controlsEl.classList.add("hidden");
@@ -2160,6 +2133,7 @@ document.addEventListener('DOMContentLoaded', () => {
     resizeCanvas();
     volumeChanged();
     setupEffects();
+    setupMediaSession();
 
     audioCtx?.suspend();
 
