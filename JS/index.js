@@ -524,12 +524,13 @@ async function fileFingerprint(file) {
         hash ^= b;
         hash = Math.imul(hash, 16777619);
     };
-    for (let i = 0; i < headBytes.length; i++) mix(headBytes[i]);
-    for (let i = 0; i < tailBytes.length; i++) mix(tailBytes[i]);
-    const lm = file.lastModified || 0;
-    for (let shift = 0; shift < 4; shift++) mix((size >> (shift * 8)) & 0xff);
-    for (let shift = 0; shift < 4; shift++) mix((lm >> (shift * 8)) & 0xff);
-    return `${size}-${lm}-${hash >>> 0}`;
+    for (const b of headBytes) mix(b);
+    for (const b of tailBytes) mix(b);
+    const sizeBig = BigInt(size);
+    const lmBig = BigInt(file.lastModified || 0);
+    for (let shift = 0; shift < 8; shift++) {mix(Number((sizeBig >> BigInt(shift * 8)) & 0xffn));}
+    for (let shift = 0; shift < 8; shift++) {mix(Number((lmBig >> BigInt(shift * 8)) & 0xffn));}
+    return `${size}-${file.lastModified || 0}-${(hash >>> 0).toString(16)}`;
 }
 
 function getFileByIdentifier(id) {
