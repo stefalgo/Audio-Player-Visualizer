@@ -86,10 +86,13 @@ const SAMPLE_BYTES = 64 * 1024;
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 const videoEl = document.createElement("video");
-videoEl.muted = true;
+videoEl.muted = false;
 videoEl.playsInline = true;
+videoEl.preservesPitch = false;
 videoEl.style.display = "none";
 document.body.appendChild(videoEl);
+
+const mediaSource = audioCtx.createMediaElementSource(videoEl);
 
 // dont question it
 const pageOriginalTitle = document.title;
@@ -147,7 +150,7 @@ const RETRO_CENTER_FREQS = [
 let user_eq_presets = JSON.parse(localStorage.getItem("USER_EQ_PRESETS") || "{}");
 
 let analyser, analyserL, analyserR, dataL, dataR;
-let source, gainNode, buffer, startTime;
+let gainNode;
 let effectChain = null;
 let eqState = EQ_BANDS.map(() => 0);
 let files = [];
@@ -178,6 +181,11 @@ let analyserSmoothing = visualizerSL.value;
 let subtitleLastIndex = 0;
 let fftChangeTimeout = null; // debounce when changing the fftsize
 let resizeTimeout = null; // debounce thing for updateing the canvas on window resize or something like that
+
+gainNode = audioCtx.createGain();
+gainNode.gain.value = volume;
+
+mediaSource.connect(gainNode);
 
 //------------------------------------------------------------------------------------------------
 
@@ -314,6 +322,7 @@ function setupEffects() {
         )
     );
 
+    effectChain.connectInput(gainNode);
     effectChain.connectOutput();
     createAnalyser(effectChain.output);
 
@@ -321,11 +330,8 @@ function setupEffects() {
 }
 
 function getElapsedTime() {
-    if (!audioCtx || !buffer) return 0;
-    if (audioCtx.state === 'running' && source && startTime !== undefined && startTime !== null) {
-        return (audioCtx.currentTime - startTime) * playbackRate;
-    }
-    return Number(timeSlider.value * buffer.duration) || 0;
+    if (!videoEl || !videoEl.duration) return 0;
+    return videoEl.currentTime;
 }
 
 function getMediaDuration(file) {
@@ -418,11 +424,9 @@ function getSupportedMediaFormats() {
 // e
 function setPlaybackRate(rate) {
     rate = Number(rate) || 1.0;
-    const cur = getElapsedTime();
     playbackRate = rate;
-    if (source && source.playbackRate) {
-        try { source.playbackRate.value = playbackRate; videoEl.playbackRate = playbackRate; } catch (e) { }
-        if (audioCtx) startTime = audioCtx.currentTime - cur / playbackRate;
+    if (videoEl) {
+        videoEl.playbackRate = playbackRate;
     }
     return playbackRate;
 }
@@ -1232,65 +1236,26 @@ function updateAnalyser() {
 //----------------------------------------------------------------------------------------------------------------------
 
 function playFrom(offset) {
-    cleanupGraph();
-    source?.stop();
     audioCtx.resume();
-    source = audioCtx.createBufferSource();
-    source.buffer = buffer;
 
-    setPlaybackRate(playbackRate);
-
-    gainNode = audioCtx.createGain();
-    gainNode.gain.value = volume;
-
-    source.connect(gainNode);
-    //------------------------------------------------------------
-    // const compressor = audioCtx.createDynamicsCompressor();
-    // compressor.threshold.value = -12;
-    // compressor.knee.value = 20;
-    // compressor.ratio.value = 8;
-    // compressor.attack.value = 0.003;
-    // compressor.release.value = 0.25;
-    // source.connect(gainNode);
-    // gainNode.connect(compressor);
-    //------------------------------------------------------------
-
-    // some testing stuff
-    // if (playbackLowFreq && playbackLowFreq > 0) {
-    //     playbackHPFilter = audioCtx.createBiquadFilter();
-    //     playbackHPFilter.type = 'highpass';
-    //     playbackHPFilter.frequency.value = playbackLowFreq;
-    //     node.connect(playbackHPFilter);
-    //     node = playbackHPFilter;
-    // }
-    // if (playbackHighFreq && playbackHighFreq > 0) {
-    //     playbackLPFilter = audioCtx.createBiquadFilter();
-    //     playbackLPFilter.type = 'lowpass';
-    //     playbackLPFilter.frequency.value = playbackHighFreq;
-    //     node.connect(playbackLPFilter);
-    //     node = playbackLPFilter;
-    // }
-
-    effectChain.connectInput(gainNode);
-    //effectChain.connectInput(compressor);
-
-    startTime = audioCtx.currentTime - (offset / Math.max(0.0001, playbackRate));
-    source.start(0, offset);
     videoEl.currentTime = offset;
-    //videoEl.play().catch(() => { });
+    videoEl.playbackRate = playbackRate;
+
+    videoEl.play().catch(err => {
+        console.warn("Video play failed:", err);
+    });
+
     pausePlayButton.dataset.state = 'pause';
 }
 
 // Stops the audio
 function stopAudio(clearCanvas, pauseCtx) {
-    if (source) {
-        source.stop();
-        //videoEl.pause();
-        if (pauseCtx) {
-            audioCtx.suspend();
-            pausePlayButton.dataset.state = 'play';
-        }
-        if (clearCanvas) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    videoEl.pause();
+    if (pauseCtx) {
+        pausePlayButton.dataset.state = 'play';
+    }
+    if (clearCanvas) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
 }
 
@@ -1316,59 +1281,52 @@ function loadFile(file) {
     };
 
     reader.onload = () => {
-        audioCtx.decodeAudioData(
-            reader.result,
-            buf => {
-                if (loadToken !== currentLoadToken) return;
-                videoEl.src = URL.createObjectURL(file);
-                videoEl.load();
-                videoEl.addEventListener("loadeddata", () => {
-                    videoEl.currentTime = 0;
-                }, { once: true });
+        if (loadToken !== currentLoadToken) return;
+        videoEl.src = URL.createObjectURL(file);
+        videoEl.load();
+        videoEl.addEventListener("loadeddata", () => {
 
-                document.querySelectorAll('.songItem').forEach(el => {
-                    el.classList.remove('active', 'loading');
-                });
+            videoEl.currentTime = 0;
 
-                songElement?.classList.add('active');
+            document.querySelectorAll('.songItem').forEach(el => {
+                el.classList.remove('active', 'loading');
+            });
 
-                buffer = buf;
-                currentSelectedFile = file._fingerprint;
-                selectedSubtitle = getSubtitle(file);
-                subtitleLastIndex = 0;
-                loopCounter = 0;
-                randomSongs.remember(file);
-                chooseAudioLabel.textContent = file.name;
-                document.title = `${file.name} - ${pageOriginalTitle}`;
-                playFrom(0);
-            },
-            err => {
-                if (loadToken !== currentLoadToken) return;
-                songElement?.classList.remove('active', 'loading');
-                songElement?.classList.add('error');
-                console.error(`Failed decoding ${file.name}`, err);
-            }
-        );
+            songElement?.classList.add('active');
+
+            currentSelectedFile = file._fingerprint;
+            selectedSubtitle = getSubtitle(file);
+            subtitleLastIndex = 0;
+            loopCounter = 0;
+
+            randomSongs.remember(file);
+
+            chooseAudioLabel.textContent = file.name;
+            document.title = `${file.name} - ${pageOriginalTitle}`;
+
+            playFrom(0);
+
+        }, { once:true });
     };
     reader.readAsArrayBuffer(file);
 }
 
 function togglePlayPause() {
-    if (!audioCtx || !buffer) return;
-    const elapsed = getElapsedTime();
-    const sliderAtEnd = Math.abs(+timeSlider.value * buffer.duration - buffer.duration) < 0.1;
-    if (audioCtx.state === 'running') {
+    if (!videoEl.duration) return;
+    if (!videoEl.paused) {
         stopAudio(false, true);
-        timeSlider.value = elapsed / buffer.duration;
     } else {
         audioCtx.resume();
-        playFrom(+timeSlider.value * buffer.duration);
-    }
-    if (elapsed >= buffer.duration - 0.5 && sliderAtEnd) playFrom(0);
-}
 
+        videoEl.play().catch(err=>{
+            console.warn(err);
+        });
+
+        pausePlayButton.dataset.state = 'pause';
+    }
+}
 function playNext(jump = 1, loop = true) {
-    if (!audioCtx || !buffer) return;
+    if (!audioCtx || !videoEl.src) return;
     let idx = findIndexByIdentifier(currentSelectedFile);
     if (idx === -1) idx = 0;
     const nextIdx = idx + jump;
@@ -1385,18 +1343,16 @@ function loadRandom() {
 }
 
 function jumpAt(time = 5) {
-    if (!audioCtx || !buffer) return;
-    let t = getElapsedTime() + time;
-    t = t >= 0 ? t : 0
-    if (t >= buffer.duration && !playSoundList) playNext(1, true);
-    else {
-        if (audioCtx.state === 'running') playFrom(t);
-        else {
-            stopAudio(false, true);
-            audioTimeText.textContent = formatTime(t) + ' / ' + formatTime(buffer.duration);
-            timeSlider.value = t / buffer.duration
+    if (!videoEl.duration) return;
+    let t = videoEl.currentTime + time;
+    if (t < 0) t = 0;
+    if (t >= videoEl.duration) {
+        if (!playSoundList) {
+            playNext(1,true);
         }
+        return;
     }
+    videoEl.currentTime = t;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -1417,20 +1373,16 @@ async function addFiles(filesARG) {
     const uniqueNewFiles = newFiles.filter(file => { return !files.some(existing => existing._fingerprint === file._fingerprint); });
 
     if (uniqueNewFiles.length === 0) return;
-
     files = files.concat(uniqueNewFiles);
-
     addFilesToSongList(uniqueNewFiles);
-
     randomSongs.setMemory(files.length)
-
     const file = uniqueNewFiles[0];
     if (!file) {
         console.warn('This file does not exist in the array.');
         return;
     }
 
-    if (!audioCtx || audioCtx.state !== 'running') {
+    if (!audioCtx || videoEl.paused) {
         loadFile(file);
     }
 
@@ -1454,8 +1406,9 @@ function removeFile(file) {
     if (currentSelectedFile === file._fingerprint) {
         stopAudio(true, true);
 
-        buffer = null;
-        startTime = 0;
+        videoEl.removeAttribute("src");
+        videoEl.load();
+
         selectedSubtitle = '';
         timeSlider.value = 0;
 
@@ -1464,15 +1417,6 @@ function removeFile(file) {
         }
 
         document.title = pageOriginalTitle;
-
-        if (source) {
-            try {
-                source.stop();
-                source.disconnect();
-            } catch { }
-
-            source = null;
-        }
     }
 
     updateTotalDurationText();
@@ -1483,24 +1427,27 @@ function removeFile(file) {
 
 // Main loop
 function commonLoop() {
-    if (!audioCtx || !buffer) return;
+    if (!audioCtx || !videoEl.duration) return;
+
     const elapsed = getElapsedTime();
 
-    if (audioCtx.state === 'running') {
-        if (elapsed < buffer.duration) {
-            timeSlider.value = elapsed / buffer.duration;
+    if (!videoEl.paused) {
+        if (elapsed < videoEl.duration) {
+            timeSlider.value = elapsed / videoEl.duration;
         }
     }
 
-    if ((!audioCtx || elapsed >= buffer.duration) && !soundEnded) {
+    if (elapsed >= videoEl.duration && !soundEnded) {
         soundEnded = true;
         stopAudio(false, true);
+
         if (loopMode === 1) {
             if (loopCounter === 0) {
                 loopCounter = 1;
                 playFrom(0);
             } else {
                 loopCounter = 0;
+
                 if (playRandom) {
                     loadRandom();
                 } else if (playSoundList) {
@@ -1522,7 +1469,7 @@ function commonLoop() {
         }
     }
 
-    if (elapsed < buffer.duration && soundEnded) {
+    if (elapsed < videoEl.duration && soundEnded) {
         soundEnded = false;
     }
 }
@@ -1530,7 +1477,7 @@ function commonLoop() {
 // Render stuff loop
 function renderLoop() {
     requestAnimationFrame(renderLoop);
-    if (!analyser || !audioCtx || !buffer) return;
+    if (!analyser || !audioCtx) return;
     const elapsed = getElapsedTime();
 
     if (!window._lastSubtitleCheck) window._lastSubtitleCheck = 0;
@@ -1541,7 +1488,7 @@ function renderLoop() {
         showSubtitle(elapsed, selectedSubtitle);
     }
 
-    const timeText = formatTime(elapsed / playbackRate) + ' / ' + formatTime(buffer.duration / playbackRate);
+    const timeText = formatTime(elapsed) + ' / ' + formatTime(videoEl.duration);
     if (audioTimeText.textContent !== timeText) {
         audioTimeText.textContent = timeText
     }
@@ -1553,7 +1500,7 @@ function renderLoop() {
 
     let lastProgress = -1;
 
-    const progress = Math.round((elapsed / buffer.duration) * 1000) / 10;
+    const progress = Math.round((elapsed / videoEl.duration) * 1000) / 10;
 
     if (progress !== lastProgress) {
         songListContainer.style.setProperty('--audioElapsed', progress + '%');
@@ -1561,7 +1508,7 @@ function renderLoop() {
     }
 
 
-    if (audioCtx.state === 'running') {
+    if (!videoEl.paused) {
         analyser.getByteFrequencyData(freqData);
         analyser.getFloatFrequencyData(freqDataFloat);
         analyser.getByteTimeDomainData(timeData);
@@ -1626,14 +1573,6 @@ function volumeChanged() {
 
     document.getElementById("audio-volume").innerText = `Volume: ${dB > 0 ? '+' : ''}${dbDisplay}`;
     volumeSlider.dataset.tip = `Volume: ${Math.floor(volumeSlider.value * 100)}%`
-}
-
-function setPlaybackFreqRange(lowHz = 0, highHz = 0) {
-    playbackLowFreq = Number(lowHz) || 0;
-    playbackHighFreq = Number(highHz) || 0;
-    if (audioCtx && buffer && audioCtx.state === 'running') {
-        playFrom(getElapsedTime());
-    }
 }
 
 function isTypingOrEditing() {
@@ -1760,13 +1699,9 @@ volumeSlider.addEventListener('input', () => {
 });
 
 timeSlider.addEventListener('input', () => {
-    if (!audioCtx || !buffer) return;
-    const t = +timeSlider.value * buffer.duration;
-    if (audioCtx.state === 'running') playFrom(t);
-    else {
-        stopAudio(false, true);
-        audioTimeText.textContent = formatTime(t) + ' / ' + formatTime(buffer.duration);
-    }
+    if (!audioCtx || !videoEl.duration) return;
+    const t = +timeSlider.value * videoEl.duration;
+    videoEl.currentTime = t;
 });
 
 playbackSpeedInput.addEventListener('input', () => {

@@ -580,23 +580,11 @@ class VideoRender extends Renderer {
     render(videoEl, subtitleData = null) {
         if (!videoEl) return;
 
-        const elapsed = getElapsedTime();
-        const drift = videoEl.currentTime - elapsed;
         const canvasW = this.canvas.width;
         const canvasH = this.canvas.height;
         const videoW = videoEl.videoWidth;
         const videoH = videoEl.videoHeight;
 
-        if (Math.abs(drift) > 0.25 && performance.now() - this.lastHardSync > 500) {
-            videoEl.currentTime = elapsed;
-            this.lastHardSync = performance.now();
-        }
-
-        if (this.audioCtx?.state === "running") {
-            if (videoEl.paused) videoEl.play().catch(() => { });
-        } else if (!videoEl.paused) {
-            videoEl.pause();
-        }
         if (videoEl.readyState < 2) return;
 
         this.bgCanvas ??= document.createElement("canvas");
