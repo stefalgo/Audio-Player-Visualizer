@@ -249,6 +249,28 @@ function buildEffectsUI() {
     });
 }
 
+function createSplitAnalyser(sourceNode, fftSize = 1024, smoothing = 0) {
+    const splitter = audioCtx.createChannelSplitter(2);
+
+    sourceNode.connect(splitter);
+
+    const analyserL = audioCtx.createAnalyser();
+    const analyserR = audioCtx.createAnalyser();
+
+    analyserL.fftSize = fftSize;
+    analyserR.fftSize = fftSize;
+    analyserL.smoothingTimeConstant = smoothing;
+    analyserR.smoothingTimeConstant = smoothing;
+
+    splitter.connect(analyserL, 0);
+    splitter.connect(analyserR, 1);
+
+    const dataL = new Float32Array(analyserL.fftSize);
+    const dataR = new Float32Array(analyserR.fftSize);
+
+    return { analyserL, analyserR, dataL, dataR };
+}
+
 function createAnalyser(node) {
     if (analyser) {
         try {
@@ -492,7 +514,7 @@ async function fileFingerprint(file) {
     const lm = file.lastModified || 0;
     for (let shift = 0; shift < 4; shift++) mix((size >> (shift * 8)) & 0xff);
     for (let shift = 0; shift < 4; shift++) mix((lm >> (shift * 8)) & 0xff);
-    return (hash >>> 0).toString(16);
+    return `${size}-${lm}-${hash >>> 0}`;
 }
 
 function getFileByIdentifier(id) {
@@ -1198,28 +1220,6 @@ function resizeCanvas() {
     canvas.height = Math.round(rect.height);
 }
 //----------------------------------------------------------------------------------------------------------------------
-
-function createSplitAnalyser(sourceNode, fftSize = 1024, smoothing = 0) {
-    const splitter = audioCtx.createChannelSplitter(2);
-
-    sourceNode.connect(splitter);
-
-    const analyserL = audioCtx.createAnalyser();
-    const analyserR = audioCtx.createAnalyser();
-
-    analyserL.fftSize = fftSize;
-    analyserR.fftSize = fftSize;
-    analyserL.smoothingTimeConstant = smoothing;
-    analyserR.smoothingTimeConstant = smoothing;
-
-    splitter.connect(analyserL, 0);
-    splitter.connect(analyserR, 1);
-
-    const dataL = new Float32Array(analyserL.fftSize);
-    const dataR = new Float32Array(analyserR.fftSize);
-
-    return { analyserL, analyserR, dataL, dataR };
-}
 
 function updateAnalyser() {
     freqData = new Uint8Array(analyser.frequencyBinCount);
