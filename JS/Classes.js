@@ -50,55 +50,6 @@ class AudioBands {
     }
 }
 
-class SliderProgress {
-    constructor(slider) {
-        if (!(slider instanceof HTMLElement)) {
-            throw new Error("SliderProgress expects a DOM element");
-        }
-
-        this.slider = slider;
-        if (this.getMax() <= this.getMin()) return;
-        this.update = this.update.bind(this);
-        this.init();
-    }
-
-    getMin() {
-        return Number(this.slider.min ?? 0);
-    }
-
-    getMax() {
-        return Number(this.slider.max ?? 100);
-    }
-
-    init() {
-        this.update();
-
-        this.slider.addEventListener("input", this.update);
-
-        const proto = Object.getPrototypeOf(this.slider);
-        const descriptor = Object.getOwnPropertyDescriptor(proto, "value");
-
-        if (!descriptor || !descriptor.set) return;
-
-        Object.defineProperty(this.slider, "value", {
-            get: descriptor.get,
-            set: (v) => {
-                descriptor.set.call(this.slider, v);
-                this.update();
-            }
-        });
-    }
-
-    update() {
-        const min = this.getMin();
-        const max = this.getMax();
-        const value = Number(this.slider.value);
-        if (max <= min) return;
-        const percent = ((value - min) / (max - min)) * 100;
-        this.slider.style.setProperty("--value", `${percent}%`);
-    }
-}
-
 class TooltipManager {
     constructor() {
         this.tooltip = document.createElement('div');
@@ -133,34 +84,27 @@ class TooltipManager {
 
     updateTooltip(event) {
         const target = event.target.closest('[data-tip]');
-
         if (!target || target.dataset.tip === '') {
             this.tooltip.style.visibility = 'hidden';
             this.tooltip.style.opacity = '0';
-
             this.tipObserver.disconnect();
             this.activeElement = null;
-
             return;
         }
 
         if (target !== this.activeElement) {
             this.tipObserver.disconnect();
-
             this.tipObserver.observe(target, {
                 attributes: true,
                 attributeFilter: ['data-tip']
             });
-
             this.activeElement = target;
         }
 
         this.tooltip.innerHTML = target.dataset.tip;
-
         const tooltipHeight = this.tooltip.offsetHeight;
         const tooltipWidth = this.tooltip.offsetWidth;
         const margin = 10;
-
         let top = event.pageY + 20;
         let left = event.pageX + 10;
 
@@ -1142,5 +1086,249 @@ class SubtitleEditor {
             '"': "&quot;",
             "'": "&#039;"
         }[m]));
+    }
+}
+
+class Metronome {
+    constructor(media, {
+        bpm = 120,
+        offset = 0,
+        beatsPerBar = 4,
+        lookAhead = 0.1,
+        interval = 25,
+        click = true,
+        onBeat = null
+    } = {}) {
+        this.media = media;
+        this.bpm = bpm;
+        this.offset = offset;
+        this.beatsPerBar = beatsPerBar;
+        this.lookAhead = lookAhead;
+        this.interval = interval;
+        this.onBeat = onBeat;
+        this.enableClick = click;
+        this.audio = new AudioContext();
+        this.beatLength = 60 / bpm;
+        this.nextBeatTime = 0;
+        this.nextBeatIndex = 0;
+        this.timer = null;
+        media.addEventListener("play", () => this.start());
+        media.addEventListener("pause", () => this.stop());
+        media.addEventListener("seeked", () => this.resync());
+        media.addEventListener("ratechange", () => this.resync());
+    }
+
+    start() {
+        this.audio.resume();
+        this.resync();
+        this.stop();
+        this.timer = setInterval(() => {
+            this.schedule();
+        }, this.interval);
+    }
+
+    stop() {
+        clearInterval(this.timer);
+        this.timer = null;
+    }
+
+    schedule() {
+        const mediaNow = this.media.currentTime;
+        while (this.nextBeatTime < mediaNow + this.lookAhead) {
+            const delay = this.nextBeatTime - mediaNow;
+            const audioTime = this.audio.currentTime + delay;
+            const beatInBar = this.nextBeatIndex % this.beatsPerBar;
+            if (this.enableClick) this.metronomeClick(audioTime, beatInBar === 0);
+            this.onBeat?.({
+                beat: this.nextBeatIndex,
+                beatInBar,
+                bar: Math.floor(this.nextBeatIndex / this.beatsPerBar),
+                mediaTime: this.nextBeatTime,
+                audioTime
+            });
+            this.nextBeatIndex++;
+            this.nextBeatTime += this.beatLength;
+        }
+    }
+
+    resync() {
+        const beat = Math.floor(
+            (this.media.currentTime - this.offset) /
+            this.beatLength
+        );
+        this.nextBeatIndex = beat + 1;
+        this.nextBeatTime = this.offset + (beat + 1) * this.beatLength;
+    }
+
+    setBpm(bpm) {
+        this.bpm = bpm;
+        this.beatLength = 60 / bpm;
+        this.resync();
+    }
+
+    setOffset(offset) {
+        this.offset = offset;
+        this.resync();
+    }
+
+    nudge(seconds) {
+        this.offset += seconds;
+        this.resync();
+    }
+
+    metronomeClick(time, accent) {
+        const osc = this.audio.createOscillator();
+        const gain = this.audio.createGain();
+
+        osc.type = "square";
+        osc.frequency.setValueAtTime(
+            accent ? 1800 : 1400,
+            time
+        );
+        gain.gain.setValueAtTime(0.4, time);
+        gain.gain.exponentialRampToValueAtTime(
+            0.001,
+            time + 0.03
+        );
+        osc.connect(gain);
+        gain.connect(this.audio.destination);
+        osc.start(time);
+        osc.stop(time + 0.035);
+    }
+
+    getBeat() {
+        return Math.floor((this.media.currentTime - this.offset) / this.beatLength);
+    }
+
+    getBeatProgress() {
+        const t = (this.media.currentTime - this.offset) % this.beatLength;
+        return t / this.beatLength;
+    }
+}
+
+class Timeline {
+    constructor(element, {
+        min = 0,
+        max = 1,
+        step = 0.001,
+        onHover = null,
+        onSeek = null,
+        onSeekFinish = null
+    } = {}) {
+        this.element = element;
+        this.min = min;
+        this.max = max;
+        this.step = step;
+        this.onHover = onHover;
+        this.onSeek = onSeek;
+        this.onSeekFinish = onSeekFinish;
+        this.value = min;
+        this.playbackValue = min;
+        this.dragging = false;
+        this.bindEvents();
+    }
+
+    updatePlayback(value) {
+        const percent = ((value - this.min) / (this.max - this.min)) * 100;
+        this.element.style.setProperty(
+            "--playback",
+            `${percent}%`
+        );
+    }
+
+    setValue(value) {
+        this.playbackValue = this.clamp(value);
+        this.updatePlayback(this.playbackValue);
+        if (!this.dragging) {
+            this.value = this.playbackValue;
+            this.updateProgress(this.value);
+        }
+    }
+
+    getValue() {
+        return this.value;
+    }
+
+    clamp(value) {
+        value = Math.max(this.min, Math.min(this.max, value));
+        return Math.round(value / this.step) * this.step;
+    }
+
+    getMouseValue(event) {
+        const rect = this.element.getBoundingClientRect();
+        const x = Math.max(0, Math.min(rect.width, event.clientX - rect.left));
+        const percent = x / rect.width;
+        return this.clamp(this.min + percent * (this.max - this.min));
+    }
+
+
+    updateProgress(value) {
+        const percent = ((value - this.min) / (this.max - this.min)) * 100;
+        this.element.style.setProperty(
+            "--progress",
+            `${percent}%`
+        );
+    }
+
+
+    updateHover(event) {
+        const rect = this.element.getBoundingClientRect();
+        const x = Math.max(0, Math.min(rect.width, event.clientX - rect.left));
+        const percent = x / rect.width;
+        this.element.style.setProperty(
+            "--hover",
+            `${percent * 100}%`
+        );
+        if (this.onHover) {
+            this.onHover(this.clamp(this.min + percent * (this.max - this.min)));
+        }
+    }
+
+
+    seek(event) {
+        this.value = this.getMouseValue(event);
+        this.updateProgress(this.value);
+        this.onSeek?.(this.value);
+    }
+
+    bindEvents() {
+        this.element.addEventListener("pointerdown", e => {
+            if (!e.isPrimary || e.button !== 0) return;
+            this.dragging = true;
+            this.element.setPointerCapture(e.pointerId);
+            this.seek(e);
+        });
+
+
+        this.element.addEventListener("pointermove", e => {
+            this.updateHover(e);
+            if (this.dragging) {
+                this.seek(e);
+            }
+        });
+
+
+        this.element.addEventListener("pointerup", e => {
+            if (!this.dragging) return;
+            this.dragging = false;
+            if (this.onSeekFinish) {
+                this.onSeekFinish(this.value);
+            }
+        });
+
+
+        this.element.addEventListener("pointercancel", () => {
+            this.dragging = false;
+        });
+
+
+        this.element.addEventListener("pointerleave", () => {
+            if (!this.dragging) {
+                this.element.style.setProperty(
+                    "--hover",
+                    "0%"
+                );
+            }
+        });
     }
 }

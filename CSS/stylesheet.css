@@ -273,6 +273,105 @@ input[type="range"]::-moz-range-track {
     height: var(--slider-track-height);
 }
 
+/* --------------------------------------------------------- */
+.timeline {
+    --progress: 0%;
+    --playback: 0%;
+    --buffer: 0%;
+    --hover: 0%;
+    position: relative;
+    width: 80%;
+    height: 24px;
+    cursor: pointer;
+    user-select: none;
+    touch-action: none;
+}
+
+.timeline::before {
+    content: "";
+    position: absolute;
+    inset: 50% 0 auto;
+    height: 4px;
+    transform: translateY(-50%);
+    background: var(--gray-400);
+    backdrop-filter: var(--backdrop-blur);
+    border-radius: 999px;
+}
+
+.timeline-buffer,
+.timeline-progress,
+.timeline-current {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    height: 4px;
+    transform: translateY(-50%);
+    border-radius: 999px;
+}
+
+.timeline-buffer {
+    width: var(--buffer);
+    background: var(--gray-300);
+}
+
+.timeline-current {
+    width: var(--playback);
+    background: var(--gray-150);
+}
+
+.timeline-progress {
+    width: var(--progress);
+    background: var(--gray-100);
+    transition: opacity 0.15s;
+}
+
+.timeline-hover {
+    position: absolute;
+    left: var(--hover);
+    top: 50%;
+    width: 2px;
+    height: 12px;
+    transform: translate(-50%, -50%);
+    background: var(--gray-100);
+    opacity: 0;
+}
+
+.timeline-thumb,
+.timeline-ghostThumb {
+    position: absolute;
+    top: 50%;
+    width: 12px;
+    height: 12px;
+    transform: translate(-50%, -50%) scale(1);
+    transform-origin: center center;
+    border-radius: 50%;
+    transition: transform 0.15s;
+}
+
+.timeline-thumb {
+    left: var(--progress);
+    background: var(--gray-100);
+}
+
+.timeline-ghostThumb {
+    left: var(--playback);
+    background: var(--gray-150);
+}
+
+.timeline:hover .timeline-hover {
+    opacity: 1;
+}
+
+.timeline:hover .timeline-progress {
+    opacity: 0.3;
+}
+
+.timeline:hover .timeline-thumb {
+    transform: translate(-50%, -50%) scale(1.2);
+}
+
+/* --------------------------------------------------------- */
+
 #loopModeBtn,
 #playModeBtn,
 #pause-play-button,

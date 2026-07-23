@@ -208,7 +208,41 @@ const languageNames = new Intl.DisplayNames(["en"], {
     type: "language",
 });
 
+// const metro = new Metronome(videoEl, {
+//     bpm: 132,
+//     offset: 0.15,
+//     onBeat(info) {
+//         console.log(info);
+//         console.log(info.beat);
+//         console.log(info.beatInBar);
+//         console.log(info.bar);
+//     }
+// });
+
 //const subtitleEditor = new SubtitleEditor("SubtitleEditorWindow");
+
+const timeline = new Timeline(
+    document.querySelector(".timeline"),
+    {
+        min: 0,
+        max: 1,
+        step: 0.001,
+        onHover(time) {
+            timeline.element.dataset.tip = formatTime(time * videoEl.duration);
+        },
+        onSeek(time) {
+            if (!videoEl.duration) return;
+            isSeeking = true;
+            pendingSeek = time * videoEl.duration;
+
+        },
+        onSeekFinish() {
+            isSeeking = false;
+            if (!videoEl.duration) return;
+            videoEl.currentTime = pendingSeek;
+        }
+    }
+);
 
 //------------------------------------------------------------------------------------------------
 function buildEffectsUI() {
@@ -349,12 +383,6 @@ async function updateMediaSession({
         //     type: "image/png"
         // }]
     });
-}
-
-function finishSeek() {
-    isSeeking = false;
-    if (!videoEl.duration) return;
-    videoEl.currentTime = pendingSeek;
 }
 
 function getElapsedTime(ignoreSeek) {
@@ -1323,7 +1351,7 @@ function loadFile(file) {
         document.title = `${file.name} - ${pageOriginalTitle}`;
         playFrom(0);
 
-        updateMediaSession({title: file.name});
+        updateMediaSession({ title: file.name });
     }, { once: true });
 }
 
@@ -1429,7 +1457,7 @@ function removeFile(file) {
         selectedSubtitle = '';
         subtitleLastIndex = 0;
         soundEnded = false;
-        timeSlider.value = 0;
+        timeline.setValue(0);
         if (chooseAudioLabel) {
             chooseAudioLabel.textContent = 'No file selected';
         }
@@ -1446,12 +1474,10 @@ function removeFile(file) {
 function commonLoop() {
     if (!audioCtx || !videoEl.duration) return;
 
-    const elapsed = getElapsedTime();
+    const elapsed = getElapsedTime(true);
 
-    if (!videoEl.paused || isSeeking) {
-        if (elapsed < videoEl.duration) {
-            timeSlider.value = elapsed / videoEl.duration;
-        }
+    if (!videoEl.paused && videoEl.duration) {
+        timeline.setValue(Math.min(1, elapsed / videoEl.duration));
     }
 
     if (elapsed >= videoEl.duration && !soundEnded) {
@@ -1505,7 +1531,7 @@ function renderLoop() {
         showSubtitle(elapsed, selectedSubtitle);
     }
 
-    const timeText = formatTime(getElapsedTime()) + ' / ' + formatTime(videoEl.duration);
+    const timeText = formatTime(elapsed) + ' / ' + formatTime(videoEl.duration);
     if (audioTimeText.textContent !== timeText) {
         audioTimeText.textContent = timeText
     }
@@ -1521,7 +1547,6 @@ function renderLoop() {
 
     if (progress !== lastProgress) {
         songListContainer.style.setProperty('--audioElapsed', progress + '%');
-        timeSlider.style.setProperty("--progress", progress + '%');
         lastProgress = progress;
     }
 
@@ -1715,19 +1740,6 @@ visualizerSL.addEventListener('input', () => {
 volumeSlider.addEventListener('input', () => {
     volumeChanged();
 });
-
-timeSlider.addEventListener('pointerdown', () => {
-    isSeeking = true;
-    pendingSeek = videoEl.currentTime;
-});
-
-timeSlider.addEventListener('input', () => {
-    if (!videoEl.duration) return;
-    pendingSeek = Number(timeSlider.value) * videoEl.duration;
-});
-
-timeSlider.addEventListener('pointerup', finishSeek);
-timeSlider.addEventListener('pointercancel', finishSeek);
 
 playbackSpeedInput.addEventListener('input', () => {
     setPlaybackRate(Number(playbackSpeedInput.value) || 1);
@@ -2087,10 +2099,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     spaceBar.attach();
-
-    document.querySelectorAll(".slider.time").forEach(el => {
-        new SliderProgress(el);
-    });
 
     visualizerMF.setAttribute('data-tip', `Visualizer max frequency: ${visualizerMF.value} Hz`);
     visualizerQL.setAttribute('data-tip', `Visualizer quality: ${analyserffsize} fftSize`);
