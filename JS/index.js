@@ -222,13 +222,13 @@ const languageNames = new Intl.DisplayNames(["en"], {
 //const subtitleEditor = new SubtitleEditor("SubtitleEditorWindow");
 
 const timeline = new Timeline(
-    document.querySelector(".timeline"),
+    document.getElementById("timeline"),
     {
         min: 0,
         max: 1,
         step: 0.001,
         onHover(time) {
-            timeline.element.dataset.tip = formatTime(time * videoEl.duration);
+            timeline.element.dataset.tip = formatTime(time * videoEl.duration / playbackRate);
         },
         onSeek(time) {
             if (!videoEl.duration) return;
@@ -1278,8 +1278,13 @@ function forceFindSub() {
 
 function resizeCanvas() {
     const rect = canvasContainer.getBoundingClientRect();
-    canvas.width = Math.round(rect.width);
-    canvas.height = Math.round(rect.height);
+    const maxWidth = 1920;
+    const maxHeight = 1080;
+    let width = rect.width;
+    let height = rect.height;
+    const scale = Math.min(maxWidth / width, maxHeight / height, 1);
+    canvas.width = Math.round(width * scale);
+    canvas.height = Math.round(height * scale);
 }
 //----------------------------------------------------------------------------------------------------------------------
 
@@ -1531,7 +1536,7 @@ function renderLoop() {
         showSubtitle(elapsed, selectedSubtitle);
     }
 
-    const timeText = formatTime(elapsed) + ' / ' + formatTime(videoEl.duration);
+    const timeText = formatTime(elapsed / playbackRate) + ' / ' + formatTime(videoEl.duration / playbackRate);
     if (audioTimeText.textContent !== timeText) {
         audioTimeText.textContent = timeText
     }

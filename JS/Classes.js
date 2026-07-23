@@ -1261,7 +1261,6 @@ class Timeline {
         return this.clamp(this.min + percent * (this.max - this.min));
     }
 
-
     updateProgress(value) {
         const percent = ((value - this.min) / (this.max - this.min)) * 100;
         this.element.style.setProperty(
@@ -1269,7 +1268,6 @@ class Timeline {
             `${percent}%`
         );
     }
-
 
     updateHover(event) {
         const rect = this.element.getBoundingClientRect();
@@ -1283,7 +1281,6 @@ class Timeline {
             this.onHover(this.clamp(this.min + percent * (this.max - this.min)));
         }
     }
-
 
     seek(event) {
         this.value = this.getMouseValue(event);
@@ -1299,7 +1296,6 @@ class Timeline {
             this.seek(e);
         });
 
-
         this.element.addEventListener("pointermove", e => {
             this.updateHover(e);
             if (this.dragging) {
@@ -1307,20 +1303,18 @@ class Timeline {
             }
         });
 
-
         this.element.addEventListener("pointerup", e => {
             if (!this.dragging) return;
             this.dragging = false;
+            this.updatePlayback(this.value);
             if (this.onSeekFinish) {
                 this.onSeekFinish(this.value);
             }
         });
 
-
         this.element.addEventListener("pointercancel", () => {
             this.dragging = false;
         });
-
 
         this.element.addEventListener("pointerleave", () => {
             if (!this.dragging) {
