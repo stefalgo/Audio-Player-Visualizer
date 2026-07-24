@@ -127,4 +127,4 @@ License: [BSD 3-Clause License](./licenses/jsmediatags.LICENSE.md)
 
 ## DSEG
 DSEG fonts are used in this prooject.\
-License: [SIL OPEN FONT LICENSE Version 1.1](./licenses/DSEG-LICENSE.txt)
+License: [OFL-1.1 License](./licenses/DSEG-LICENSE.txt)
