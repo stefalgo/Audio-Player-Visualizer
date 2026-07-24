@@ -16,6 +16,7 @@
     <title>Audio Visualizer</title>
     <link rel="icon" href="./Media/Icon2.png" type="image/png">
     <link rel="stylesheet" href="./CSS/stylesheet.css" type="text/css">
+    <script src="./JS/jsmediatags.min.js" defer></script>
     <script src="./JS/Classes.js" defer></script>
     <script src="./JS/RenderVis.js" defer></script>
     <script src="./JS/AudioFilters.js" defer></script>
@@ -23,23 +24,29 @@
 </head>
 
 <body>
-    <template id="songItemTemplate">
-        <div class="cardItem songItem">
-            <div class="cardLeft">
+<template id="songItemTemplate">
+    <div class="cardItem songItem">
+        <div class="cardLeft">
+            <img class="songCover" src="" alt="Song Artwork">
+
+            <div class="songDetails">
                 <span class="cardTitle">
                     <span class="songName"></span>
                     <span class="cardMetadata songExtension" style="user-select: none;"></span>
                 </span>
 
+                <span class="cardMetadata songArtist"></span>
+                <span class="cardMetadata songAlbum"></span>
                 <span class="cardMetadata songInfo"></span>
             </div>
-
-            <div class="cardRight">
-                <button class="button songItemPlayButton" style="margin: 5px;"></button>
-                <button class="button songItemDeleteButton" style="margin: 5px;">Remove</button>
-            </div>
         </div>
-    </template>
+
+        <div class="cardRight">
+            <button class="button songItemPlayButton" style="margin: 5px;"></button>
+            <button class="button songItemDeleteButton" style="margin: 5px;">Remove</button>
+        </div>
+    </div>
+</template>
     <template id="subtitleItemTemplate">
         <div class="cardItem subtitleItem">
             <div class="cardLeft">

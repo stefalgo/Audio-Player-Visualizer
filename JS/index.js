@@ -98,7 +98,10 @@ const mediaSource = audioCtx.createMediaElementSource(videoEl);
 // dont question it
 const pageOriginalTitle = document.title;
 
-const EQ_PRESETS = {
+//---------- Config stuff ----------//
+const useFileArtwork = true //// Uses the artwork of the file if available
+
+const EQ_PRESETS = { //// The built-in presets for the equalizer
     General: {
         Flat: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         Loudness: [6, 5, 4, 2, 0, 0, 2, 4, 6, 7],
@@ -139,8 +142,10 @@ const EQ_PRESETS = {
     }
 };
 
-const EQ_BANDS = [31, 63, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
-const RETRO_CENTER_FREQS = [
+const EQ_BANDS = [ //// Bands that the equalizer will use
+    31, 63, 125, 250, 500, 1000, 2000, 4000, 8000, 16000
+];
+const RETRO_CENTER_FREQS = [ //// What freqs. will be shown on the retro render
     31,
     63, 80, 100, 125, 160, 200, 250, 315,
     400, 500, 630, 800, 1000, 1250, 1600, 2000,
@@ -149,6 +154,16 @@ const RETRO_CENTER_FREQS = [
 ];
 
 let user_eq_presets = JSON.parse(localStorage.getItem("USER_EQ_PRESETS") || "{}");
+
+let playbackRate = 1.0; //// 1.0: Normal, <1 slow, >1 fast
+let volume = volumeSlider.value; //// Volume 0.0 - 1.0
+let playbackLowFreq = 0; // Not used yet
+let playbackHighFreq = 0; // Not used yet
+let pauseViz = false;
+let playSoundList = false; //// Autoplay next
+let playRandom = false;
+let loopMode = 0; //// 1: loop once | 2: loop forever
+//----------------------------------//
 
 let isSeeking = false;
 let pendingSeek = 0;
@@ -164,18 +179,10 @@ let currentSelectedFile = ''; // _fingerprint
 let freqData, freqDataFloat, timeData;
 let currentLoadToken = 0; // e
 
-let playbackRate = 1.0;
-let volume = volumeSlider.value;
-let playbackLowFreq = 0;
-let playbackHighFreq = 0;
 let playbackHPFilter = null;
 let playbackLPFilter = null;
 let currentViz = dropdownVizType.value;
-let pauseViz = false;
 let soundEnded = false;
-let playSoundList = false;
-let playRandom = false;
-let loopMode = 0;
 let loopCounter = 0;
 
 // REMEMBER powers of 2 or something like that
@@ -190,7 +197,6 @@ gainNode = audioCtx.createGain();
 gainNode.gain.value = volume;
 
 mediaSource.connect(gainNode);
-
 //------------------------------------------------------------------------------------------------
 
 const randomSongs = new HumanRandom()
@@ -367,22 +373,35 @@ function setupEffects() {
     buildEffectsUI();
 }
 
+function getArtworkURL(picture) {
+    if (!picture || !picture.data) return null;
+    const blob = new Blob(
+        [new Uint8Array(picture.data)],
+        { type: picture.format }
+    );
+    return URL.createObjectURL(blob);
+}
+
 async function updateMediaSession({
     title = "",
     artist = "",
     album = "",
+    artwork = null,
 } = {}) {
     if (!("mediaSession" in navigator)) return;
-    navigator.mediaSession.metadata = new MediaMetadata({
+    const metadata = {
         title,
         artist,
         album,
-        // artwork: [{
-        //     src: "../Media/Affinity_sound_ico.png",
-        //     sizes: "512x512",
-        //     type: "image/png"
-        // }]
-    });
+    };
+    if (artwork) {
+        metadata.artwork = [{
+            src: artwork,
+            sizes: "512x512",
+            type: "image/png"
+        }];
+    }
+    navigator.mediaSession.metadata = new MediaMetadata(metadata);
 }
 
 function getElapsedTime(ignoreSeek) {
@@ -625,7 +644,10 @@ function addFilesToSongList(filesSelected) {
     filesSelected.forEach((file) => {
         const clone = songItemTemplate.content.cloneNode(true);
         const songDiv = clone.querySelector('.songItem');
+        const cover = clone.querySelector('.songCover');
         const title = clone.querySelector('.songName');
+        const artist = clone.querySelector('.songArtist');
+        const album = clone.querySelector('.songAlbum');
         const extension = clone.querySelector('.songExtension');
         const metadata = clone.querySelector('.songInfo');
         const playButton = clone.querySelector('.songItemPlayButton');
@@ -633,12 +655,23 @@ function addFilesToSongList(filesSelected) {
         const fileName = file.name.replace(/\.[^/.]+$/, "");
         const fileExt = file.name.replace(/^.*\./, "");
 
-        songDiv.dataset.fileName = file._fingerprint;
-        title.textContent = fileName;
-        title.dataset.tip = fileName;
-        extension.textContent = `.${fileExt}`;
+        const artwork = file._artworkURL;
+        const songTitle = file._metadata?.title ? file._metadata.title : fileName;
 
-        metadata.textContent = `${formatTime(file._duration, '{hh}:{mm}:{ss}')} | UID=${file._fingerprint} | Type="${file.type}"`;
+        songDiv.dataset.fileName = file._fingerprint;
+        title.textContent = songTitle;
+        title.dataset.tip = songTitle;
+        extension.textContent = file._metadata?.title ? `[${file._metadata.track}]` : `.${fileExt}`;
+        artist.textContent = file._metadata?.artist;
+        album.textContent = file._metadata?.album;
+        if (artwork) {
+            cover.src = artwork;
+            cover.alt = `Song Artwork: ${songTitle}`;
+        } else {
+            cover.style.display = 'none';
+        }
+
+        metadata.textContent = `${formatTime(file._duration, '{hh}:{mm}:{ss}')} | Type="${file.type}"`;
 
         playButton.addEventListener('click', () => {
             if (currentSelectedFile === file._fingerprint) {
@@ -679,7 +712,7 @@ function addSubtitleFilesToList(filesSelected) {
         title.dataset.tip = fileName;
         extension.textContent = `.${fileExt}`;
 
-        metadata.textContent = `UID=${file._fingerprint} | Type="${file._type}" | ${file._language}`;
+        metadata.textContent = `Type="${file._type}" | ${file._language}`;
 
         selectButton.addEventListener('click', () => {
             selectedSubtitle = selectedSubtitle === file._fingerprint ? "" : file._fingerprint;
@@ -1356,7 +1389,12 @@ function loadFile(file) {
         document.title = `${file.name} - ${pageOriginalTitle}`;
         playFrom(0);
 
-        updateMediaSession({ title: file.name });
+        updateMediaSession({
+            title: file._metadata?.title ?? file.name,
+            artist: file._metadata?.artist ?? "--",
+            album: file._metadata?.album ?? "--",
+            artwork: file?._artworkURL ?? null
+        });
     }, { once: true });
 }
 
@@ -1405,6 +1443,19 @@ function jumpAt(time = 5) {
 
 //----------------------------------------------------------------------------------------------------------------------
 
+function getTags(file) {
+    return new Promise((resolve, reject) => {
+        jsmediatags.read(file, {
+            onSuccess: function (tag) {
+                resolve(tag.tags);
+            },
+            onError: function (error) {
+                reject(error);
+            }
+        });
+    });
+}
+
 async function addFiles(filesARG) {
     const selectedFiles = Array.from(filesARG);
     audioFileInput.value = "";
@@ -1414,6 +1465,15 @@ async function addFiles(filesARG) {
     if (newFiles.length === 0) return;
 
     for (const file of newFiles) {
+        try {
+            const tags = await getTags(file);
+            file._metadata = tags;
+            file._artworkURL = useFileArtwork ? getArtworkURL(tags?.picture) : null;
+        } catch (error) {
+            console.log("No metadata:", file.name);
+            file._metadata = {};
+            file._artworkURL = null;
+        }
         file._fingerprint = await fileFingerprint(file);
         file._duration = await getMediaDuration(file);
     }
@@ -1449,6 +1509,10 @@ function removeFile(file) {
     if (el) el.remove();
     randomSongs.forget(file);
     const isCurrent = currentSelectedFile === file._fingerprint;
+    if (file._artworkURL) {
+        URL.revokeObjectURL(file._artworkURL);
+        file._artworkURL = null;
+    }
     if (isCurrent) {
         currentLoadToken++;
         stopAudio(true, true);

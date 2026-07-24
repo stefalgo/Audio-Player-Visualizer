@@ -574,21 +574,16 @@ class RetroRenderer extends Renderer {
 class VideoRender extends Renderer {
     constructor(canvas, ctx, audioCtx, config = {}) {
         super(canvas, ctx, audioCtx, config);
-        this.lastHardSync = 0;
     }
-
     render(videoEl, subtitleData = null) {
         if (!videoEl) return;
-
         const canvasW = this.canvas.width;
         const canvasH = this.canvas.height;
         const videoW = videoEl.videoWidth;
         const videoH = videoEl.videoHeight;
-
         if (videoW === 0 || videoH === 0) {
             this.ctx.fillStyle = "black";
             this.ctx.fillRect(0, 0, canvasW, canvasH);
-
             this.ctx.save();
             this.ctx.textAlign = "center";
             this.ctx.textBaseline = "middle";
@@ -600,15 +595,11 @@ class VideoRender extends Renderer {
                 canvasH / 2
             );
             this.ctx.restore();
-
             return;
         }
-
         if (videoEl.readyState < 2) return;
-
         this.bgCanvas ??= document.createElement("canvas");
         this.bgCtx ??= this.bgCanvas.getContext("2d");
-
         const bw = (this.bgCanvas.width = canvasW * 0.3);
         const bh = (this.bgCanvas.height = canvasH * 0.3);
         const bgScale = Math.max(bw / videoW, bh / videoH);
@@ -616,31 +607,23 @@ class VideoRender extends Renderer {
         const drawH = videoH * bgScale;
         const bx = (bw - drawW) / 2;
         const by = (bh - drawH) / 2;
-
         this.bgCtx.clearRect(0, 0, bw, bh);
         this.bgCtx.drawImage(videoEl, bx, by, drawW, drawH);
-
         this.ctx.save();
         this.ctx.globalAlpha = 0.4;
         this.ctx.drawImage(this.bgCanvas, 0, 0, canvasW, canvasH);
         this.ctx.restore();
-
         let fgScale;
-
         if (videoW / videoH > canvasW / canvasH) {
             fgScale = canvasW / videoW;
         } else {
             fgScale = canvasH / videoH;
         }
-
         const fgW = videoW * fgScale;
         const fgH = videoH * fgScale;
-
         const fgX = (canvasW - fgW) / 2;
         const fgY = (canvasH - fgH) / 2;
-
         this.ctx.drawImage(videoEl, fgX, fgY, fgW, fgH);
-
         if (subtitleData?.subs) {
             this.renderASS(subtitleData, videoEl.currentTime);
         }

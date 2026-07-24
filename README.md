@@ -113,3 +113,18 @@ The current track is played twice, then a random track from the playlist is sele
 **Loop + Shuffle**
 
 The current track loops continuously and never advances to another track.
+
+# license
+
+This project is under the [MIT License](./LICENSE)\
+Copyright (c) 2026 Stefalgo
+
+# Third-party licenses
+
+## jsmediatags
+jsmediatags is used in this project for reading media metadata.\
+License: [BSD 3-Clause License](./licenses/jsmediatags.LICENSE.md)
+
+## DSEG
+DSEG fonts are used in this prooject.\
+License: [OFL-1.1 License](./licenses/DSEG-LICENSE.txt)
