@@ -1224,6 +1224,7 @@ class Timeline {
         this.onSeekFinish = onSeekFinish;
         this.value = min;
         this.playbackValue = min;
+        this.seekStartValue = min;
         this.dragging = false;
         this.bindEvents();
     }
@@ -1288,9 +1289,23 @@ class Timeline {
         this.onSeek?.(this.value);
     }
 
+    cancelSeek() {
+        this.dragging = false;
+        this.value = this.seekStartValue;
+        this.updateProgress(this.value);
+    }
+
     bindEvents() {
+        this.element.addEventListener("contextmenu", e => {
+            e.preventDefault();
+            if (this.dragging) {
+                this.cancelSeek();
+            }
+        });
+
         this.element.addEventListener("pointerdown", e => {
             if (!e.isPrimary || e.button !== 0) return;
+            this.seekStartValue = this.value;
             this.dragging = true;
             this.element.setPointerCapture(e.pointerId);
             this.seek(e);
