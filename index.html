@@ -24,29 +24,29 @@
 </head>
 
 <body>
-<template id="songItemTemplate">
-    <div class="cardItem songItem">
-        <div class="cardLeft">
-            <img class="songCover" src="" alt="Song Artwork">
+    <template id="songItemTemplate">
+        <div class="cardItem songItem">
+            <div class="cardLeft">
+                <img class="songCover" src="" alt="Song Artwork">
 
-            <div class="songDetails">
-                <span class="cardTitle">
-                    <span class="songName"></span>
-                    <span class="cardMetadata songExtension" style="user-select: none;"></span>
-                </span>
+                <div class="songDetails">
+                    <span class="cardTitle">
+                        <span class="songName"></span>
+                        <span class="cardMetadata songExtension" style="user-select: none;"></span>
+                    </span>
 
-                <span class="cardMetadata songArtist"></span>
-                <span class="cardMetadata songAlbum"></span>
-                <span class="cardMetadata songInfo"></span>
+                    <span class="cardMetadata songArtist"></span>
+                    <span class="cardMetadata songAlbum"></span>
+                    <span class="cardMetadata songInfo"></span>
+                </div>
+            </div>
+
+            <div class="cardRight">
+                <button class="button songItemPlayButton" style="margin: 5px;"></button>
+                <button class="button songItemDeleteButton" style="margin: 5px;">Remove</button>
             </div>
         </div>
-
-        <div class="cardRight">
-            <button class="button songItemPlayButton" style="margin: 5px;"></button>
-            <button class="button songItemDeleteButton" style="margin: 5px;">Remove</button>
-        </div>
-    </div>
-</template>
+    </template>
     <template id="subtitleItemTemplate">
         <div class="cardItem subtitleItem">
             <div class="cardLeft">
@@ -74,6 +74,32 @@
             Project Page
         </a>
         <button id="showControlsBtn" class="button" hidden>Controls</button>
+    </div>
+
+    <div id="VisualizerOptions" class="movable-window">
+        <div class="window-topbar">ビジュアライザー設定</div>
+        <div class="window-content">
+            <label for="visualizerMF">Visualizer max frequency</label>
+            <input type="range" data-tip="Visualizer max frequency: x Hz" id="visualizerMF" class="slider" min="1000" max="16000" value="16000" step="100">
+            <br>
+            <label for="visualizerQL">Visualizer quality</label>
+            <input type="range" data-tip="Visualizer quality: x fftSize" id="visualizerQL" class="slider" min="1" max="4" value="2" step="1">
+            <br>
+            <label for="visualizerSL">Visualizer smoothing</label>
+            <input type="range" data-tip="Visualizer smoothing: x%" id="visualizerSL" class="slider" min="0" max="0.9" value="0.8" step="0.1">
+            <div style="display: flex; flex-direction: row;">
+                <label for="vizPauseVizBtn">Pause render</label>
+                <input data-tip="Pause Visualizer" type="checkbox" id="vizPauseVizBtn" class="checkbox">
+            </div>
+            <select id="visualizerType" data-tip="Visualizer type">
+                <option value="bar">Bar</option>
+                <option value="retro" selected>Retro</option>
+                <option value="waterfall">Waterfall</option>
+                <option value="waveform">Waveform</option>
+                <option value="soundTrace">Draw Sound Trace</option>
+                <option value="video">Video</option>
+            </select>
+        </div>
     </div>
 
     <div id="eq-sliders" class="movable-window" style="display: none; min-width: 300px;">
@@ -246,31 +272,8 @@
                 <button id="playModeBtn" class="button"></button>
             </div>
 
-            <div class="Viz-Settings">
-                <label for="visualizerMF">Visualizer max frequency</label>
-                <input type="range" data-tip="Visualizer max frequency: x Hz" id="visualizerMF" class="slider" min="1000" max="16000" value="16000" step="100">
-                <br>
-                <label for="visualizerQL">Visualizer quality</label>
-                <input type="range" data-tip="Visualizer quality: x fftSize" id="visualizerQL" class="slider" min="1" max="4" value="2" step="1">
-                <br>
-                <label for="visualizerSL">Visualizer smoothing</label>
-                <input type="range" data-tip="Visualizer smoothing: x%" id="visualizerSL" class="slider" min="0" max="0.9" value="0.8" step="0.1">
-                <div style="display: flex; flex-direction: row;">
-                    <label for="vizPauseVizBtn">Pause render</label>
-                    <input data-tip="Pause Visualizer" type="checkbox" id="vizPauseVizBtn" class="checkbox">
-                </div>
-                <select id="visualizerType" data-tip="Visualizer type">
-                    <option value="bar">Bar</option>
-                    <option value="retro" selected>Retro</option>
-                    <option value="waterfall">Waterfall</option>
-                    <option value="waveform">Waveform</option>
-                    <option value="soundTrace">Draw Sound Trace</option>
-                    <option value="video">Video</option>
-                </select>
-            </div>
-
             <div class="playback-container">
-                <span id="audio-currentTime" class="segment14">00 : 00 : 00 . 000 / 00 : 00 : 00 . 000</span>
+                <span id="audio-currentTime" class="segment14" style="user-select: none; text-shadow: 0 0 7px #000000;">00 : 00 : 00 . 000 / 00 : 00 : 00 . 000</span>
                 <div style="display: flex; flex-direction: row; align-items: center;">
                     <button id="topListBtn" class="button"></button>
                     <button id="play-previous-button" class="button"></button>
@@ -298,7 +301,8 @@
                 <input type="button" id="otherEffectsBtn" class="button" value="オーディオエフェクト" style="margin-left: 5px;">
                 <input type="button" id="subBtn" class="button" value="字幕" style="margin-left: 5px;">
                 <input type="button" id="subOptionsBtn" class="button" value="字幕設定" style="margin-left: 5px;">
-
+                <input type="button" id="subVizOptBtn" class="button" value="ビジュアライザー設定" style="margin-left: 5px;">
+                <button id="pipButton" class="button" style="margin-left: 5px;"></button>
             </div>
         </div>
     </div>

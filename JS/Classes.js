@@ -143,14 +143,19 @@ class MovableWindow {
         this.offsetY = 0;
 
         this.minimized = false;
-
         this.win.style.position = "absolute";
         this.bar.style.cursor = "grab";
-
         this.win.addEventListener("pointerdown", this.onFocus);
 
+        const title = this.bar.textContent.trim();
+        this.bar.innerHTML = `
+            <span class="window-title" data-tip="${title}">
+                ${title}
+            </span>
+        `;
+
         this.bar.insertAdjacentHTML("beforeend", `
-            <span>
+            <span class="window-controls">
                 <button class="button minimize">-</button>
                 <button class="button close">X</button>
             </span>
@@ -158,7 +163,6 @@ class MovableWindow {
 
         this.minimizeBtn = this.bar.querySelector(".minimize");
         this.closeBtn = this.bar.querySelector(".close");
-
         this.minimizeBtn.addEventListener("click", this.onMinimize);
         this.closeBtn.addEventListener("click", this.onClose);
 

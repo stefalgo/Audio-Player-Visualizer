@@ -128,11 +128,9 @@ class ReverbEffect extends AudioEffect {
             decay
         );
         this.input.connect(this.output);
-
         this.input.connect(this.convolver);
         this.convolver.connect(this.reverbGain);
         this.reverbGain.connect(this.output);
-
         this.enabled = false;
         this.amount = 50;
     }
@@ -198,14 +196,12 @@ class ReverbEffect extends AudioEffect {
 class CompressorEffect extends AudioEffect {
     constructor(ctx) {
         super(ctx);
-
         this.compressor = ctx.createDynamicsCompressor();
         this.compressor.threshold.value = -12;
         this.compressor.knee.value = 20;
         this.compressor.ratio.value = 8;
         this.compressor.attack.value = 0.003;
         this.compressor.release.value = 0.25;
-
         this.enabled = true;
         this.setEnabled(this.enabled);
     }

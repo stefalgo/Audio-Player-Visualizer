@@ -65,6 +65,9 @@ const otherEffectsDiv = document.getElementById("otherEffects");
 const eqMaxDbInput = document.getElementById("eqMaxDbInput");
 const canvasContainer = document.getElementById("canvasContainer");
 const showControlsBtn = document.getElementById('showControlsBtn');
+const pipButton = document.getElementById("pipButton");
+const visualizerOptionsDiv = document.getElementById("VisualizerOptions");
+const subVizOptBtn = document.getElementById("subVizOptBtn");
 
 window.alert = async function (message, targetEl) {
     await TooltipDialog.info(targetEl, message);
@@ -99,7 +102,7 @@ const mediaSource = audioCtx.createMediaElementSource(videoEl);
 const pageOriginalTitle = document.title;
 
 //---------- Config stuff ----------//
-const useFileArtwork = true //// Uses the artwork of the file if available
+const useFileArtwork = true //// Use the artwork of the file if available
 
 const EQ_PRESETS = { //// The built-in presets for the equalizer
     General: {
@@ -163,6 +166,8 @@ let pauseViz = false;
 let playSoundList = false; //// Autoplay next
 let playRandom = false;
 let loopMode = 0; //// 1: loop once | 2: loop forever
+let timeTextMode = 0; //// 0: current / duration | 1: current / time left
+
 //----------------------------------//
 
 let isSeeking = false;
@@ -175,6 +180,7 @@ let eqState = EQ_BANDS.map(() => 0);
 let files = [];
 let subtitleList = []; // {_fingerprint, title, subs}
 let selectedSubtitle = ''; // _fingerprint
+let lastSubtitleFingerprint = '';
 let currentSelectedFile = ''; // _fingerprint
 let freqData, freqDataFloat, timeData;
 let currentLoadToken = 0; // e
@@ -249,6 +255,14 @@ const timeline = new Timeline(
         }
     }
 );
+
+
+const pipVideo = document.createElement("video");
+pipVideo.playsInline = true;
+pipVideo.style.display = "none";
+document.body.appendChild(pipVideo);
+const canvasStream = canvas.captureStream(30);
+pipVideo.srcObject = canvasStream;
 
 //------------------------------------------------------------------------------------------------
 function buildEffectsUI() {
@@ -531,6 +545,8 @@ function timeToSeconds(t) {
 
 function formatTime(s, format = '{hh} : {mm} : {ss} . {mls}') {
     s = Number.isFinite(Number(s)) ? Number(s) : 0;
+    const negative = s < 0;
+    s = Math.abs(s);
     const t = Math.floor(s);
     const hh = String(Math.floor(t / 3600)).padStart(2, '0');
     const mm = String(Math.floor(t / 60) % 60).padStart(2, '0');
@@ -617,26 +633,26 @@ function findIndexByIdentifier(id) {
 }
 
 //----------------------------------------------------------------------------------------------------------------------
-
-function cleanupGraph() {
-    if (source) {
-        try { source.stop(); } catch { }
-        try { source.disconnect(); } catch { }
-        source = null;
-    }
-    if (playbackHPFilter) {
-        try { playbackHPFilter.disconnect(); } catch { }
-        playbackHPFilter = null;
-    }
-    if (playbackLPFilter) {
-        try { playbackLPFilter.disconnect(); } catch { }
-        playbackLPFilter = null;
-    }
-    if (gainNode) {
-        try { gainNode.disconnect(); } catch { }
-        gainNode = null;
-    }
-}
+//// not used anymore
+// function cleanupGraph() {
+//     if (source) {
+//         try { source.stop(); } catch { }
+//         try { source.disconnect(); } catch { }
+//         source = null;
+//     }
+//     if (playbackHPFilter) {
+//         try { playbackHPFilter.disconnect(); } catch { }
+//         playbackHPFilter = null;
+//     }
+//     if (playbackLPFilter) {
+//         try { playbackLPFilter.disconnect(); } catch { }
+//         playbackLPFilter = null;
+//     }
+//     if (gainNode) {
+//         try { gainNode.disconnect(); } catch { }
+//         gainNode = null;
+//     }
+// }
 
 //----------------------------------------------------------------------------------------------------------------------
 
@@ -654,7 +670,6 @@ function addFilesToSongList(filesSelected) {
         const deleteButton = clone.querySelector('.songItemDeleteButton');
         const fileName = file.name.replace(/\.[^/.]+$/, "");
         const fileExt = file.name.replace(/^.*\./, "");
-
         const artwork = file._artworkURL;
         const songTitle = file._metadata?.title ? file._metadata.title : fileName;
 
@@ -670,7 +685,6 @@ function addFilesToSongList(filesSelected) {
         } else {
             cover.style.display = 'none';
         }
-
         metadata.textContent = `${formatTime(file._duration, '{hh}:{mm}:{ss}')} | Type="${file.type}"`;
 
         playButton.addEventListener('click', () => {
@@ -693,10 +707,7 @@ function addFilesToSongList(filesSelected) {
 
 function addSubtitleFilesToList(filesSelected) {
     filesSelected.forEach((file) => {
-        if (document.querySelector(`[data-file-name="${file._fingerprint}"]`)) {
-            return;
-        }
-
+        if (document.querySelector(`[data-file-name="${file._fingerprint}"]`)) return;
         const clone = subtitleItemTemplate.content.cloneNode(true);
         const subDiv = clone.querySelector('.subtitleItem');
         const title = clone.querySelector('.subtitleTitle');
@@ -711,7 +722,6 @@ function addSubtitleFilesToList(filesSelected) {
         title.textContent = fileName;
         title.dataset.tip = fileName;
         extension.textContent = `.${fileExt}`;
-
         metadata.textContent = `Type="${file._type}" | ${file._language}`;
 
         selectButton.addEventListener('click', () => {
@@ -1176,15 +1186,8 @@ async function loadSubtitles(files) {
 function removeSubtitle(fingerprint) {
     const index = subtitleList.findIndex(item => item._fingerprint === fingerprint);
     const el = document.querySelector(`[data-file-name="${fingerprint}"]`);
-
-    if (index !== -1) {
-        subtitleList.splice(index, 1);
-    }
-
-    if (selectedSubtitle === fingerprint) {
-        selectedSubtitle = '';
-    }
-
+    if (index !== -1) subtitleList.splice(index, 1);
+    if (selectedSubtitle === fingerprint) selectedSubtitle = '';
     el.remove();
 }
 
@@ -1195,16 +1198,13 @@ function getSubtitle(file) {
         if (!name) return "";
         let s = String(name).toLowerCase().trim();
         s = s.replace(/.*[\/]/, "");
-
         if (isSubtitle) {
             s = s.replace(/\.[a-z0-9-]+\.(vtt|srt|txt|sub|ass|sbv)$/i, "");
             s = s.replace(/\.(vtt|srt|txt|sub|ass|sbv)$/i, "");
         } else {
             s = s.replace(/\.[^/.]+$/, "");
         }
-
         s = s.replace(/[^\p{L}\p{N}\s_-]/gu, "")
-        //------------------------------------
         return s;
     };
 
@@ -1243,32 +1243,30 @@ function getSubtitle(file) {
 }
 
 //selectedSubtitle = _fingerprint
-function showSubtitle(timeSeconds, selectedSubtitle) {
+function showSubtitle(timeSeconds) {
     const h3 = subtitleTextEl;
     timeSeconds -= Number(subtitleOffsetInput.value || 0) / 1000;
     const entry = subtitleList.find(e => e._fingerprint === selectedSubtitle);
     const titleEl = document.getElementById("subtitle-title");
-
     if (!entry || !entry.subs?.length) {
-        if (h3.innerHTML !== "") {
-            h3.innerHTML = "";
-        }
+        if (h3.innerHTML !== "") h3.innerHTML = "";
         const title = "字幕 - No subtitles";
-        if (titleEl.innerText !== title) {
-            titleEl.innerText = title;
+        if (titleEl.textContent !== title) {
+            titleEl.textContent = title;
             titleEl.dataset.tip = title;
-            document.querySelectorAll('.subtitleItem').forEach(el => {
+        }
+        if (lastSubtitleFingerprint !== null) {
+            lastSubtitleFingerprint = null;
+            document.querySelectorAll('.subtitleItem.active').forEach(el => {
                 el.classList.remove('active');
             });
         }
         return null;
     }
-
-    const subs = entry.subs;
-    const titleText = `字幕 - ${entry.name || entry._fingerprint}`;
-
-    if (titleEl.textContent !== titleText) {
-        titleEl.innerText = titleText;
+    if (lastSubtitleFingerprint !== entry._fingerprint) {
+        lastSubtitleFingerprint = entry._fingerprint;
+        const titleText = `字幕 - ${entry.name || entry._fingerprint}`;
+        titleEl.textContent = titleText;
         titleEl.dataset.tip = titleText;
         document.querySelectorAll('.subtitleItem').forEach(el => {
             el.classList.toggle(
@@ -1277,7 +1275,7 @@ function showSubtitle(timeSeconds, selectedSubtitle) {
             );
         });
     }
-
+    const subs = entry.subs;
     let i = subtitleLastIndex || 0;
     if (i >= subs.length) i = 0;
     for (let j = 0; j < subs.length; j++) {
@@ -1295,9 +1293,7 @@ function showSubtitle(timeSeconds, selectedSubtitle) {
         }
         i = (i + 1) % subs.length;
     }
-    if (h3.innerHTML !== "") {
-        h3.innerHTML = "";
-    }
+    if (h3.innerHTML !== "") h3.innerHTML = "";
     return null;
 }
 
@@ -1470,7 +1466,7 @@ async function addFiles(filesARG) {
             file._metadata = tags;
             file._artworkURL = useFileArtwork ? getArtworkURL(tags?.picture) : null;
         } catch (error) {
-            console.log("No metadata:", file.name);
+            //console.log("No metadata:", file.name);
             file._metadata = {};
             file._artworkURL = null;
         }
@@ -1597,10 +1593,19 @@ function renderLoop() {
     const now = performance.now();
     if (now - window._lastSubtitleCheck >= SUBTITLE_CHECK_INTERVAL) {
         window._lastSubtitleCheck = now;
-        showSubtitle(elapsed, selectedSubtitle);
+        showSubtitle(elapsed);
     }
 
-    const timeText = formatTime(elapsed / playbackRate) + ' / ' + formatTime(videoEl.duration / playbackRate);
+    let timeText;
+
+    if (timeTextMode === 0) {
+        timeText = `${formatTime(elapsed / playbackRate)} / ${formatTime(videoEl.duration / playbackRate)}`;
+    } else if (timeTextMode === 1) {
+        timeText = `${formatTime(elapsed / playbackRate)} / -${formatTime((elapsed - videoEl.duration) / playbackRate)}`;
+    } else {
+        timeText = '';
+    }
+
     if (audioTimeText.textContent !== timeText) {
         audioTimeText.textContent = timeText
     }
@@ -1672,19 +1677,15 @@ function renderLoop() {
 //----------------------------------------------------------------------------------------------------------------------
 
 function volumeChanged() {
-    const linearValue = volumeSlider.value; // 0 to 2
-
+    const linearValue = Number(volumeSlider.value);
     if (gainNode) {
         gainNode.gain.value = linearValue;
     }
-
-    volume = linearValue
-
-    const dB = linearValue === 0 ? -Infinity : 20 * Math.log10(linearValue);
-    const dbDisplay = `${dB.toFixed(1)} dB`;
-
-    document.getElementById("audio-volume").innerText = `Volume: ${dB > 0 ? '+' : ''}${dbDisplay}`;
-    volumeSlider.dataset.tip = `Volume: ${Math.floor(volumeSlider.value * 100)}%`
+    volume = linearValue;
+    const dB = linearValue <= 0 ? -Infinity : 20 * Math.log10(linearValue);
+    const dbDisplay = dB === -Infinity ? "-inf dB" : `${dB >= 0 ? "+" : ""}${dB.toFixed(1)} dB`;
+    document.getElementById("audio-volume").innerText = `Volume: ${dbDisplay}`;
+    volumeSlider.dataset.tip = `Volume: ${Math.round(linearValue * 100)}%`;
 }
 
 function isTypingOrEditing() {
@@ -1846,6 +1847,10 @@ subOptionsBtn.addEventListener("click", () => {
 otherEffectsBtn.addEventListener("click", () => {
     otherEffectsDiv.style.display = otherEffectsDiv.style.display === "none" ? "block" : "none";
 });
+
+subVizOptBtn.addEventListener("click", () => {
+    visualizerOptionsDiv.style.display = visualizerOptionsDiv.style.display === "none" ? "block" : "none";
+})
 
 eqResetBtn.addEventListener("click", () => {
     equalizer.reset();
@@ -2013,6 +2018,38 @@ document.querySelectorAll(".searchBar").forEach(searchBar => {
     });
 });
 
+pipButton.addEventListener("click", async () => {
+    try {
+        if (document.pictureInPictureElement) {
+            await document.exitPictureInPicture();
+        } else {
+            await pipVideo.play();
+            await pipVideo.requestPictureInPicture();
+            //await videoEl.requestPictureInPicture();
+        }
+    } catch (error) {
+        //console.log("[PiP failed]\n", error);
+        await alert("この動画はピクチャーインピクチャーに対応していません", pipButton);
+    }
+});
+
+pipVideo.addEventListener("enterpictureinpicture", () => {
+    pipButton.dataset.inpip = "yes";
+    canvas.style.visibility = "hidden";
+    canvas.width = 1920;
+    canvas.height = 1080;
+});
+
+pipVideo.addEventListener("leavepictureinpicture", () => {
+    pipButton.dataset.inpip = "no";
+    canvas.style.removeProperty("visibility");
+    resizeCanvas();
+});
+
+audioTimeText.addEventListener("click", () => {
+    timeTextMode = timeTextMode === 1 ? 0 : 1;
+})
+
 eqMaxDbInput.addEventListener("change", () => {
     const min = Number(eqMaxDbInput.min);
     const max = Number(eqMaxDbInput.max);
@@ -2033,17 +2070,19 @@ equalizer.onChange(data => {
 //----------------------------------------------------------------------------------------------------------------------
 function updatePlayButton() {
     if (!pausePlayButton) return;
-
     pausePlayButton.dataset.state = videoEl.paused ? "play" : "pause";
 }
 
 function setupMediaSession() {
     if (!('mediaSession' in navigator)) return;
-    navigator.mediaSession.setActionHandler('play', () => {
-        videoEl.play();
+    navigator.mediaSession.setActionHandler('play', async () => {
+        await videoEl.play();
+        await pipVideo.play();
     });
+
     navigator.mediaSession.setActionHandler('pause', () => {
         videoEl.pause();
+        pipVideo.pause();
     });
     navigator.mediaSession.setActionHandler('seekbackward', (details) => {
         const offset = details.seekOffset || 10;
@@ -2061,8 +2100,18 @@ function setupMediaSession() {
     });
 }
 
-videoEl.addEventListener("play", updatePlayButton);
-videoEl.addEventListener("pause", updatePlayButton);
+videoEl.addEventListener("play", () => {
+    pipVideo.play();
+    navigator.mediaSession.playbackState = "playing";
+    updatePlayButton();
+});
+
+videoEl.addEventListener("pause", () => {
+    pipVideo.pause();
+    navigator.mediaSession.playbackState = "paused";
+    updatePlayButton();
+});
+
 videoEl.addEventListener("ended", updatePlayButton);
 
 function createFocusHandler(movableWindows) {
@@ -2228,9 +2277,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     eqPresetsDropdown();
     resizeCanvas();
-    volumeChanged();
     setupEffects();
     setupMediaSession();
+    volumeChanged();
 
     audioCtx?.suspend();
 
