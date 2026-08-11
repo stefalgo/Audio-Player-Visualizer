@@ -1,8 +1,10 @@
 class AudioBands {
+    static LN10OVER10 = Math.LN10 / 10;
+
     static getBandPower(data, iLow, iHigh) {
         let power = 0;
         for (let i = iLow; i <= iHigh; i++) {
-            power += Math.pow(10, data[i] / 10);
+            power += Math.exp(data[i] * AudioBands.LN10OVER10);
         }
         return power;
     }
@@ -57,12 +59,17 @@ class TooltipManager {
         document.body.appendChild(this.tooltip);
 
         this.activeElement = null;
+        this.tooltipSize = { width: 0, height: 0 };
 
         this.updateTooltip = this.updateTooltip.bind(this);
         this.hideTooltip = this.hideTooltip.bind(this);
         this.tipObserver = new MutationObserver(() => {
             if (this.activeElement) {
                 this.tooltip.textContent = this.activeElement.dataset.tip || "";
+                this.tooltipSize = {
+                    width: this.tooltip.offsetWidth,
+                    height: this.tooltip.offsetHeight
+                };
             }
         });
 
@@ -99,14 +106,18 @@ class TooltipManager {
                 attributeFilter: ['data-tip']
             });
             this.activeElement = target;
+            this.tooltip.innerHTML = target.dataset.tip;
+            this.tooltipSize = {
+                width: this.tooltip.offsetWidth,
+                height: this.tooltip.offsetHeight
+            };
         }
 
-        this.tooltip.innerHTML = target.dataset.tip;
-        const tooltipHeight = this.tooltip.offsetHeight;
-        const tooltipWidth = this.tooltip.offsetWidth;
         const margin = 10;
         let top = event.pageY + 20;
         let left = event.pageX + 10;
+        const tooltipHeight = this.tooltipSize.height;
+        const tooltipWidth = this.tooltipSize.width;
 
         if (top + tooltipHeight + margin > window.scrollY + window.innerHeight) {
             top = event.pageY - tooltipHeight - margin;
@@ -174,7 +185,7 @@ class MovableWindow {
     }
 
     keepInsideViewport = () => {
-        if (getComputedStyle(this.win).display === "none") return;
+        if (this.win.offsetWidth === 0 || this.win.offsetHeight === 0) return;
         const rect = this.win.getBoundingClientRect();
         let x = rect.left;
         let y = rect.top;
@@ -227,9 +238,12 @@ class MovableWindow {
         if (!this.dragging) return;
         let x = e.clientX - this.offsetX;
         let y = e.clientY - this.offsetY;
+        const maxX = window.innerWidth - this.win.offsetWidth;
+        const maxY = window.innerHeight - this.win.offsetHeight;
+        x = Math.max(0, Math.min(maxX, x));
+        y = Math.max(0, Math.min(maxY, y));
         this.win.style.left = `${x}px`;
         this.win.style.top = `${y}px`;
-        this.keepInsideViewport();
     };
 
     onPointerUp = () => {
@@ -402,7 +416,7 @@ class CanvasEQ {
         this.dragging = false;
         this.onChangeCallbacks = [];
         this.bind();
-        this.loop();
+        this.draw();
 
         this.dragStartGains = [];
 
@@ -651,6 +665,8 @@ class CanvasEQ {
     }
 
     visualize(data, analyser) {
+        this.draw();
+
         const leds = this.leds;
         const step = this.sliderH / leds;
         const nyquist = analyser.context.sampleRate / 2;
@@ -874,7 +890,7 @@ class TooltipDialog {
                 cleanup();
                 if (this.type === "prompt") {
                     const val = this.input.value.trim();
-                    this.resolve(val === "" ? false : val);
+                    this.resolve(val === "" ? null : val);
                 } else {
                     this.resolve(true);
                 }
@@ -893,7 +909,7 @@ class TooltipDialog {
                 if (e.key === "Enter") {
                     cleanup();
                     const val = this.input.value.trim();
-                    this.resolve(val === "" ? false : val);
+                    this.resolve(val === "" ? null : val);
                 }
                 if (e.key === "Escape") {
                     cleanup();
@@ -1229,16 +1245,22 @@ class Timeline {
         this.value = min;
         this.playbackValue = min;
         this.seekStartValue = min;
+        this.lastPlaybackPercent = null;
+        this.lastProgressPercent = null;
         this.dragging = false;
+        this.isLive = false;
         this.bindEvents();
     }
 
     updatePlayback(value) {
         const percent = ((value - this.min) / (this.max - this.min)) * 100;
-        this.element.style.setProperty(
-            "--playback",
-            `${percent}%`
-        );
+        if (percent !== this.lastPlaybackPercent) {
+            this.element.style.setProperty(
+                "--playback",
+                `${percent}%`
+            );
+            this.lastPlaybackPercent = percent;
+        }
     }
 
     setValue(value) {
@@ -1268,13 +1290,21 @@ class Timeline {
 
     updateProgress(value) {
         const percent = ((value - this.min) / (this.max - this.min)) * 100;
-        this.element.style.setProperty(
-            "--progress",
-            `${percent}%`
-        );
+        if (percent !== this.lastProgressPercent) {
+            this.element.style.setProperty(
+                "--progress",
+                `${percent}%`
+            );
+            this.lastProgressPercent = percent;
+        }
     }
 
     updateHover(event) {
+        if (this.isLive) {
+            this.element.style.setProperty("--hover", "100%");
+            if (this.onHover) this.onHover("Live");
+            return;
+        }
         const rect = this.element.getBoundingClientRect();
         const x = Math.max(0, Math.min(rect.width, event.clientX - rect.left));
         const percent = x / rect.width;
@@ -1283,11 +1313,14 @@ class Timeline {
             `${percent * 100}%`
         );
         if (this.onHover) {
-            this.onHover(this.clamp(this.min + percent * (this.max - this.min)));
+            this.onHover(this.clamp(
+                this.min + percent * (this.max - this.min)
+            ));
         }
     }
 
     seek(event) {
+        if (this.isLive) return;
         this.value = this.getMouseValue(event);
         this.updateProgress(this.value);
         this.onSeek?.(this.value);
@@ -1299,6 +1332,19 @@ class Timeline {
         this.updateProgress(this.value);
     }
 
+    setLive(isLive) {
+        this.isLive = isLive;
+        if (isLive) {
+            this.dragging = false;
+            this.value = this.max;
+            this.playbackValue = this.max;
+
+            this.element.style.setProperty("--playback", "100%");
+            this.element.style.setProperty("--progress", "100%");
+            this.element.style.setProperty("--hover", "100%");
+        }
+    }
+
     bindEvents() {
         this.element.addEventListener("contextmenu", e => {
             e.preventDefault();
@@ -1308,6 +1354,7 @@ class Timeline {
         });
 
         this.element.addEventListener("pointerdown", e => {
+            if (this.isLive) return;
             if (!e.isPrimary || e.button !== 0) return;
             this.seekStartValue = this.value;
             this.dragging = true;

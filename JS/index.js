@@ -3,86 +3,83 @@
 // pls dont judge me
 
 //import { RenderHandler } from "./RenderVis"
-const canvas = document.getElementById('visualizer');
+
+const $id = elementId => document.getElementById(elementId);
+const $ = selector => document.querySelector(selector);
+const $$ = selector => document.querySelectorAll(selector);
+
+const canvas = $id('visualizer');
 const ctx = canvas.getContext('2d', { willReadFrequently: true });
-const audioFileInput = document.getElementById('audioFile');
-const subtitleFileInput = document.getElementById('subtitleFile');
-const timeSlider = document.getElementById('timeSlider');
-const volumeSlider = document.getElementById('volumeSlider');
-const pausePlayButton = document.getElementById('pause-play-button');
-const songListContainer = document.getElementById('songList-Container');
-const subListContainer = document.getElementById('subtitlesList-Container');
-const eqSlidersContainer = document.getElementById('eq-sliders');
-const subtitlesDiv = document.getElementById('Subtitles');
-const subtitlesOptionsDiv = document.getElementById('SubtitlesOptions');
-const audioTimeText = document.getElementById('audio-currentTime');
-const dropdownVizType = document.getElementById('visualizerType');
-const eqPresetSelect = document.getElementById("eqPresetSelect");
-const visualizerMF = document.getElementById('visualizerMF');
-const visualizerQL = document.getElementById('visualizerQL');
-const visualizerSL = document.getElementById('visualizerSL');
-const playbackSpeedInput = document.getElementById('playback-speed');
-const subtitleOffsetInput = document.getElementById("subtitleOffset");
-const chooseAudioLabel = document.getElementById('ChooseaudioFileLabel');
-const controlsEl = document.getElementById('controls');
-const subtitleTextEl = document.getElementById('subtitleText');
-const subtitleStyleCheckbox = document.getElementById('subtitlePlainStyle');
-const songListTotalPlayTimeText = document.getElementById('songList-totalPlayTime');
+const audioFileInput = $id('audioFile');
+const subtitleFileInput = $id('subtitleFile');
+const timeSlider = $id('timeSlider');
+const volumeSlider = $id('volumeSlider');
+const pausePlayButton = $id('pause-play-button');
+const songListContainer = $id('songList-Container');
+const subListContainer = $id('subtitlesList-Container');
+const eqSlidersContainer = $id('eq-sliders');
+const subtitlesDiv = $id('Subtitles');
+const subtitlesOptionsDiv = $id('SubtitlesOptions');
+const audioTimeText = $id('audio-currentTime');
+const dropdownVizType = $id('visualizerType');
+const eqPresetSelect = $id("eqPresetSelect");
+const visualizerMF = $id('visualizerMF');
+const visualizerQL = $id('visualizerQL');
+const visualizerSL = $id('visualizerSL');
+const playbackSpeedInput = $id('playback-speed');
+const subtitleOffsetInput = $id("subtitleOffset");
+const chooseAudioLabel = $id('ChooseaudioFileLabel');
+const controlsEl = $id('controls'); console.error("Roses are Red, Violets are Blue \n Unexpected '{' on line 32"); // humor
+const subtitleTextEl = $id('subtitleText');
+const subtitleStyleCheckbox = $id('subtitlePlainStyle');
+const songListTotalPlayTimeText = $id('songList-totalPlayTime');
+const songItemTemplate = $id('songItemTemplate');
+const subtitleItemTemplate = $id('subtitleItemTemplate');
+const songListBtn = $id("songListBtn");
+const subListBtn = $id("subListBtn");
+const eqBtn = $id("eqBtn");
+const subBtn = $id("subBtn");
+const subOptionsBtn = $id("subOptionsBtn");
+const eqResetBtn = $id("eqResetBtn");
+const eqPresetSetBtn = $id("eqPresetSetBtn");
+const eqSliderLink = $id("eqSliderLink");
+const eqSliderLinkModes = $id("eqSliderLinkModes");
+const eqPresetSaveBtn = $id("eqPresetSaveBtn");
+const eqPresetRemoveBtn = $id("eqPresetRemoveBtn");
+const subUnloadSubBtn = $id("subUnloadSubBtn");
+const subAutoFindBtn = $id("subAutoFindBtn");
+const vizPauseVizBtn = $id("vizPauseVizBtn");
+const playPreviousButton = $id("play-previous-button");
+const playNextButton = $id("play-next-button");
+const playNextRandomButton = $id("play-next-random-button");
+const subtitleFontSize = $id("subtitleFontSize");
+const subtitleFont = $id("subtitleFont");
+const removeAllSounds = $id("removeAllSounds");
+const removeAllSubtitles = $id("removeAllSubtitles");
+const topListBtn = $id("topListBtn");
+const songList = $id("songList");
+const subtitlesList = $id("subtitlesList");
+const songSearch = $id("songSearch");
+const subSearch = $id("subSearch");
+const eqSliderLinkQsize = $id("eqSliderLinkQsize");
+const effectsContainer = $id("effectsContainer");
+const otherEffectsBtn = $id("otherEffectsBtn");
+const otherEffectsDiv = $id("otherEffects");
+const eqMaxDbInput = $id("eqMaxDbInput");
+const canvasContainer = $id("canvasContainer");
+const showControlsBtn = $id('showControlsBtn');
+const pipButton = $id("pipButton");
+const visualizerOptionsDiv = $id("VisualizerOptions");
+const subVizOptBtn = $id("subVizOptBtn");
+const radioUrl = $id("radioUrl");
+const radioAddUrl = $id("radioAddUrl");
+const radioBtn = $id("radioBtn");
+const radioWin = $id("radioWin");
 
-console.error("Roses are Red, Violets are Blue \n Unexpected '{' on line 32");
-const songItemTemplate = document.getElementById('songItemTemplate');
-const subtitleItemTemplate = document.getElementById('subtitleItemTemplate');
-const songListBtn = document.getElementById("songListBtn");
-const subListBtn = document.getElementById("subListBtn");
-const eqBtn = document.getElementById("eqBtn");
-const subBtn = document.getElementById("subBtn");
-const subOptionsBtn = document.getElementById("subOptionsBtn");
-const eqResetBtn = document.getElementById("eqResetBtn");
-const eqPresetSetBtn = document.getElementById("eqPresetSetBtn");
-const eqSliderLink = document.getElementById("eqSliderLink");
-const eqSliderLinkModes = document.getElementById("eqSliderLinkModes");
-const eqPresetSaveBtn = document.getElementById("eqPresetSaveBtn");
-const eqPresetRemoveBtn = document.getElementById("eqPresetRemoveBtn");
-const subUnloadSubBtn = document.getElementById("subUnloadSubBtn");
-const subAutoFindBtn = document.getElementById("subAutoFindBtn");
-const vizPauseVizBtn = document.getElementById("vizPauseVizBtn");
-const playPreviousButton = document.getElementById("play-previous-button");
-const playNextButton = document.getElementById("play-next-button");
-const playNextRandomButton = document.getElementById("play-next-random-button");
-const subtitleFontSize = document.getElementById("subtitleFontSize");
-const subtitleFont = document.getElementById("subtitleFont");
-const removeAllSounds = document.getElementById("removeAllSounds");
-const removeAllSubtitles = document.getElementById("removeAllSubtitles");
-const topListBtn = document.getElementById("topListBtn");
-const songList = document.getElementById("songList");
-const subtitlesList = document.getElementById("subtitlesList");
-const songSearch = document.getElementById("songSearch");
-const subSearch = document.getElementById("subSearch");
-const eqSliderLinkQsize = document.getElementById("eqSliderLinkQsize");
-const effectsContainer = document.getElementById("effectsContainer");
-const otherEffectsBtn = document.getElementById("otherEffectsBtn");
-const otherEffectsDiv = document.getElementById("otherEffects");
-const eqMaxDbInput = document.getElementById("eqMaxDbInput");
-const canvasContainer = document.getElementById("canvasContainer");
-const showControlsBtn = document.getElementById('showControlsBtn');
-const pipButton = document.getElementById("pipButton");
-const visualizerOptionsDiv = document.getElementById("VisualizerOptions");
-const subVizOptBtn = document.getElementById("subVizOptBtn");
-
-window.alert = async function (message, targetEl) {
-    await TooltipDialog.info(targetEl, message);
-};
-
-window.confirm = function (message, targetEl, btn = 0) {
-    return TooltipDialog.confirm(targetEl, message, btn);
-};
-
-window.prompt = function (
-    message,
-    defaultValue = "",
-    targetEl,
-) {
-    return TooltipDialog.prompt(targetEl, message, defaultValue);
+const dialog = {
+    alert: (message, targetEl) => TooltipDialog.info(targetEl, message),
+    confirm: (message, targetEl, btn = 0) => TooltipDialog.confirm(targetEl, message, btn),
+    prompt: (message, defaultValue = "", targetEl) => TooltipDialog.prompt(targetEl, message, defaultValue)
 };
 
 const SAMPLE_BYTES = 64 * 1024;
@@ -148,6 +145,7 @@ const EQ_PRESETS = { //// The built-in presets for the equalizer
 const EQ_BANDS = [ //// Bands that the equalizer will use
     31, 63, 125, 250, 500, 1000, 2000, 4000, 8000, 16000
 ];
+
 const RETRO_CENTER_FREQS = [ //// What freqs. will be shown on the retro render
     31,
     63, 80, 100, 125, 160, 200, 250, 315,
@@ -156,18 +154,26 @@ const RETRO_CENTER_FREQS = [ //// What freqs. will be shown on the retro render
     16000
 ];
 
+let PLAYERCONFIG = {
+    playback: {
+        rate: 1.0, /// 1.0: Normal, <1: slow, >1: fast
+        volume: volumeSlider.value, /// 0.0 - 1.0
+        lowFreq: 0, /// Not used yet
+        highFreq: 0 /// Not used yet
+    },
+    playbackList: {
+        playMode: 0, /// 0: off, 1: autoplay, 2: random
+        loopMode: 0 /// 0: off, 1: loop once, 2: loop forever
+    },
+    visualizer: {
+        paused: false,
+        current: dropdownVizType.value
+    },
+    maxRenderFps: 60,
+    timeTextMode: 0 /// 0: current / duration, 1: current / time left
+};
+
 let user_eq_presets = JSON.parse(localStorage.getItem("USER_EQ_PRESETS") || "{}");
-
-let playbackRate = 1.0; //// 1.0: Normal, <1 slow, >1 fast
-let volume = volumeSlider.value; //// Volume 0.0 - 1.0
-let playbackLowFreq = 0; // Not used yet
-let playbackHighFreq = 0; // Not used yet
-let pauseViz = false;
-let playSoundList = false; //// Autoplay next
-let playRandom = false;
-let loopMode = 0; //// 1: loop once | 2: loop forever
-let timeTextMode = 0; //// 0: current / duration | 1: current / time left
-
 //----------------------------------//
 
 let isSeeking = false;
@@ -187,7 +193,6 @@ let currentLoadToken = 0; // e
 
 let playbackHPFilter = null;
 let playbackLPFilter = null;
-let currentViz = dropdownVizType.value;
 let soundEnded = false;
 let loopCounter = 0;
 
@@ -198,9 +203,11 @@ let analyserSmoothing = visualizerSL.value;
 let subtitleLastIndex = 0;
 let fftChangeTimeout = null; // debounce when changing the fftsize
 let resizeTimeout = null; // debounce thing for updateing the canvas on window resize or something like that
+let lastProgress = -1;
+let lastRenderTimestamp = 0;
 
 gainNode = audioCtx.createGain();
-gainNode.gain.value = volume;
+gainNode.gain.value = PLAYERCONFIG.playback.volume;
 
 mediaSource.connect(gainNode);
 //------------------------------------------------------------------------------------------------
@@ -214,7 +221,7 @@ const renderHandler = new RenderHandler(canvas, ctx, audioCtx, {
     retroCenterFreqs: RETRO_CENTER_FREQS
 });
 
-const equalizer = new CanvasEQ(document.getElementById('eq'), EQ_BANDS, 12);
+const equalizer = new CanvasEQ($id('eq'), EQ_BANDS, 12);
 
 const languageNames = new Intl.DisplayNames(["en"], {
     type: "language",
@@ -234,13 +241,13 @@ const languageNames = new Intl.DisplayNames(["en"], {
 //const subtitleEditor = new SubtitleEditor("SubtitleEditorWindow");
 
 const timeline = new Timeline(
-    document.getElementById("timeline"),
+    $id("timeline"),
     {
         min: 0,
         max: 1,
         step: 0.001,
         onHover(time) {
-            timeline.element.dataset.tip = formatTime(time * videoEl.duration / playbackRate);
+            timeline.element.dataset.tip = time === "Live" ? "Live" : formatTime(time * videoEl.duration / PLAYERCONFIG.playback.rate);
         },
         onSeek(time) {
             if (!videoEl.duration) return;
@@ -513,11 +520,11 @@ function getSupportedMediaFormats() {
 // e
 function setPlaybackRate(rate) {
     rate = Number(rate) || 1.0;
-    playbackRate = rate;
+    PLAYERCONFIG.playback.rate = rate;
     if (videoEl) {
-        videoEl.playbackRate = playbackRate;
+        videoEl.playbackRate = PLAYERCONFIG.playback.rate;
     }
-    return playbackRate;
+    return PLAYERCONFIG.playback.rate;
 }
 
 function timeToSeconds(t) {
@@ -685,7 +692,7 @@ function addFilesToSongList(filesSelected) {
         } else {
             cover.style.display = 'none';
         }
-        metadata.textContent = `${formatTime(file._duration, '{hh}:{mm}:{ss}')} | Type="${file.type}"`;
+        metadata.textContent = `${file._duration !== 'Live' ? formatTime(file._duration, '{hh}:{mm}:{ss}') : 'Live'} | Type="${file.type}"`;
 
         playButton.addEventListener('click', () => {
             if (currentSelectedFile === file._fingerprint) {
@@ -696,7 +703,7 @@ function addFilesToSongList(filesSelected) {
         });
 
         deleteButton.addEventListener('click', async () => {
-            if (await confirm("この曲をプレイリストから外しますか？", deleteButton, 1)) {
+            if (await dialog.confirm("この曲をプレイリストから外しますか？", deleteButton, 1)) {
                 removeFile(file);
             }
         });
@@ -707,7 +714,7 @@ function addFilesToSongList(filesSelected) {
 
 function addSubtitleFilesToList(filesSelected) {
     filesSelected.forEach((file) => {
-        if (document.querySelector(`[data-file-name="${file._fingerprint}"]`)) return;
+        if ($(`[data-file-name="${file._fingerprint}"]`)) return;
         const clone = subtitleItemTemplate.content.cloneNode(true);
         const subDiv = clone.querySelector('.subtitleItem');
         const title = clone.querySelector('.subtitleTitle');
@@ -729,7 +736,7 @@ function addSubtitleFilesToList(filesSelected) {
         });
 
         deleteButton.addEventListener('click', async () => {
-            if (await confirm("この字幕トラックをリストから外しますか？", deleteButton, 1)) {
+            if (await dialog.confirm("この字幕トラックをリストから外しますか？", deleteButton, 1)) {
                 removeSubtitle(file._fingerprint);
             }
         });
@@ -1185,7 +1192,7 @@ async function loadSubtitles(files) {
 
 function removeSubtitle(fingerprint) {
     const index = subtitleList.findIndex(item => item._fingerprint === fingerprint);
-    const el = document.querySelector(`[data-file-name="${fingerprint}"]`);
+    const el = $(`[data-file-name="${fingerprint}"]`);
     if (index !== -1) subtitleList.splice(index, 1);
     if (selectedSubtitle === fingerprint) selectedSubtitle = '';
     el.remove();
@@ -1247,7 +1254,7 @@ function showSubtitle(timeSeconds) {
     const h3 = subtitleTextEl;
     timeSeconds -= Number(subtitleOffsetInput.value || 0) / 1000;
     const entry = subtitleList.find(e => e._fingerprint === selectedSubtitle);
-    const titleEl = document.getElementById("subtitle-title");
+    const titleEl = $id("subtitle-title");
     if (!entry || !entry.subs?.length) {
         if (h3.innerHTML !== "") h3.innerHTML = "";
         const title = "字幕 - No subtitles";
@@ -1257,7 +1264,7 @@ function showSubtitle(timeSeconds) {
         }
         if (lastSubtitleFingerprint !== null) {
             lastSubtitleFingerprint = null;
-            document.querySelectorAll('.subtitleItem.active').forEach(el => {
+            $$('.subtitleItem.active').forEach(el => {
                 el.classList.remove('active');
             });
         }
@@ -1268,7 +1275,7 @@ function showSubtitle(timeSeconds) {
         const titleText = `字幕 - ${entry.name || entry._fingerprint}`;
         titleEl.textContent = titleText;
         titleEl.dataset.tip = titleText;
-        document.querySelectorAll('.subtitleItem').forEach(el => {
+        $$('.subtitleItem').forEach(el => {
             el.classList.toggle(
                 'active',
                 el.dataset.fileName === entry._fingerprint
@@ -1331,7 +1338,7 @@ function playFrom(offset) {
     audioCtx.resume();
 
     videoEl.currentTime = offset;
-    videoEl.playbackRate = playbackRate;
+    videoEl.playbackRate = PLAYERCONFIG.playback.rate;
 
     videoEl.play().catch(err => {
         console.warn("Video play failed:", err);
@@ -1349,8 +1356,8 @@ function stopAudio(clearCanvas, pauseCtx) {
 function loadFile(file) {
     if (!file) return;
     const loadToken = ++currentLoadToken;
-    const songElement = document.querySelector(`.songItem[data-file-name="${file._fingerprint}"]`);
-    document.querySelectorAll('.songItem').forEach(el => {
+    const songElement = $(`.songItem[data-file-name="${file._fingerprint}"]`);
+    $$('.songItem').forEach(el => {
         el.classList.remove('loading');
     });
     songElement?.classList.add('loading');
@@ -1365,14 +1372,23 @@ function loadFile(file) {
         URL.revokeObjectURL(videoEl._objectURL);
         videoEl._objectURL = null;
     }
-    const url = URL.createObjectURL(file);
+    let url;
+
+    if (file.type === "radio" && file.url) {
+        videoEl.crossOrigin = "anonymous";
+        url = file.url;
+    } else {
+        videoEl.crossOrigin = null;
+        url = URL.createObjectURL(file);
+        videoEl._objectURL = url;
+    }
+
     videoEl.src = url;
-    videoEl._objectURL = url;
     videoEl.load();
     videoEl.addEventListener("loadeddata", () => {
         if (loadToken !== currentLoadToken) return;
         videoEl.currentTime = 0;
-        document.querySelectorAll('.songItem').forEach(el => {
+        $$('.songItem').forEach(el => {
             el.classList.remove('active', 'loading');
         });
         songElement?.classList.add('active');
@@ -1429,7 +1445,7 @@ function jumpAt(time = 5) {
     let t = videoEl.currentTime + time;
     if (t < 0) t = 0;
     if (t >= videoEl.duration) {
-        if (!playSoundList) {
+        if (!PLAYERCONFIG.playbackList.playMode === 1) {
             playNext(1, true);
         }
         return;
@@ -1497,10 +1513,60 @@ async function addFiles(filesARG) {
     console.log(files);
 }
 
+async function addRadioUrl(url) {
+    if (!url || typeof url !== "string") return;
+    url = url.trim();
+    if (!url) return;
+    const radio = {
+        name: url,
+        url: url,
+        type: "radio",
+        _metadata: {},
+        _artworkURL: null,
+        _fingerprint: `radio:${url}`,
+        _duration: "Live"
+    };
+    if (files.some(existing => existing._fingerprint === radio._fingerprint)) return;
+    files.push(radio);
+    addFilesToSongList([radio]);
+    randomSongs.setMemory(files.length);
+    if (!audioCtx || videoEl.paused) {
+        loadFile(radio);
+    }
+    updateTotalDurationText();
+    console.log("Added radio station:", radio);
+}
+
+async function isMediaStream(url) {
+    try {
+        const response = await fetch(url, {
+            method: "HEAD",
+            redirect: "follow"
+        });
+        if (!response.ok) {
+            return false;
+        }
+        const contentType = response.headers.get("content-type")?.toLowerCase() || "";
+        const validTypes = [
+            "audio/",
+            "video/",
+            "application/ogg",
+            "application/vnd.apple.mpegurl",
+            "application/x-mpegurl",
+            "application/x-mpegurl",
+            "audio/mpegurl"
+        ];
+        return validTypes.some(type => contentType.startsWith(type));
+    } catch (err) {
+        console.warn("Could not test stream:", err);
+        return false;
+    }
+}
+
 function removeFile(file) {
     if (!file) return;
     const index = files.findIndex(f => f._fingerprint === file._fingerprint);
-    const el = document.querySelector(`[data-file-name="${file._fingerprint}"]`);
+    const el = $(`[data-file-name="${file._fingerprint}"]`);
     if (index !== -1) files.splice(index, 1);
     if (el) el.remove();
     randomSongs.forget(file);
@@ -1538,40 +1604,39 @@ function removeFile(file) {
 // Main loop
 function commonLoop() {
     if (!audioCtx || !videoEl.duration) return;
-
     const elapsed = getElapsedTime(true);
-
     if (!videoEl.paused && videoEl.duration) {
         timeline.setValue(Math.min(1, elapsed / videoEl.duration));
+        timeline.setLive(videoEl.duration === Infinity);
     }
 
     if (elapsed >= videoEl.duration && !soundEnded) {
         soundEnded = true;
         stopAudio(false, true);
 
-        if (loopMode === 1) {
+        if (PLAYERCONFIG.playbackList.loopMode === 1) {
             if (loopCounter === 0) {
                 loopCounter = 1;
                 playFrom(0);
             } else {
                 loopCounter = 0;
 
-                if (playRandom) {
+                if (PLAYERCONFIG.playbackList.playMode === 2) {
                     loadRandom();
-                } else if (playSoundList) {
+                } else if (PLAYERCONFIG.playbackList.playMode === 1) {
                     playNext(1, false);
                 }
             }
-        } else if (loopMode === 2) {
-            if (playSoundList) {
+        } else if (PLAYERCONFIG.playbackList.loopMode === 2) {
+            if (PLAYERCONFIG.playbackList.playMode === 1) {
                 playNext(1);
             } else {
                 playFrom(0);
             }
         } else {
-            if (playRandom) {
+            if (PLAYERCONFIG.playbackList.playMode === 2) {
                 loadRandom();
-            } else if (playSoundList) {
+            } else if (PLAYERCONFIG.playbackList.playMode === 1) {
                 playNext(1, false);
             }
         }
@@ -1585,12 +1650,15 @@ function commonLoop() {
 // Render stuff loop
 function renderLoop() {
     requestAnimationFrame(renderLoop);
+    const now = performance.now();
+    const minFrameTime = 1000 / PLAYERCONFIG.maxRenderFps;
+    if (now - lastRenderTimestamp < minFrameTime) return;
+    lastRenderTimestamp = now;
     if (!analyser || !audioCtx) return;
     const elapsed = getElapsedTime(true);
 
     if (!window._lastSubtitleCheck) window._lastSubtitleCheck = 0;
     const SUBTITLE_CHECK_INTERVAL = 50; // ms
-    const now = performance.now();
     if (now - window._lastSubtitleCheck >= SUBTITLE_CHECK_INTERVAL) {
         window._lastSubtitleCheck = now;
         showSubtitle(elapsed);
@@ -1598,10 +1666,12 @@ function renderLoop() {
 
     let timeText;
 
-    if (timeTextMode === 0) {
-        timeText = `${formatTime(elapsed / playbackRate)} / ${formatTime(videoEl.duration / playbackRate)}`;
-    } else if (timeTextMode === 1) {
-        timeText = `${formatTime(elapsed / playbackRate)} / -${formatTime((elapsed - videoEl.duration) / playbackRate)}`;
+    if (videoEl.duration === Infinity) {
+        timeText = `${formatTime(elapsed / PLAYERCONFIG.playback.rate)} / Live`;
+    } else if (PLAYERCONFIG.timeTextMode === 0) {
+        timeText = `${formatTime(elapsed / PLAYERCONFIG.playback.rate)} / ${formatTime(videoEl.duration / PLAYERCONFIG.playback.rate)}`;
+    } else if (PLAYERCONFIG.timeTextMode === 1) {
+        timeText = `${formatTime(elapsed / PLAYERCONFIG.playback.rate)} / -${formatTime((elapsed - videoEl.duration) / PLAYERCONFIG.playback.rate)}`;
     } else {
         timeText = '';
     }
@@ -1610,12 +1680,10 @@ function renderLoop() {
         audioTimeText.textContent = timeText
     }
 
-    const timeColor = playbackRate < 1 ? '#ff4d4d' : playbackRate > 1 ? '#4dff4d' : '';
+    const timeColor = PLAYERCONFIG.playback.rate < 1 ? '#ff4d4d' : PLAYERCONFIG.playback.rate > 1 ? '#4dff4d' : '';
     if (audioTimeText.style.color !== timeColor) {
         audioTimeText.style.color = timeColor;
     }
-
-    let lastProgress = -1;
 
     const progress = Math.round(((elapsed / (videoEl.duration || 1)) * 1000)) / 10;
 
@@ -1639,8 +1707,8 @@ function renderLoop() {
 
     equalizer.visualize(freqDataFloat, analyser);
 
-    if (!pauseViz) {
-        switch (currentViz) {
+    if (!PLAYERCONFIG.visualizer.paused) {
+        switch (PLAYERCONFIG.visualizer.current) {
             case 'bar':
                 renderHandler.bar.render(freqData, analyser, 2, visualizerMF.value, analyserSmoothing);
                 break;
@@ -1669,7 +1737,7 @@ function renderLoop() {
                 break;
 
             default:
-                console.warn(`Unknown visualizer: ${currentViz}`);
+                console.warn(`Unknown visualizer: ${PLAYERCONFIG.visualizer.current}`);
         }
     }
 }
@@ -1681,10 +1749,10 @@ function volumeChanged() {
     if (gainNode) {
         gainNode.gain.value = linearValue;
     }
-    volume = linearValue;
+    PLAYERCONFIG.playback.volume = linearValue;
     const dB = linearValue <= 0 ? -Infinity : 20 * Math.log10(linearValue);
     const dbDisplay = dB === -Infinity ? "-inf dB" : `${dB >= 0 ? "+" : ""}${dB.toFixed(1)} dB`;
-    document.getElementById("audio-volume").innerText = `Volume: ${dbDisplay}`;
+    $id("audio-volume").innerText = `Volume: ${dbDisplay}`;
     volumeSlider.dataset.tip = `Volume: ${Math.round(linearValue * 100)}%`;
 }
 
@@ -1739,6 +1807,22 @@ audioFileInput.addEventListener('change', e => {
     addFiles(e.target.files);
 });
 
+radioAddUrl.addEventListener("click", async e => {
+    const url = radioUrl.value.trim();
+    if (!url) return;
+    const valid = await isMediaStream(url);
+    if (!valid) {
+        console.warn("Not a recognised media stream:", url);
+        dialog.alert("That URL doesn't appear to be a radio/audio/video stream.", radioAddUrl);
+        return;
+    }
+    await addRadioUrl(url);
+});
+
+radioUrl.addEventListener("click", () => {
+    radioUrl.select();
+});
+
 subtitleFileInput.addEventListener('change', async (e) => {
     const subs = await loadSubtitles(e.target.files);
     console.log("Subtitles loaded:", subs);
@@ -1750,11 +1834,8 @@ window.addEventListener('dragover', e => {
 
 window.addEventListener("drop", async (e) => {
     e.preventDefault();
-
     if (!e.dataTransfer || e.dataTransfer.files.length === 0) return;
-
     const files = Array.from(e.dataTransfer.files);
-
     const subtitleFiles = files.filter(file => {
         const name = file.name.toLowerCase();
         return name.endsWith(".vtt") ||
@@ -1772,7 +1853,7 @@ window.addEventListener("drop", async (e) => {
 });
 
 dropdownVizType.addEventListener('change', () => {
-    currentViz = dropdownVizType.value;
+    PLAYERCONFIG.visualizer.current = dropdownVizType.value;
 });
 
 visualizerMF.addEventListener('input', () => {
@@ -1852,6 +1933,10 @@ subVizOptBtn.addEventListener("click", () => {
     visualizerOptionsDiv.style.display = visualizerOptionsDiv.style.display === "none" ? "block" : "none";
 })
 
+radioBtn.addEventListener("click", () => {
+    radioWin.style.display = radioWin.style.display === "none" ? "block" : "none";
+})
+
 eqResetBtn.addEventListener("click", () => {
     equalizer.reset();
 });
@@ -1875,7 +1960,7 @@ eqSliderLinkQsize.addEventListener("input", () => {
 
 eqPresetSaveBtn.addEventListener("click", async () => {
     const selected = eqPresetSelect.options[eqPresetSelect.selectedIndex];
-    let name = await prompt(
+    let name = await dialog.prompt(
         "プリセット名を入力してください",
         selected ? selected.textContent : "",
         eqPresetSaveBtn,
@@ -1894,7 +1979,7 @@ eqPresetSaveBtn.addEventListener("click", async () => {
         .slice(0, 50);
 
     if (user_eq_presets[name]) {
-        const ok = await confirm(
+        const ok = await dialog.confirm(
             `「${name}」プリセットを上書きしますか？`,
             eqPresetSaveBtn,
             1
@@ -1915,10 +2000,10 @@ eqPresetRemoveBtn.addEventListener("click", async () => {
     if (!selected) return;
     const group = selected.parentElement;
     if (!group || group.label !== "User presets") {
-        await alert("ユーザーが保存したプリセットのみ削除できます", eqPresetRemoveBtn, 0);
+        await dialog.alert("ユーザーが保存したプリセットのみ削除できます", eqPresetRemoveBtn, 0);
         return;
     }
-    const ok = await confirm(
+    const ok = await dialog.confirm(
         "選択したプリセットを削除しますか？",
         eqPresetRemoveBtn,
         1
@@ -1936,7 +2021,7 @@ subAutoFindBtn.addEventListener("click", () => {
 });
 
 vizPauseVizBtn.addEventListener("click", () => {
-    pauseViz = !pauseViz;
+    PLAYERCONFIG.visualizer.paused = !PLAYERCONFIG.visualizer.paused;
 });
 
 playPreviousButton.addEventListener("click", () => {
@@ -1964,7 +2049,7 @@ subtitleFont.addEventListener("change", (e) => {
 });
 
 removeAllSounds.addEventListener("click", async () => {
-    const ok = await confirm("プレイリストをクリアしますか？", removeAllSounds, 1);
+    const ok = await dialog.confirm("プレイリストをクリアしますか？", removeAllSounds, 1);
     if (!ok) return;
     if (files.length > 1) {
         files.filter(file => file._fingerprint !== currentSelectedFile).forEach(removeFile);
@@ -1974,7 +2059,7 @@ removeAllSounds.addEventListener("click", async () => {
 });
 
 removeAllSubtitles.addEventListener("click", async () => {
-    const ok = await confirm("字幕をリストから外しますか？", removeAllSubtitles, 1);
+    const ok = await dialog.confirm("字幕をリストから外しますか？", removeAllSubtitles, 1);
     if (!ok) return;
     if (subtitleList.length > 1) {
         subtitleList.filter(file => file._fingerprint !== selectedSubtitle).forEach(file => removeSubtitle(file._fingerprint));
@@ -1997,7 +2082,7 @@ songSearch.addEventListener("input", () => {
     const searchTerm = songSearch.value.toLowerCase().trim();
     const matchingFingerprints = files.filter(file => file.name.toLowerCase().includes(searchTerm)).map(file => file._fingerprint);
 
-    document.querySelectorAll(".songItem").forEach(item => {
+    $$(".songItem").forEach(item => {
         const fingerprint = item.dataset.fileName;
         item.style.display = matchingFingerprints.includes(fingerprint) ? "" : "none";
     });
@@ -2006,13 +2091,13 @@ songSearch.addEventListener("input", () => {
 subSearch.addEventListener("input", () => {
     const searchTerm = subSearch.value.toLowerCase().trim();
     const matchingFingerprints = subtitleList.filter(sub => sub.name.toLowerCase().includes(searchTerm)).map(sub => sub._fingerprint);
-    document.querySelectorAll(".subtitleItem").forEach(item => {
+    $$(".subtitleItem").forEach(item => {
         const fingerprint = item.dataset.fileName;
         item.style.display = matchingFingerprints.includes(fingerprint) ? "" : "none";
     });
 });
 
-document.querySelectorAll(".searchBar").forEach(searchBar => {
+$$(".searchBar").forEach(searchBar => {
     searchBar.addEventListener("keydown", e => {
         if (e.key === "Enter") e.target.blur();
     });
@@ -2029,7 +2114,7 @@ pipButton.addEventListener("click", async () => {
         }
     } catch (error) {
         //console.log("[PiP failed]\n", error);
-        await alert("この動画はピクチャーインピクチャーに対応していません", pipButton);
+        await dialog.alert("この動画はピクチャーインピクチャーに対応していません", pipButton);
     }
 });
 
@@ -2047,7 +2132,7 @@ pipVideo.addEventListener("leavepictureinpicture", () => {
 });
 
 audioTimeText.addEventListener("click", () => {
-    timeTextMode = timeTextMode === 1 ? 0 : 1;
+    PLAYERCONFIG.timeTextMode = PLAYERCONFIG.timeTextMode === 1 ? 0 : 1;
 })
 
 eqMaxDbInput.addEventListener("change", () => {
@@ -2163,26 +2248,21 @@ window.addEventListener("mousemove", (e) => {
 
 document.addEventListener('DOMContentLoaded', () => {
     const tooltips = new TooltipManager();
-    const movableWindows = [...document.querySelectorAll(".movable-window")].map(win => new MovableWindow(win));
+    const movableWindows = [...$$(".movable-window")].map(win => new MovableWindow(win));
     // const focusWindow = createFocusHandler(movableWindows);
     // movableWindows.forEach(win => {
     //     win.onFocusCallback = focusWindow;
     // });
 
     const playModeToggle = new LoopToggle(
-        document.getElementById("playModeBtn"),
+        $id("playModeBtn"),
         ["none", "playList", "random"],
         (mode) => {
-            const modes = {
-                none: { playSoundList: false, playRandom: false },
-                playList: { playSoundList: true, playRandom: false },
-                random: { playSoundList: false, playRandom: true }
-            };
-
-            const config = modes[mode];
-
-            playSoundList = config.playSoundList;
-            playRandom = config.playRandom;
+            PLAYERCONFIG.playbackList.playMode = {
+                none: 0,
+                playList: 1,
+                random: 2
+            }[mode];
         },
         "none",
         {
@@ -2193,10 +2273,10 @@ document.addEventListener('DOMContentLoaded', () => {
     );
 
     const loopModeToggle = new LoopToggle(
-        document.getElementById("loopModeBtn"),
+        $id("loopModeBtn"),
         ["none", "loopOnce", "loop"],
         (mode) => {
-            loopMode = {
+            PLAYERCONFIG.playbackList.loopMode = {
                 none: 0,
                 loopOnce: 1,
                 loop: 2
@@ -2250,7 +2330,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     ];
 
-    const wallpaperswitch = new WallpaperSwitcher(document.getElementById("wallpaper"));
+    const wallpaperswitch = new WallpaperSwitcher($id("wallpaper"));
     wallpapers.forEach(wallpaper => {
         const img = new Image();
         img.fetchPriority = "low";
@@ -2289,12 +2369,16 @@ document.addEventListener('DOMContentLoaded', () => {
         clearTimeout(resizeTimeout);
         resizeTimeout = setTimeout(resizeCanvas, 100);
     });
-    observer.observe(document.getElementById("canvasContainer"));
+    observer.observe($id("canvasContainer"));
 
     setInterval(() => {
         wallpaperswitch.nextRandom(wallpapers);
     }, 63000);
 
-    setInterval(commonLoop, 16);
+    const runCommonLoop = () => {
+        commonLoop();
+        requestAnimationFrame(runCommonLoop);
+    };
+    runCommonLoop();
     renderLoop();
 });
