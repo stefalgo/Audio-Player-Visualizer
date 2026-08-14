@@ -286,6 +286,9 @@ input[type="range"]::-moz-range-track {
     cursor: pointer;
     user-select: none;
     touch-action: none;
+
+    /* background-color: hsl(0deg 0% 0% / 23%);
+    backdrop-filter: var(--backdrop-blur); */
 }
 
 .timeline::before {
@@ -296,7 +299,7 @@ input[type="range"]::-moz-range-track {
     transform: translateY(-50%);
     background: var(--gray-400);
     backdrop-filter: var(--backdrop-blur);
-    box-shadow: #00000050 0 0 7px 7px;
+    /* box-shadow: #00000050 0 0 7px 7px; */
     border-radius: 999px;
 }
 
@@ -670,6 +673,16 @@ input[type="file"]+label {
     resize: none;
     box-sizing: border-box;
     min-height: 120px;
+}
+
+/*------------------------------------------------*/
+
+#metronomeWin {
+    width: var(--window-width-sm);
+}
+
+#metronomeWin .window-content {
+    padding: 5px;
 }
 
 /*------------------------------------------------*/

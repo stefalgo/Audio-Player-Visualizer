@@ -1111,31 +1111,174 @@ class SubtitleEditor {
 
 class Metronome {
     constructor(media, {
+        canvas = null,
         bpm = 120,
-        offset = 0,
+        firstBeat = 0,
         beatsPerBar = 4,
         lookAhead = 0.1,
         interval = 25,
+        volume = 1,
         click = true,
         onBeat = null
     } = {}) {
         this.media = media;
         this.bpm = bpm;
-        this.offset = offset;
+        this.firstBeat = firstBeat;
         this.beatsPerBar = beatsPerBar;
         this.lookAhead = lookAhead;
         this.interval = interval;
-        this.onBeat = onBeat;
+        this.volume = volume;
         this.enableClick = click;
+        this.onBeat = onBeat;
         this.audio = new AudioContext();
         this.beatLength = 60 / bpm;
-        this.nextBeatTime = 0;
-        this.nextBeatIndex = 0;
+        this.nextBeatTime = firstBeat;
         this.timer = null;
-        media.addEventListener("play", () => this.start());
-        media.addEventListener("pause", () => this.stop());
-        media.addEventListener("seeked", () => this.resync());
-        media.addEventListener("ratechange", () => this.resync());
+        this.canvas = canvas;
+        this.ctx = canvas?.getContext("2d") ?? null;
+        if (this.canvas) {
+            this.resizeObserver = new ResizeObserver(() => {
+                this.resizeCanvas();
+            });
+
+            this.resizeObserver.observe(this.canvas);
+        }
+        media.addEventListener("seeked", () => {
+            this.resync();
+            //this.render();
+        });
+
+        media.addEventListener("ratechange", () => {
+            this.resync();
+            //this.render();
+        });
+    }
+
+    resizeCanvas() {
+        if (!this.canvas) return;
+        const rect = this.canvas.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        this.canvas.width = Math.round(rect.width * dpr);
+        this.canvas.height = Math.round(rect.height * dpr);
+        this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        //this.render();
+    }
+
+    render() {
+        if (!this.canvas || !this.ctx) return;
+        const ctx = this.ctx;
+        const rect = this.canvas.getBoundingClientRect();
+        const cw = rect.width;
+        const ch = rect.height;
+        ctx.clearRect(0, 0, cw, ch);
+        const currentTime = this.media.currentTime;
+        const visibleBeats = 8; // +- 2 beats from center
+        const currentBeat = this.getBeat();
+        let firstVisibleBeat = currentBeat - Math.floor(visibleBeats / 2);
+        let lastVisibleBeat = firstVisibleBeat + visibleBeats;
+        if (firstVisibleBeat < 0) {
+            firstVisibleBeat = 0;
+            lastVisibleBeat = visibleBeats;
+        }
+        const startTime = this.firstBeat + firstVisibleBeat * this.beatLength;
+        const endTime = this.firstBeat + lastVisibleBeat * this.beatLength;
+        const duration = endTime - startTime;
+        const timeToX = (time) => {
+            return (
+                (time - startTime) /
+                duration
+            ) * cw;
+        };
+
+        ctx.fillStyle = "rgba(10,10,10,0.95)";
+        ctx.fillRect(0, 0, cw, ch);
+        for (let beat = firstVisibleBeat; beat <= lastVisibleBeat; beat++) {
+            const beatTime = this.firstBeat + beat * this.beatLength;
+            const x = timeToX(beatTime);
+            const beatInBar = beat % this.beatsPerBar;
+            const isBar = beatInBar === 0;
+
+            ctx.strokeStyle = isBar ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.25)";
+            ctx.lineWidth = isBar ? 2 : 1;
+            ctx.beginPath();
+            ctx.moveTo(x, 40);
+            ctx.lineTo(x, ch - 16);
+            ctx.stroke();
+
+            ctx.fillStyle = isBar ? "rgba(255,255,255,1)" : "rgba(255,255,255,0.6)";
+            ctx.font = isBar ? "bold 12px monospace" : "11px monospace";
+            ctx.textAlign = "center";
+            ctx.fillText(
+                `${beat + 1}`,
+                x,
+                36
+            );
+
+            if (isBar) {
+                const bar = Math.floor(beat / this.beatsPerBar);
+                ctx.fillStyle = "rgba(255,255,255,0.5)";
+                ctx.font = "10px monospace";
+                ctx.fillText(
+                    `Bar ${bar + 1}`,
+                    x,
+                    ch - 6
+                );
+            }
+        }
+
+        const firstBeatX = timeToX(this.firstBeat);
+        if (firstBeatX >= 0 && firstBeatX <= cw) {
+            ctx.strokeStyle = "rgba(255,80,80,0.9)";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(firstBeatX, 26);
+            ctx.lineTo(firstBeatX, ch);
+            ctx.stroke();
+            ctx.fillStyle = "rgba(255,100,100,1)";
+            ctx.font = "bold 10px monospace";
+            ctx.textAlign = "center";
+            ctx.fillText(
+                "FIRST BEAT",
+                firstBeatX + 30,
+                ch - 25
+            );
+        }
+
+        const currentX = timeToX(currentTime);
+        if (currentX >= 0 && currentX <= cw) {
+            ctx.strokeStyle = "rgba(100,10,255,1)";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(currentX, 26);
+            ctx.lineTo(currentX, ch);
+            ctx.stroke();
+            ctx.fillStyle = "rgba(100,10,255,1)";
+            const size = 6;
+            const y = 50;
+            ctx.beginPath();
+            ctx.moveTo(currentX, y - size);
+            ctx.lineTo(currentX + size, y);
+            ctx.lineTo(currentX, y + size);
+            ctx.lineTo(currentX - size, y);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        const topItems = [
+            `BPM ${this.bpm}`,
+            `firstBeat ${this.firstBeat.toFixed(3)}s`
+        ];
+        ctx.fillStyle = "rgba(255,255,255,0.8)";
+        ctx.font = "11px monospace";
+        ctx.textAlign = "center";
+        const sectionWidth = cw / topItems.length;
+        topItems.forEach((text, i) => {
+            ctx.fillText(
+                text,
+                sectionWidth * i + sectionWidth / 2,
+                16
+            );
+        });
     }
 
     start() {
@@ -1144,6 +1287,7 @@ class Metronome {
         this.stop();
         this.timer = setInterval(() => {
             this.schedule();
+            //this.render();
         }, this.interval);
     }
 
@@ -1154,75 +1298,113 @@ class Metronome {
 
     schedule() {
         const mediaNow = this.media.currentTime;
-        while (this.nextBeatTime < mediaNow + this.lookAhead) {
+        const endTime = mediaNow + this.lookAhead;
+        while (this.nextBeatTime <= endTime) {
             const delay = this.nextBeatTime - mediaNow;
             const audioTime = this.audio.currentTime + delay;
-            const beatInBar = this.nextBeatIndex % this.beatsPerBar;
-            if (this.enableClick) this.metronomeClick(audioTime, beatInBar === 0);
+            const beat = Math.round((this.nextBeatTime - this.firstBeat) / this.beatLength);
+            const beatInBar = beat % this.beatsPerBar;
+            const bar = Math.floor(beat / this.beatsPerBar);
+            if (this.enableClick) {
+                this.metronomeClick(
+                    audioTime,
+                    beatInBar === 0
+                );
+            }
             this.onBeat?.({
-                beat: this.nextBeatIndex,
+                beat,
                 beatInBar,
-                bar: Math.floor(this.nextBeatIndex / this.beatsPerBar),
+                bar,
                 mediaTime: this.nextBeatTime,
                 audioTime
             });
-            this.nextBeatIndex++;
             this.nextBeatTime += this.beatLength;
         }
     }
 
     resync() {
-        const beat = Math.floor(
-            (this.media.currentTime - this.offset) /
-            this.beatLength
-        );
-        this.nextBeatIndex = beat + 1;
-        this.nextBeatTime = this.offset + (beat + 1) * this.beatLength;
+        const mediaTime = this.media.currentTime;
+        if (mediaTime <= this.firstBeat) {
+            this.nextBeatTime = this.firstBeat;
+            return;
+        }
+        const elapsed = mediaTime - this.firstBeat;
+        const beat = Math.floor(elapsed / this.beatLength);
+        this.nextBeatTime = this.firstBeat + (beat + 1) * this.beatLength;
     }
 
     setBpm(bpm) {
         this.bpm = bpm;
         this.beatLength = 60 / bpm;
         this.resync();
+        //this.render();
     }
 
-    setOffset(offset) {
-        this.offset = offset;
+    setFirstBeat(sec) {
+        this.firstBeat = Math.round(sec * 1000) / 1000;
         this.resync();
+        //this.render();
     }
 
     nudge(seconds) {
-        this.offset += seconds;
+        const milliseconds = Math.round(seconds * 1000);
+        this.firstBeat = Math.round((this.firstBeat * 1000 + milliseconds)) / 1000;
         this.resync();
+        //this.render();
     }
 
     metronomeClick(time, accent) {
         const osc = this.audio.createOscillator();
         const gain = this.audio.createGain();
-
         osc.type = "square";
         osc.frequency.setValueAtTime(
             accent ? 1800 : 1400,
             time
         );
-        gain.gain.setValueAtTime(0.4, time);
+        gain.gain.setValueAtTime(
+            this.volume,
+            time
+        );
         gain.gain.exponentialRampToValueAtTime(
             0.001,
             time + 0.03
         );
         osc.connect(gain);
-        gain.connect(this.audio.destination);
+        gain.connect(
+            this.audio.destination
+        );
         osc.start(time);
         osc.stop(time + 0.035);
     }
 
     getBeat() {
-        return Math.floor((this.media.currentTime - this.offset) / this.beatLength);
+        if (this.media.currentTime < this.firstBeat) return -1;
+        return Math.floor((this.media.currentTime - this.firstBeat) / this.beatLength);
+    }
+
+    getBeatInBar() {
+        const beat = this.getBeat();
+        if (beat < 0) return -1;
+        return (beat % this.beatsPerBar);
+    }
+
+    getBar() {
+        const beat = this.getBeat();
+        if (beat < 0) return -1;
+        return Math.floor(beat / this.beatsPerBar);
     }
 
     getBeatProgress() {
-        const t = (this.media.currentTime - this.offset) % this.beatLength;
-        return t / this.beatLength;
+        if (this.media.currentTime < this.firstBeat) return 0;
+        const t = (this.media.currentTime - this.firstBeat) % this.beatLength;
+        return (t / this.beatLength);
+    }
+
+    getBeatTime(beat) {
+        return (
+            this.firstBeat +
+            beat * this.beatLength
+        );
     }
 }
 
@@ -1390,5 +1572,86 @@ class Timeline {
                 );
             }
         });
+    }
+}
+
+class TapTempo {
+    constructor(button, {
+        timeout = 2000,
+        minInterval = 120,
+        maxInterval = 2000
+    } = {}) {
+        this.button = button;
+        this.timeout = timeout;
+        this.minInterval = minInterval;
+        this.maxInterval = maxInterval;
+        this.taps = [];
+        this.timer = null;
+        this.outputCallback = null;
+        this.bpmChangeCallback = null;
+        this.button.addEventListener("click", () => this.tap());
+    }
+
+    onOutput(callback) {
+        this.outputCallback = callback;
+        return this;
+    }
+
+    onBpmChange(callback) {
+        this.bpmChangeCallback = callback;
+        return this;
+    }
+
+    tap() {
+        const now = performance.now();
+        this.taps.push(now);
+        clearTimeout(this.timer);
+        if (this.taps.length >= 2) {
+            const intervals = [];
+            for (let i = 1; i < this.taps.length; i++) {
+                const interval = this.taps[i] - this.taps[i - 1];
+                if (interval >= this.minInterval && interval <= this.maxInterval) {
+                    intervals.push(interval);
+                }
+            }
+            if (intervals.length > 0) {
+                const average = intervals.reduce((sum, value) => sum + value, 0) / intervals.length;
+                const bpm = Math.round(60000 / average);
+                this.bpmChangeCallback?.(bpm);
+            }
+        }
+        this.timer = setTimeout(() => {
+            this.finish();
+        }, this.timeout);
+    }
+
+    finish() {
+        clearTimeout(this.timer);
+        this.timer = null;
+        if (this.taps.length < 2) {
+            this.reset();
+            return;
+        }
+        const intervals = [];
+        for (let i = 1; i < this.taps.length; i++) {
+            const interval = this.taps[i] - this.taps[i - 1];
+            if (interval >= this.minInterval && interval <= this.maxInterval) {
+                intervals.push(interval);
+            }
+        }
+        if (intervals.length === 0) {
+            this.reset();
+            return;
+        }
+        const average = intervals.reduce((sum, value) => sum + value, 0) / intervals.length;
+        const bpm = Math.round(60000 / average);
+        this.outputCallback?.(bpm);
+        this.reset();
+    }
+
+    reset() {
+        clearTimeout(this.timer);
+        this.timer = null;
+        this.taps = [];
     }
 }

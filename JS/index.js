@@ -75,6 +75,14 @@ const radioUrl = $id("radioUrl");
 const radioAddUrl = $id("radioAddUrl");
 const radioBtn = $id("radioBtn");
 const radioWin = $id("radioWin");
+const metroTapTempoButton = $id("metroTapTempoButton");
+const metroBpmInput = $id("metroBpmInput");
+const metroFirstBeat = $id("metroFirstBeat");
+const metroEnabled = $id("metroEnabled");
+const metroBeatsPerBar = $id("metroBeatsPerBar");
+const metroVolume = $id("metroVolume");
+const metroBtn = $id("metroBtn");
+const metronomeWin = $id("metronomeWin");
 
 const dialog = {
     alert: (message, targetEl) => TooltipDialog.info(targetEl, message),
@@ -169,6 +177,20 @@ let PLAYERCONFIG = {
         paused: false,
         current: dropdownVizType.value
     },
+    metronome: { // initial config
+        canvas: document.getElementById("metronomeCanvas"),
+        bpm: Number(metroBpmInput.value), //188, //101, // 132, // 116,
+        firstBeat: Number(metroFirstBeat.value), //0, //0, // 0.15, // 0.8,
+        beatsPerBar: Number(metroBeatsPerBar.value), //4
+        volume: Number(metroVolume.value / 100), //0.4,
+        // onBeat: (info) => {
+        //     console.log("//-----Metronome-----//");
+        //     console.log(info);
+        //     console.log(info.beat, "BPM");
+        //     console.log(info.beatInBar, "Bar Beat");
+        //     console.log(info.bar, "Bar");
+        // }
+    },
     maxRenderFps: 60,
     timeTextMode: 0 /// 0: current / duration, 1: current / time left
 };
@@ -227,16 +249,9 @@ const languageNames = new Intl.DisplayNames(["en"], {
     type: "language",
 });
 
-// const metro = new Metronome(videoEl, {
-//     bpm: 132,
-//     offset: 0.15,
-//     onBeat(info) {
-//         console.log(info);
-//         console.log(info.beat);
-//         console.log(info.beatInBar);
-//         console.log(info.bar);
-//     }
-// });
+const metro = new Metronome(videoEl, {
+    ...PLAYERCONFIG.metronome
+});
 
 //const subtitleEditor = new SubtitleEditor("SubtitleEditorWindow");
 
@@ -263,6 +278,7 @@ const timeline = new Timeline(
     }
 );
 
+const tapTempo = new TapTempo(metroTapTempoButton);
 
 const pipVideo = document.createElement("video");
 pipVideo.playsInline = true;
@@ -1706,6 +1722,7 @@ function renderLoop() {
     }
 
     equalizer.visualize(freqDataFloat, analyser);
+    metro.render();
 
     if (!PLAYERCONFIG.visualizer.paused) {
         switch (PLAYERCONFIG.visualizer.current) {
@@ -1904,38 +1921,23 @@ document.addEventListener("keydown", (e) => {
     if (e.code === "ArrowLeft") jumpAt(-5);
 });
 
-songListBtn.addEventListener("click", () => {
-    songList.style.display = songList.style.display === "none" ? "block" : "none";
-});
+//----------------------------------------------------------------------------------------------------------------------
 
-subListBtn.addEventListener("click", () => {
-    subtitlesList.style.display = subtitlesList.style.display === "none" ? "block" : "none";
-});
+function toggleWindow(el) {
+    el.style.display = el.style.display === "none" ? "block" : "none";
+}
 
-eqBtn.addEventListener("click", () => {
-    eqSlidersContainer.style.display =
-        eqSlidersContainer.style.display === "none" ? "block" : "none";
-});
+songListBtn.addEventListener("click", () => toggleWindow(songList));
+subListBtn.addEventListener("click", () => toggleWindow(subtitlesList));
+eqBtn.addEventListener("click", () => toggleWindow(eqSlidersContainer));
+subBtn.addEventListener("click", () => toggleWindow(subtitlesDiv));
+subOptionsBtn.addEventListener("click", () => toggleWindow(subtitlesOptionsDiv));
+otherEffectsBtn.addEventListener("click", () => toggleWindow(otherEffectsDiv));
+subVizOptBtn.addEventListener("click", () => toggleWindow(visualizerOptionsDiv));
+radioBtn.addEventListener("click", () => toggleWindow(radioWin));
+metroBtn.addEventListener("click", () => toggleWindow(metronomeWin));
 
-subBtn.addEventListener("click", () => {
-    subtitlesDiv.style.display = subtitlesDiv.style.display === "none" ? "block" : "none";
-});
-
-subOptionsBtn.addEventListener("click", () => {
-    subtitlesOptionsDiv.style.display = subtitlesOptionsDiv.style.display === "none" ? "block" : "none";
-});
-
-otherEffectsBtn.addEventListener("click", () => {
-    otherEffectsDiv.style.display = otherEffectsDiv.style.display === "none" ? "block" : "none";
-});
-
-subVizOptBtn.addEventListener("click", () => {
-    visualizerOptionsDiv.style.display = visualizerOptionsDiv.style.display === "none" ? "block" : "none";
-})
-
-radioBtn.addEventListener("click", () => {
-    radioWin.style.display = radioWin.style.display === "none" ? "block" : "none";
-})
+//----------------------------------------------------------------------------------------------------------------------
 
 eqResetBtn.addEventListener("click", () => {
     equalizer.reset();
@@ -2152,6 +2154,43 @@ equalizer.onChange(data => {
         eq.setBand(i, band.gain);
     });
 });
+
+tapTempo.onBpmChange((bpm) => {
+    metro.stop();
+    metroEnabled.checked = false;
+    metroBpmInput.value = bpm;
+    metro.setBpm(bpm);
+});
+
+metroFirstBeat.addEventListener("change", () => {
+    metro.setFirstBeat(Number(metroFirstBeat.value));
+});
+
+metroEnabled.addEventListener("change", () => {
+    metroEnabled.checked ? metro.start() : metro.stop();
+});
+
+metroBpmInput.addEventListener("change", () => {
+    metro.setBpm(Number(metroBpmInput.value));
+    metroBpmInput.placeholder = metroBpmInput.value;
+})
+
+metroBeatsPerBar.addEventListener("change", () => {
+    metro.beatsPerBar = Number(metroBeatsPerBar.value);
+})
+
+metroVolume.addEventListener("change", () => {
+    metro.volume = Number(metroVolume.value / 100);
+})
+
+$$('.metroNudgeBtn').forEach((el) => {
+    let nudge = Number(el.dataset.metroNudge);
+    el.addEventListener("click", () => {
+        metro.nudge(nudge);
+        metroFirstBeat.value = metro.firstBeat;
+    })
+})
+
 //----------------------------------------------------------------------------------------------------------------------
 function updatePlayButton() {
     if (!pausePlayButton) return;
@@ -2244,7 +2283,6 @@ window.addEventListener("mousemove", (e) => {
         controlsEl.classList.add("hidden");
     }
 });
-
 
 document.addEventListener('DOMContentLoaded', () => {
     const tooltips = new TooltipManager();
@@ -2375,10 +2413,13 @@ document.addEventListener('DOMContentLoaded', () => {
         wallpaperswitch.nextRandom(wallpapers);
     }, 63000);
 
-    const runCommonLoop = () => {
-        commonLoop();
-        requestAnimationFrame(runCommonLoop);
-    };
-    runCommonLoop();
+    // const runCommonLoop = () => {
+    //     commonLoop();
+    //     requestAnimationFrame(runCommonLoop);
+    // };
+    // runCommonLoop();
+    // renderLoop();
+    setInterval(commonLoop, 1000 / PLAYERCONFIG.maxRenderFps);
+
     renderLoop();
 });
