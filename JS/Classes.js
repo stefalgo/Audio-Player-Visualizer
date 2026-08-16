@@ -1115,6 +1115,7 @@ class Metronome {
         bpm = 120,
         firstBeat = 0,
         beatsPerBar = 4,
+        sections = [],
         lookAhead = 0.1,
         interval = 25,
         volume = 1,
@@ -1125,6 +1126,7 @@ class Metronome {
         this.bpm = bpm;
         this.firstBeat = firstBeat;
         this.beatsPerBar = beatsPerBar;
+        this.sections = sections;
         this.lookAhead = lookAhead;
         this.interval = interval;
         this.volume = volume;
@@ -1136,6 +1138,7 @@ class Metronome {
         this.timer = null;
         this.canvas = canvas;
         this.ctx = canvas?.getContext("2d") ?? null;
+        this.currentSection = '';
         if (this.canvas) {
             this.resizeObserver = new ResizeObserver(() => {
                 this.resizeCanvas();
@@ -1172,17 +1175,17 @@ class Metronome {
         const ch = rect.height;
         ctx.clearRect(0, 0, cw, ch);
         const currentTime = this.media.currentTime;
-        const visibleBeats = 8; // +- 2 beats from center
+
+        const visibleBeats = 8;
         const currentBeat = this.getBeat();
-        let firstVisibleBeat = currentBeat - Math.floor(visibleBeats / 2);
-        let lastVisibleBeat = firstVisibleBeat + visibleBeats;
-        if (firstVisibleBeat < 0) {
-            firstVisibleBeat = 0;
-            lastVisibleBeat = visibleBeats;
-        }
+        const page = Math.floor(currentBeat / visibleBeats);
+        const firstVisibleBeat = Math.max(0, page * visibleBeats);
+        const lastVisibleBeat = firstVisibleBeat + visibleBeats;
+
         const startTime = this.firstBeat + firstVisibleBeat * this.beatLength;
         const endTime = this.firstBeat + lastVisibleBeat * this.beatLength;
         const duration = endTime - startTime;
+
         const timeToX = (time) => {
             return (
                 (time - startTime) /
@@ -1192,36 +1195,82 @@ class Metronome {
 
         ctx.fillStyle = "rgba(10,10,10,0.95)";
         ctx.fillRect(0, 0, cw, ch);
+
+        const guideLines = 6;
+        const guideTop = 41;
+        const guideBottom = ch - 17;
+        const guideHeight = guideBottom - guideTop;
+        ctx.strokeStyle = "rgba(255,255,255,0.12)";
+        ctx.lineWidth = 1;
+        const guideOpacities = [
+            0.2,
+            0.65,
+            0.35,
+            0.2,
+            0.35,
+            0.65
+        ];
+        for (let i = 0; i < guideLines; i++) {
+            const y = guideTop + (guideHeight / (guideLines - 1)) * i;
+            ctx.strokeStyle = `rgba(255,255,255,${guideOpacities[i]})`;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(cw, y);
+            ctx.stroke();
+        }
+
         for (let beat = firstVisibleBeat; beat <= lastVisibleBeat; beat++) {
             const beatTime = this.firstBeat + beat * this.beatLength;
             const x = timeToX(beatTime);
             const beatInBar = beat % this.beatsPerBar;
-            const isBar = beatInBar === 0;
+            const bar = Math.floor(beat / this.beatsPerBar);
 
-            ctx.strokeStyle = isBar ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.25)";
-            ctx.lineWidth = isBar ? 2 : 1;
-            ctx.beginPath();
-            ctx.moveTo(x, 40);
-            ctx.lineTo(x, ch - 16);
-            ctx.stroke();
+            const isBar = beatInBar === 0;
+            const section = isBar ? this.sections.find(section => section.bar === bar + 1) : null;
+            const isSection = !!section;
+            const currentBar = Math.floor(currentBeat / this.beatsPerBar);
+            this.currentSection = this.sections.filter(section => section.bar <= currentBar + 1).at(-1) ?? null;
+
+            if (isSection) {
+                ctx.strokeStyle = "rgba(255,255,255,0.9)";
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(x - 3, 40);
+                ctx.lineTo(x - 3, ch - 16);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(x + 3, 40);
+                ctx.lineTo(x + 3, ch - 16);
+                ctx.stroke();
+            } else {
+                ctx.strokeStyle = isBar ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.1)";
+                ctx.lineWidth = isBar ? 2 : 1;
+                ctx.beginPath();
+                ctx.moveTo(x, 40);
+                ctx.lineTo(x, ch - 16);
+                ctx.stroke();
+            }
 
             ctx.fillStyle = isBar ? "rgba(255,255,255,1)" : "rgba(255,255,255,0.6)";
-            ctx.font = isBar ? "bold 12px monospace" : "11px monospace";
-            ctx.textAlign = "center";
+            ctx.font = isBar ? "bold 10px monospace" : "10px monospace";
+            const isFirstVisible = beat === firstVisibleBeat;
+            const isLastVisible = beat === lastVisibleBeat;
+            ctx.textAlign = isFirstVisible ? "left" : isLastVisible ? "right" : "center";
             ctx.fillText(
                 `${beat + 1}`,
                 x,
-                36
+                ch - 6
             );
 
             if (isBar) {
                 const bar = Math.floor(beat / this.beatsPerBar);
-                ctx.fillStyle = "rgba(255,255,255,0.5)";
-                ctx.font = "10px monospace";
+                ctx.fillStyle = "rgba(255,255,255,1)";
+                ctx.font = "bold 12px monospace";
                 ctx.fillText(
-                    `Bar ${bar + 1}`,
+                    `${bar + 1}`,
                     x,
-                    ch - 6
+                    36
                 );
             }
         }
@@ -1266,6 +1315,7 @@ class Metronome {
 
         const topItems = [
             `BPM ${this.bpm}`,
+            `|| ${this.currentSection?.name ?? ""}`,
             `firstBeat ${this.firstBeat.toFixed(3)}s`
         ];
         ctx.fillStyle = "rgba(255,255,255,0.8)";
