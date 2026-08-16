@@ -179,17 +179,22 @@ let PLAYERCONFIG = {
     },
     metronome: { // initial config
         canvas: document.getElementById("metronomeCanvas"),
-        bpm: Number(metroBpmInput.value), //188, //101, // 132, // 116,
-        firstBeat: Number(metroFirstBeat.value), //0, //0, // 0.15, // 0.78,
+        bpm: Number(metroBpmInput.value), //188, //101, // 132, // 116, // 178,
+        firstBeat: Number(metroFirstBeat.value), //0, //0, // 0.15, // 0.78, // 0.56,
         beatsPerBar: Number(metroBeatsPerBar.value), //4
         volume: Number(metroVolume.value / 100), //0.4,
         // sections: [
-        //     { bar: 2, name: "A" },
-        //     { bar: 10, name: "B" },
-        //     { bar: 26, name: "C" },
-        //     { bar: 36, name: "D" },
-        //     { bar: 52, name: "E" },
-        //     { bar: 56, name: "F" }
+        //     { bar: 2, name: "Intro" },
+        //     { bar: 10, name: "Verse" },
+        //     { bar: 26, name: "Pre-Chorus" },
+        //     { bar: 36, name: "Chorus" },
+        //     { bar: 52, name: "Inter" },
+        //     { bar: 56, name: "Verse" },
+        //     { bar: 74, name: "Chorus" },
+        //     { bar: 90, name: "Pre-Solo" },
+        //     { bar: 98, name: "Solo" },
+        //     { bar: 108, name: "Chorus" },
+        //     { bar: 138, name: "Outro" },
         // ]
         // onBeat: (info) => {
         //     console.log("//-----Metronome-----//");

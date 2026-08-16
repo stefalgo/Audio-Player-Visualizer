@@ -1139,6 +1139,10 @@ class Metronome {
         this.canvas = canvas;
         this.ctx = canvas?.getContext("2d") ?? null;
         this.currentSection = '';
+
+        this.lastFlashBeat = -1;
+        this.flashStart = 0;
+        this.flashDuration = 120; // ms
         if (this.canvas) {
             this.resizeObserver = new ResizeObserver(() => {
                 this.resizeCanvas();
@@ -1185,6 +1189,11 @@ class Metronome {
         const startTime = this.firstBeat + firstVisibleBeat * this.beatLength;
         const endTime = this.firstBeat + lastVisibleBeat * this.beatLength;
         const duration = endTime - startTime;
+
+        if (currentBeat !== this.lastFlashBeat) {
+            this.lastFlashBeat = currentBeat;
+            this.flashStart = performance.now();
+        }
 
         const timeToX = (time) => {
             return (
@@ -1244,12 +1253,23 @@ class Metronome {
                 ctx.lineTo(x + 3, ch - 16);
                 ctx.stroke();
             } else {
-                ctx.strokeStyle = isBar ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.1)";
+                ctx.strokeStyle = isBar ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.0)";
                 ctx.lineWidth = isBar ? 2 : 1;
                 ctx.beginPath();
                 ctx.moveTo(x, 40);
                 ctx.lineTo(x, ch - 16);
                 ctx.stroke();
+
+                const size = 4;
+                const y = 53;
+                ctx.fillStyle = isBar ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.3)";
+                ctx.beginPath();
+                ctx.moveTo(x, y - size);
+                ctx.lineTo(x + size, y);
+                ctx.lineTo(x, y + size);
+                ctx.lineTo(x - size, y);
+                ctx.closePath();
+                ctx.fill();
             }
 
             ctx.fillStyle = isBar ? "rgba(255,255,255,1)" : "rgba(255,255,255,0.6)";
@@ -1268,7 +1288,7 @@ class Metronome {
                 ctx.fillStyle = "rgba(255,255,255,1)";
                 ctx.font = "bold 12px monospace";
                 ctx.fillText(
-                    `${bar + 1}`,
+                    `${bar + 1}${isSection ? " || " : ""}${section?.name ?? ""}`,
                     x,
                     36
                 );
@@ -1301,9 +1321,16 @@ class Metronome {
             ctx.moveTo(currentX, 26);
             ctx.lineTo(currentX, ch);
             ctx.stroke();
-            ctx.fillStyle = "rgba(100,10,255,1)";
-            const size = 6;
-            const y = 50;
+            const flashElapsed = performance.now() - this.flashStart;
+            const flashProgress = Math.min(
+                flashElapsed / this.flashDuration,
+                1
+            );
+            const flash = 1 - flashProgress;
+            const baseSize = 6;
+            const size = baseSize + flash * 5;
+            const y = 53;
+            ctx.fillStyle = `rgba(100,10,255,1)`;
             ctx.beginPath();
             ctx.moveTo(currentX, y - size);
             ctx.lineTo(currentX + size, y);
@@ -1313,9 +1340,14 @@ class Metronome {
             ctx.fill();
         }
 
+        const currentSectionIndex = this.sections.indexOf(this.currentSection);
+        const nextSection = this.sections[currentSectionIndex + 1];
+        const effectiveBpm = this.bpm * this.media.playbackRate;
+        const sectionText = this.currentSection ? `|| ${this.currentSection.bar}-${nextSection?.bar ?? "END"} || ${this.currentSection.name}` : "";
+        const bpmText = effectiveBpm === this.bpm ? `BPM ${this.bpm}` : `BPM ${effectiveBpm.toFixed(1)} (${this.media.playbackRate.toFixed(2)}×)`;
         const topItems = [
-            `BPM ${this.bpm}`,
-            `|| ${this.currentSection?.name ?? ""}`,
+            bpmText,
+            sectionText,
             `firstBeat ${this.firstBeat.toFixed(3)}s`
         ];
         ctx.fillStyle = "rgba(255,255,255,0.8)";
