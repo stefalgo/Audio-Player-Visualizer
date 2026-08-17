@@ -2355,12 +2355,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const wallpapers = [
         {
-            src: "./Media/PlayerWallpapers/playerWallpaper.png",
+            src: "./Media/PlayerWallpapers/playerWallpaper.jpg",
             size: "1000px",
             offset: "-90px"
         },
         {
-            src: "./Media/PlayerWallpapers/playerWallpaper2.png",
+            src: "./Media/PlayerWallpapers/playerWallpaper2.jpg",
             size: "1000px",
             offset: "-90px"
         },
@@ -2370,12 +2370,12 @@ document.addEventListener('DOMContentLoaded', () => {
             offset: "-100px"
         },
         {
-            src: "./Media/PlayerWallpapers/playerWallpaper4.png",
+            src: "./Media/PlayerWallpapers/playerWallpaper4.jpg",
             size: "1000px",
             offset: "-270px"
         },
         {
-            src: "./Media/PlayerWallpapers/playerWallpaper5.png",
+            src: "./Media/PlayerWallpapers/playerWallpaper5.jpg",
             size: "1000px",
             offset: "-150px"
         }
