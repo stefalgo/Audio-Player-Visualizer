@@ -1229,6 +1229,22 @@ class Metronome {
             ctx.stroke();
         }
 
+        const lineY = (line, offset = 0) => {
+            const spacing = guideHeight / (guideLines - 1);
+            return guideTop + spacing * (line + offset);
+        };
+        const drawDiamond = (x, line, offset = 0, size = 4, colour = "rgba(255,255,255,1)") => {
+            const y = lineY(line, offset);
+            ctx.fillStyle = colour;
+            ctx.beginPath();
+            ctx.moveTo(x, y - size);
+            ctx.lineTo(x + size, y);
+            ctx.lineTo(x, y + size);
+            ctx.lineTo(x - size, y);
+            ctx.closePath();
+            ctx.fill();
+        };
+
         for (let beat = firstVisibleBeat; beat <= lastVisibleBeat; beat++) {
             const beatTime = this.firstBeat + beat * this.beatLength;
             const x = timeToX(beatTime);
@@ -1260,16 +1276,7 @@ class Metronome {
                 ctx.lineTo(x, ch - 16);
                 ctx.stroke();
 
-                const size = 4;
-                const y = 53;
-                ctx.fillStyle = isBar ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.3)";
-                ctx.beginPath();
-                ctx.moveTo(x, y - size);
-                ctx.lineTo(x + size, y);
-                ctx.lineTo(x, y + size);
-                ctx.lineTo(x - size, y);
-                ctx.closePath();
-                ctx.fill();
+                drawDiamond(x, 0, 0.5, 4, isBar ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.3)");
             }
 
             ctx.fillStyle = isBar ? "rgba(255,255,255,1)" : "rgba(255,255,255,0.6)";
@@ -1329,26 +1336,18 @@ class Metronome {
             const flash = 1 - flashProgress;
             const baseSize = 6;
             const size = baseSize + flash * 5;
-            const y = 53;
-            ctx.fillStyle = `rgba(100,10,255,1)`;
-            ctx.beginPath();
-            ctx.moveTo(currentX, y - size);
-            ctx.lineTo(currentX + size, y);
-            ctx.lineTo(currentX, y + size);
-            ctx.lineTo(currentX - size, y);
-            ctx.closePath();
-            ctx.fill();
+            drawDiamond(currentX, 0, 0.5, size, `rgba(100,10,255,1)`);
         }
 
         const currentSectionIndex = this.sections.indexOf(this.currentSection);
         const nextSection = this.sections[currentSectionIndex + 1];
         const effectiveBpm = this.bpm * this.media.playbackRate;
         const sectionText = this.currentSection ? `|| ${this.currentSection.bar}-${nextSection?.bar ?? "END"} || ${this.currentSection.name}` : "";
-        const bpmText = effectiveBpm === this.bpm ? `BPM ${this.bpm}` : `BPM ${effectiveBpm.toFixed(1)} (${this.media.playbackRate.toFixed(2)}×)`;
+        const bpmText = effectiveBpm === this.bpm ? `BPM ${this.bpm}` : `BPM ${effectiveBpm.toFixed(1)} (${this.media.playbackRate.toFixed(2)}x)`;
         const topItems = [
             bpmText,
             sectionText,
-            `firstBeat ${this.firstBeat.toFixed(3)}s`
+            `Offset ${this.firstBeat.toFixed(3)}s`
         ];
         ctx.fillStyle = "rgba(255,255,255,0.8)";
         ctx.font = "11px monospace";

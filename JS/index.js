@@ -2184,9 +2184,28 @@ metroEnabled.addEventListener("change", () => {
 });
 
 metroBpmInput.addEventListener("change", () => {
-    metro.setBpm(Number(metroBpmInput.value));
-    metroBpmInput.placeholder = metroBpmInput.value;
-})
+    const parseBpm = (value) => {
+        const match = value.replace(/\s/g, "").match(/^(\d+(?:\.\d+)?)\s*([*/+-])\s*(\d+(?:\.\d+)?)$/);
+        if (!match) {
+            const bpm = Number(value);
+            return Number.isFinite(bpm) && bpm > 0 ? bpm : null;
+        }
+        const [, a, operator, b] = match;
+        const x = Number(a);
+        const y = Number(b);
+        switch (operator) {
+            case "*": return x * y;
+            case "/": return y !== 0 ? x / y : null;
+            case "+": return x + y;
+            case "-": return x - y;
+        }
+    }
+    const bpm = parseBpm(metroBpmInput.value);
+    if (bpm === null) return;
+    metro.setBpm(bpm);
+    metroBpmInput.value = bpm;
+    metroBpmInput.placeholder = bpm;
+});
 
 metroBeatsPerBar.addEventListener("change", () => {
     metro.beatsPerBar = Number(metroBeatsPerBar.value);
@@ -2197,12 +2216,36 @@ metroVolume.addEventListener("change", () => {
 })
 
 $$('.metroNudgeBtn').forEach((el) => {
-    let nudge = Number(el.dataset.metroNudge);
+    const value = el.dataset.metroNudge.trim();
+
     el.addEventListener("click", () => {
-        metro.nudge(nudge);
+        let nudge;
+
+        if (value.startsWith("set ")) {
+            const seconds = Number.parseFloat(value.slice(4));
+
+            if (!Number.isFinite(seconds)) return;
+
+            metro.firstBeat = seconds;
+            metro.resync();
+        } else if (/beats?$/.test(value)) {
+            const beats = Number.parseFloat(value);
+
+            if (!Number.isFinite(beats)) return;
+
+            nudge = beats * metro.beatLength;
+            metro.nudge(nudge);
+        } else {
+            nudge = Number(value);
+
+            if (!Number.isFinite(nudge)) return;
+
+            metro.nudge(nudge);
+        }
+
         metroFirstBeat.value = metro.firstBeat;
-    })
-})
+    });
+});
 
 //----------------------------------------------------------------------------------------------------------------------
 function updatePlayButton() {

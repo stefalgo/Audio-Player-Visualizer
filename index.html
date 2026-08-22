@@ -180,21 +180,24 @@
                 <div>
                     <label>
                         BPM:
-                        <input id="metroBpmInput" class="button" type="number" placeholder="188" min="1" max="500" value="188">
+                        <input id="metroBpmInput" class="button" type="text" placeholder="188" min="1" max="500" value="188">
                     </label>
                     <button id="metroTapTempoButton" class="button">Tap Tempo</button>
                 </div>
                 <div>
                     <label>
-                        1拍目:
+                        1拍目のオフセット:
                         <input id="metroFirstBeat" class="button" type="number" placeholder="0.000" step="0.01" min="0" value="0">
                         秒
                     </label>
                     <div>
+                        <button class="button metroNudgeBtn" data-metro-nudge="-1 beat">- 1 beat</button>
                         <button class="button metroNudgeBtn" data-metro-nudge="-0.01">- 10 ms</button>
                         <button class="button metroNudgeBtn" data-metro-nudge="-0.001">- 1 ms</button>
+                        <button class="button metroNudgeBtn" data-metro-nudge="set 0">Reset</button>
                         <button class="button metroNudgeBtn" data-metro-nudge="0.001">+ 1 ms</button>
                         <button class="button metroNudgeBtn" data-metro-nudge="0.01">+ 10 ms</button>
+                        <button class="button metroNudgeBtn" data-metro-nudge="1 beat">+ 1 beat</button>
                     </div>
                 </div>
                 <div>
