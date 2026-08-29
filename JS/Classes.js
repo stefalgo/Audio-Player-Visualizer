@@ -141,7 +141,7 @@ class TooltipManager {
 }
 
 class MovableWindow {
-    constructor(win) {
+    constructor(win, controls = 3) {
         this.win = win;
         this.content = win.querySelector(".window-content");
         this.bar = win.querySelector(".window-topbar");
@@ -152,7 +152,6 @@ class MovableWindow {
         this.dragging = false;
         this.offsetX = 0;
         this.offsetY = 0;
-
         this.minimized = false;
         this.win.style.position = "absolute";
         this.bar.style.cursor = "grab";
@@ -165,17 +164,27 @@ class MovableWindow {
             </span>
         `;
 
-        this.bar.insertAdjacentHTML("beforeend", `
-            <span class="window-controls">
-                <button class="button minimize">-</button>
-                <button class="button close">X</button>
-            </span>
-        `);
-
-        this.minimizeBtn = this.bar.querySelector(".minimize");
-        this.closeBtn = this.bar.querySelector(".close");
-        this.minimizeBtn.addEventListener("click", this.onMinimize);
-        this.closeBtn.addEventListener("click", this.onClose);
+        if (controls !== 0) {
+            const controlsDiv = document.createElement('div');
+            controlsDiv.className = "window-controls";
+            if (controls === 2 || controls === 3) {
+                const minimizeBtn = document.createElement('button');
+                minimizeBtn.className = "minimize button";
+                minimizeBtn.innerText = "-";
+                controlsDiv.append(minimizeBtn);
+                this.minimizeBtn = minimizeBtn;
+                this.minimizeBtn.addEventListener("click", this.onMinimize);
+            }
+            if (controls === 1 || controls === 3) {
+                const closeBtn = document.createElement('button');
+                closeBtn.className = "close button";
+                closeBtn.innerText = "X";
+                controlsDiv.append(closeBtn);
+                this.closeBtn = closeBtn;
+                this.closeBtn.addEventListener("click", this.onClose);
+            }
+            this.bar.append(controlsDiv);
+        }
 
         this.bar.addEventListener("pointerdown", this.onPointerDown);
         window.addEventListener("pointermove", this.onPointerMove);
@@ -203,7 +212,7 @@ class MovableWindow {
         const hidden = getComputedStyle(this.content).display === "none";
         this.minimized = hidden;
         this.content.style.display = this.minimized ? "" : "none";
-        this.minimizeBtn.innerText = this.minimized ? "-" : "+";
+        if (this.minimizeBtn) this.minimizeBtn.innerText = this.minimized ? "-" : "+";
         if (this.minimized) {
             this.keepInsideViewport();
         }
@@ -259,8 +268,8 @@ class MovableWindow {
         window.removeEventListener("pointermove", this.onPointerMove);
         window.removeEventListener("pointerup", this.onPointerUp);
         window.removeEventListener("pointercancel", this.onPointerUp);
-        this.minimizeBtn.removeEventListener("click", this.onMinimize);
-        this.closeBtn.removeEventListener("click", this.onClose);
+        this.minimizeBtn?.removeEventListener("click", this.onMinimize);
+        this.closeBtn?.removeEventListener("click", this.onClose);
         window.removeEventListener("resize", this.keepInsideViewport);
     }
 }
@@ -1275,9 +1284,9 @@ class Metronome {
                 ctx.moveTo(x, 40);
                 ctx.lineTo(x, ch - 16);
                 ctx.stroke();
-
-                drawDiamond(x, 0, 0.5, 4, isBar ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.3)");
             }
+
+            drawDiamond(x, 0, 0.5, isBar ? 6 : 4, isBar ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.3)");
 
             ctx.fillStyle = isBar ? "rgba(255,255,255,1)" : "rgba(255,255,255,0.6)";
             ctx.font = isBar ? "bold 10px monospace" : "10px monospace";
@@ -1451,9 +1460,7 @@ class Metronome {
             time + 0.03
         );
         osc.connect(gain);
-        gain.connect(
-            this.audio.destination
-        );
+        gain.connect(this.audio.destination);
         osc.start(time);
         osc.stop(time + 0.035);
     }

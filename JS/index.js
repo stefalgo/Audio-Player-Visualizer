@@ -2201,7 +2201,10 @@ metroBpmInput.addEventListener("change", () => {
         }
     }
     const bpm = parseBpm(metroBpmInput.value);
-    if (bpm === null) return;
+    if (bpm === null) {
+        metroBpmInput.value = metro.bpm;
+        return;
+    };
     metro.setBpm(bpm);
     metroBpmInput.value = bpm;
     metroBpmInput.placeholder = bpm;
@@ -2217,33 +2220,41 @@ metroVolume.addEventListener("change", () => {
 
 $$('.metroNudgeBtn').forEach((el) => {
     const value = el.dataset.metroNudge.trim();
-
     el.addEventListener("click", () => {
         let nudge;
-
         if (value.startsWith("set ")) {
             const seconds = Number.parseFloat(value.slice(4));
-
             if (!Number.isFinite(seconds)) return;
-
             metro.firstBeat = seconds;
             metro.resync();
         } else if (/beats?$/.test(value)) {
             const beats = Number.parseFloat(value);
-
             if (!Number.isFinite(beats)) return;
-
             nudge = beats * metro.beatLength;
             metro.nudge(nudge);
         } else {
             nudge = Number(value);
-
             if (!Number.isFinite(nudge)) return;
-
             metro.nudge(nudge);
         }
-
         metroFirstBeat.value = metro.firstBeat;
+    });
+});
+
+$$('.metroBpmNudgeBtn').forEach((el) => {
+    const value = el.dataset.metroBpmNudg.trim();
+    el.addEventListener("click", () => {
+        let nudge;
+        if (value.startsWith("set ")) {
+            const seconds = Number.parseFloat(value.slice(4));
+            if (!Number.isFinite(seconds)) return;
+            metro.setBpm(seconds);
+        } else {
+            nudge = Number(value);
+            if (!Number.isFinite(nudge)) return;
+            metro.setBpm(metro.bpm + nudge);
+        }
+        metroBpmInput.value = metro.bpm;
     });
 });
 
@@ -2342,7 +2353,9 @@ window.addEventListener("mousemove", (e) => {
 
 document.addEventListener('DOMContentLoaded', () => {
     const tooltips = new TooltipManager();
-    const movableWindows = [...$$(".movable-window")].map(win => new MovableWindow(win));
+    const movableWindows = [...$$(".movable-window")].map(
+        win => new MovableWindow(win, Number(win.dataset.controls ?? 3))
+    );
     // const focusWindow = createFocusHandler(movableWindows);
     // movableWindows.forEach(win => {
     //     win.onFocusCallback = focusWindow;

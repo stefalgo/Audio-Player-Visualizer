@@ -52,6 +52,15 @@ This affects the **Bar** and **Waterfall** visualization modes.
 
 **Pause Render** freezes the visualizer on its current frame without affecting audio playback.
 
+### Metronome
+
+![Metronome](./Media/Showcase/Metronome.gif)
+
+There is also a simple metronome
+with a built in "Tap tempo" so you can find the BPM of your song by just tapping.
+
+you can also set an offset for the beats so you can line it up with the sound
+
 ### Playback Controls
 
 ![Controls](./Media/Showcase/image6.png)

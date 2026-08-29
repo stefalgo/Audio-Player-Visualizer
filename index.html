@@ -176,21 +176,23 @@
     <div id="metronomeWin" class="movable-window" style="display: none;">
         <div class="window-topbar">メトロノーム</div>
         <div class="window-content">
-            <div>
-                <div>
+            <div class="metronome-settings">
+                <div class="metro-row metro-bpm-row">
                     <label>
                         BPM:
                         <input id="metroBpmInput" class="button" type="text" placeholder="188" min="1" max="500" value="188">
                     </label>
+                    <button class="button mono metroBpmNudgeBtn" data-metro-bpm-nudg="-1">-</button>
+                    <button class="button mono metroBpmNudgeBtn" data-metro-bpm-nudg="1">+</button>
                     <button id="metroTapTempoButton" class="button">Tap Tempo</button>
                 </div>
-                <div>
+                <div class="metro-row metro-offset-row">
                     <label>
                         1拍目のオフセット:
                         <input id="metroFirstBeat" class="button" type="number" placeholder="0.000" step="0.01" min="0" value="0">
                         秒
                     </label>
-                    <div>
+                    <div class="metro-nudge-buttons">
                         <button class="button metroNudgeBtn" data-metro-nudge="-1 beat">- 1 beat</button>
                         <button class="button metroNudgeBtn" data-metro-nudge="-0.01">- 10 ms</button>
                         <button class="button metroNudgeBtn" data-metro-nudge="-0.001">- 1 ms</button>
@@ -200,30 +202,26 @@
                         <button class="button metroNudgeBtn" data-metro-nudge="1 beat">+ 1 beat</button>
                     </div>
                 </div>
-                <div>
+                <div class="metro-row">
                     <label>
                         1小節の拍数:
                         <input id="metroBeatsPerBar" class="button" type="number" placeholder="4" step="1" min="0" value="4">
                         拍
                     </label>
                 </div>
-                <div>
+                <div class="metro-row">
                     <label>
                         Volume:
                         <input id="metroVolume" class="button" type="number" placeholder="Volume%" step="1" min="0" max="100" value="40">
                         %
                     </label>
                 </div>
-                <div>
-                    <label style="display: flex; align-items: center;">
-                        メトロノームを有効にする
-                        <input id="metroEnabled" class="checkbox" type="checkbox">
-                    </label>
-                </div>
-                <div>
-                    <div>
-                        <canvas id="metronomeCanvas" style="width: 100%; height: 180px;"></canvas>
-                    </div>
+                <label class="metro-enabled">
+                    メトロノームを有効にする
+                    <input id="metroEnabled" class="checkbox" type="checkbox">
+                </label>
+                <div class="metro-canvas">
+                    <canvas id="metronomeCanvas"></canvas>
                 </div>
             </div>
         </div>
@@ -302,15 +300,15 @@
         </div>
     </div>
 
-    <div id="radioWin" class="movable-window" style="display: none;">
+    <div id="radioWin" class="movable-window" data-controls="1" style="display: none;">
         <div class="window-topbar">ラジオ</div>
         <div class="window-content">
-            <input id="radioUrl" class="button" type="url" placeholder="Stream URL" style="margin: 3px;">
+            <input id="radioUrl" class="button" type="url" placeholder="Radio Stream URL" style="margin: 3px;">
             <button id="radioAddUrl" class="button" style="margin-top: 3px; margin-right: 3px;">Add</button>
         </div>
     </div>
 
-    <div id="Subtitles" class="movable-window" style="display: none;">
+    <div id="Subtitles" class="movable-window" data-controls="0" style="display: none;">
         <div class="window-topbar" id="subtitle-title">字幕</div>
         <div class="window-content">
             <div style="padding: 3px;" class="subtitle-container">
