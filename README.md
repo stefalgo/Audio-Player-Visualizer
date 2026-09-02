@@ -2,11 +2,11 @@
 
 This is a personal project I made because I was bored.
 
-It's a music player and visualizer that allows you to play audio files, manage playlists, use an equalizer, and of course, enjoy various visualizations.
+It's a music player and visualizer that lets you to play audio files, manage playlists, use an equalizer, and, of course, enjoy various visualizations.
 
 ---
 
-The project runs entirely locally, so there's no need to start a local server. Simply download the project and open it in your browser.
+The project runs entirely locally, so there's no need to set up a local server or Docker. Simply download the project and open it in your browser.
 
 ## The Player
 

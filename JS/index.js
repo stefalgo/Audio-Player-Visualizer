@@ -162,6 +162,10 @@ const RETRO_CENTER_FREQS = [ //// What freqs. will be shown on the retro render
     16000
 ];
 
+// REMEMBER powers of 2 or something like that
+let analyserffsize = 1024 * (2 ** (visualizerQL.value - 1));//8192;//4096;//2048//1024;
+let analyserSmoothing = visualizerSL.value;
+
 let PLAYERCONFIG = {
     playback: {
         rate: 1.0, /// 1.0: Normal, <1: slow, >1: fast
@@ -176,6 +180,12 @@ let PLAYERCONFIG = {
     visualizer: {
         paused: false,
         current: dropdownVizType.value
+    },
+    renderer: { // initial config
+        sensitivity: 2,
+        maxFrequency: 16000,
+        analyserSmoothing: analyserSmoothing,
+        retroCenterFreqs: RETRO_CENTER_FREQS
     },
     metronome: { // initial config
         canvas: document.getElementById("metronomeCanvas"),
@@ -205,6 +215,7 @@ let PLAYERCONFIG = {
         // }
     },
     maxRenderFps: 60,
+    ForegroundVideoRender: true,
     timeTextMode: 0 /// 0: current / duration, 1: current / time left
 };
 
@@ -231,10 +242,6 @@ let playbackLPFilter = null;
 let soundEnded = false;
 let loopCounter = 0;
 
-// REMEMBER powers of 2 or something like that
-let analyserffsize = 1024 * (2 ** (visualizerQL.value - 1));//8192;//4096;//2048//1024;
-let analyserSmoothing = visualizerSL.value;
-
 let subtitleLastIndex = 0;
 let fftChangeTimeout = null; // debounce when changing the fftsize
 let resizeTimeout = null; // debounce thing for updateing the canvas on window resize or something like that
@@ -249,12 +256,9 @@ mediaSource.connect(gainNode);
 
 const randomSongs = new HumanRandom()
 
-const renderHandler = new RenderHandler(canvas, ctx, audioCtx, {
-    sensitivity: 2,
-    maxFrequency: 16000,
-    analyserSmoothing: analyserSmoothing,
-    retroCenterFreqs: RETRO_CENTER_FREQS
-});
+const renderHandler = new RenderHandler(canvas, ctx, audioCtx, {...PLAYERCONFIG.renderer});
+
+renderHandler.video.setConfig("ForegroundVideo", PLAYERCONFIG.ForegroundVideoRender);
 
 const equalizer = new CanvasEQ($id('eq'), EQ_BANDS, 12);
 

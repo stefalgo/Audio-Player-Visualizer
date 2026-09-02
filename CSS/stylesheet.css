@@ -679,6 +679,8 @@ input[type="file"]+label {
 
 #metronomeWin {
     width: var(--window-width-sm);
+    right: 0;
+    bottom: 0;
 }
 
 #metronomeWin .window-content {

@@ -574,6 +574,7 @@ class RetroRenderer extends Renderer {
 class VideoRender extends Renderer {
     constructor(canvas, ctx, audioCtx, config = {}) {
         super(canvas, ctx, audioCtx, config);
+        this.config = config
     }
     render(videoEl, subtitleData = null) {
         if (!videoEl) return;
@@ -598,21 +599,27 @@ class VideoRender extends Renderer {
             return;
         }
         if (videoEl.readyState < 2) return;
-        this.bgCanvas ??= document.createElement("canvas");
-        this.bgCtx ??= this.bgCanvas.getContext("2d");
-        const bw = (this.bgCanvas.width = canvasW * 0.3);
-        const bh = (this.bgCanvas.height = canvasH * 0.3);
-        const bgScale = Math.max(bw / videoW, bh / videoH);
-        const drawW = videoW * bgScale;
-        const drawH = videoH * bgScale;
-        const bx = (bw - drawW) / 2;
-        const by = (bh - drawH) / 2;
-        this.bgCtx.clearRect(0, 0, bw, bh);
-        this.bgCtx.drawImage(videoEl, bx, by, drawW, drawH);
-        this.ctx.save();
-        this.ctx.globalAlpha = 0.4;
-        this.ctx.drawImage(this.bgCanvas, 0, 0, canvasW, canvasH);
-        this.ctx.restore();
+        if (this.config.ForegroundVideo) {
+            this.bgCanvas ??= document.createElement("canvas");
+            this.bgCtx ??= this.bgCanvas.getContext("2d");
+
+            const bw = (this.bgCanvas.width = canvasW * 0.3);
+            const bh = (this.bgCanvas.height = canvasH * 0.3);
+
+            const bgScale = Math.max(bw / videoW, bh / videoH);
+            const drawW = videoW * bgScale;
+            const drawH = videoH * bgScale;
+            const bx = (bw - drawW) / 2;
+            const by = (bh - drawH) / 2;
+
+            this.bgCtx.clearRect(0, 0, bw, bh);
+            this.bgCtx.drawImage(videoEl, bx, by, drawW, drawH);
+
+            this.ctx.save();
+            this.ctx.globalAlpha = 0.4;
+            this.ctx.drawImage(this.bgCanvas, 0, 0, canvasW, canvasH);
+            this.ctx.restore();
+        }
         let fgScale;
         if (videoW / videoH > canvasW / canvasH) {
             fgScale = canvasW / videoW;
