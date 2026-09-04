@@ -105,16 +105,17 @@
     <div id="eq-sliders" class="movable-window" style="display: none; min-width: 300px;">
         <div class="window-topbar">イコライザーエディター</div>
         <div class="window-content">
-            <div style="display: flex; flex-direction: column; align-items: flex-start;">
-                <div style="margin-left: 10px;">
+            <div class="eq-settings">
+                <div class="eq-row" style="padding-bottom: 5px;">
                     <button class="button" id="eqResetBtn">Flat</button>
-                    <select id="eqPresetSelect" data-tip="Presets" style="margin-left: 10px;"></select>
+                    <select id="eqPresetSelect" data-tip="Presets"></select>
                     <button class="button" id="eqPresetSetBtn">Set preset</button>
-                    <button class="button" id="eqPresetSaveBtn" style="margin-left: 10px;">Save preset</button>
+                    <button class="button" id="eqPresetSaveBtn">Save preset</button>
                     <button class="button" id="eqPresetRemoveBtn">Delete preset</button>
+                    <button id="eqCopySetting" class="button"></button>
+                    <button id="eqPasteSetting" class="button"></button>
                 </div>
-
-                <div style="margin-left: 10px; display: flex; flex-direction: row; align-items: center;">
+                <div class="eq-row">
                     <label for="eqSliderLink">Smooth EQ</label>
                     <input class="checkbox" type="checkbox" id="eqSliderLink">
                     <select id="eqSliderLinkModes" data-tip="Band link curve shape" style="margin-left: 10px;">
@@ -173,8 +174,8 @@
                         BPM:
                         <input id="metroBpmInput" class="button" type="text" placeholder="188" min="1" max="500" value="188">
                     </label>
-                    <button class="button mono metroBpmNudgeBtn" data-metro-bpm-nudg="-1">-</button>
-                    <button class="button mono metroBpmNudgeBtn" data-metro-bpm-nudg="1">+</button>
+                    <button class="button metroBpmNudgeBtn" data-metro-bpm-nudg="-1">-</button>
+                    <button class="button metroBpmNudgeBtn" data-metro-bpm-nudg="1">+</button>
                     <button id="metroTapTempoButton" class="button">Tap Tempo</button>
                 </div>
                 <div class="metro-row metro-offset-row">

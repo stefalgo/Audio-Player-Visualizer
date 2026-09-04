@@ -83,6 +83,8 @@ const metroBeatsPerBar = $id("metroBeatsPerBar");
 const metroVolume = $id("metroVolume");
 const metroBtn = $id("metroBtn");
 const metronomeWin = $id("metronomeWin");
+const eqCopySetting = $id("eqCopySetting");
+const eqPasteSetting = $id("eqPasteSetting");
 
 const dialog = {
     alert: (message, targetEl) => TooltipDialog.info(targetEl, message),
@@ -256,7 +258,7 @@ mediaSource.connect(gainNode);
 
 const randomSongs = new HumanRandom()
 
-const renderHandler = new RenderHandler(canvas, ctx, audioCtx, {...PLAYERCONFIG.renderer});
+const renderHandler = new RenderHandler(canvas, ctx, audioCtx, { ...PLAYERCONFIG.renderer });
 
 renderHandler.video.setConfig("ForegroundVideo", PLAYERCONFIG.ForegroundVideoRender);
 
@@ -2031,6 +2033,39 @@ eqPresetRemoveBtn.addEventListener("click", async () => {
     removeEQPreset(selected.textContent);
 });
 
+eqCopySetting.addEventListener("click", async () => {
+    const setting = {
+        type: "equalizer-setting",
+        version: 1,
+        data: equalizer.getData().map(v => v.gain)
+    };
+
+    try {
+        await navigator.clipboard.writeText(JSON.stringify(setting));
+        console.log("Setting copied!");
+    } catch (error) {
+        console.error("Could not copy setting:", error);
+    }
+});
+
+eqPasteSetting.addEventListener("click", async () => {
+    try {
+        const text = await navigator.clipboard.readText();
+        const setting = JSON.parse(text);
+        if (
+            setting?.type !== "equalizer-setting" ||
+            setting?.version !== 1 ||
+            !setting?.data
+        ) {
+            console.warn("Clipboard does not contain a valid equation setting.");
+            return;
+        }
+        equalizer.loadPreset(setting.data);
+    } catch (error) {
+        console.warn("Clipboard does not contain a valid setting.");
+    }
+});
+
 subUnloadSubBtn.addEventListener("click", () => {
     selectedSubtitle = "";
 });
@@ -2127,7 +2162,6 @@ pipButton.addEventListener("click", async () => {
         if (document.pictureInPictureElement) {
             await document.exitPictureInPicture();
         } else {
-            await pipVideo.play();
             await pipVideo.requestPictureInPicture();
             //await videoEl.requestPictureInPicture();
         }
@@ -2273,11 +2307,13 @@ function setupMediaSession() {
     navigator.mediaSession.setActionHandler('play', async () => {
         await videoEl.play();
         await pipVideo.play();
+        navigator.mediaSession.playbackState = "playing";
     });
 
     navigator.mediaSession.setActionHandler('pause', () => {
         videoEl.pause();
         pipVideo.pause();
+        navigator.mediaSession.playbackState = "paused";
     });
     navigator.mediaSession.setActionHandler('seekbackward', (details) => {
         const offset = details.seekOffset || 10;
@@ -2297,13 +2333,13 @@ function setupMediaSession() {
 
 videoEl.addEventListener("play", () => {
     pipVideo.play();
-    navigator.mediaSession.playbackState = "playing";
+    //navigator.mediaSession.playbackState = "playing";
     updatePlayButton();
 });
 
 videoEl.addEventListener("pause", () => {
     pipVideo.pause();
-    navigator.mediaSession.playbackState = "paused";
+    //navigator.mediaSession.playbackState = "paused";
     updatePlayButton();
 });
 
