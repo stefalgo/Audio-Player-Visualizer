@@ -2042,7 +2042,7 @@ eqCopySetting.addEventListener("click", async () => {
 
     try {
         await navigator.clipboard.writeText(JSON.stringify(setting));
-        console.log("Setting copied!");
+        await dialog.alert("コピーしました！", eqCopySetting, 0);
     } catch (error) {
         console.error("Could not copy setting:", error);
     }
@@ -2060,6 +2060,7 @@ eqPasteSetting.addEventListener("click", async () => {
             console.warn("Clipboard does not contain a valid equation setting.");
             return;
         }
+        await dialog.alert("ペーストしました！", eqPasteSetting, 0);
         equalizer.loadPreset(setting.data);
     } catch (error) {
         console.warn("Clipboard does not contain a valid setting.");
