@@ -372,15 +372,19 @@ class SpaceController {
         this.holdDelay = holdDelay;
         this.spaceHeld = false;
         this.timer = null;
+        this.spaceDown = false;
     }
 
     keydown = (e) => {
         if (isTypingOrEditing()) return;
         if (e.code !== "Space") return;
-        e.preventDefault();
         if (e.repeat) return;
+        e.preventDefault();
+        this.spaceDown = true;
         this.spaceHeld = false;
+        clearTimeout(this.timer);
         this.timer = setTimeout(() => {
+            if (!this.spaceDown) return;
             this.spaceHeld = true;
             this.onHoldStart?.();
         }, this.holdDelay);
@@ -388,24 +392,51 @@ class SpaceController {
 
     keyup = (e) => {
         if (e.code !== "Space") return;
-        clearTimeout(this.timer);
-        if (this.spaceHeld) {
-            this.onHoldEnd?.();
-        } else {
-            if (isTypingOrEditing()) return;
+        const wasHeld = this.finishSpace();
+        if (isTypingOrEditing()) return;
+        if (!wasHeld) {
             this.onTap?.();
+        }
+    };
+
+    finishSpace = () => {
+        clearTimeout(this.timer);
+        this.timer = null;
+        if (!this.spaceDown) {
+            return false;
+        }
+        const wasHeld = this.spaceHeld;
+        this.spaceDown = false;
+        this.spaceHeld = false;
+        if (wasHeld) {
+            this.onHoldEnd?.();
+        }
+        return wasHeld;
+    };
+
+    blur = () => {
+        this.finishSpace();
+    };
+
+    visibilitychange = () => {
+        if (document.hidden) {
+            this.finishSpace();
         }
     };
 
     attach() {
         document.addEventListener("keydown", this.keydown);
         document.addEventListener("keyup", this.keyup);
+        window.addEventListener("blur", this.blur);
+        document.addEventListener("visibilitychange", this.visibilitychange);
     }
 
     detach() {
         document.removeEventListener("keydown", this.keydown);
         document.removeEventListener("keyup", this.keyup);
-        clearTimeout(this.timer);
+        window.removeEventListener("blur", this.blur);
+        document.removeEventListener("visibilitychange", this.visibilitychange);
+        this.finishSpace();
     }
 }
 
