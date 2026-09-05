@@ -119,10 +119,6 @@ The entire playlist is played continuously. When the last track finishes, playba
 
 The current track is played twice, then a random track from the playlist is selected and played twice as well.
 
-**Loop + Shuffle**
-
-The current track loops continuously and never advances to another track.
-
 # license
 
 This project is under the [MIT License](./LICENSE)\
