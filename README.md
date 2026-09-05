@@ -34,7 +34,7 @@ Several built-in presets are available, and you can also create your own setting
 
 Custom presets can be saved and reused later.
 
-Custom presets can be found at the end of the preset dropdown.
+Your saved presets can be found at the end of the preset dropdown.
 
 ![Equalizer Presets](./Media/Showcase/image7.png)
 
