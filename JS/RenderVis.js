@@ -684,7 +684,6 @@ class RenderHandler {
             waterfall: new WaterfallRenderer(canvas, ctx, audioCtx, config),
             wave: new WaveRenderer(canvas, ctx, audioCtx, config),
             soundTrace: new SoundTraceRenderer(canvas, ctx, audioCtx, config),
-            fullWaveform: new FullWaveformRenderer(canvas, ctx, audioCtx, config),
             retro: new RetroRenderer(canvas, ctx, audioCtx, config),
             video: new VideoRender(canvas, ctx, audioCtx, config),
         };
@@ -693,7 +692,6 @@ class RenderHandler {
         this.waterfall = this.renderers.waterfall;
         this.wave = this.renderers.wave;
         this.soundTrace = this.renderers.soundTrace;
-        this.fullWaveform = this.renderers.fullWaveform;
         this.retro = this.renderers.retro;
         this.video = this.renderers.video;
     }
