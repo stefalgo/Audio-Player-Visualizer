@@ -1,4 +1,4 @@
-# Music-Player-Visualizer
+# Audio-Player-Visualizer
 
 This is a personal project I made because I was bored.
 
