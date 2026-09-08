@@ -2462,11 +2462,6 @@ document.addEventListener('DOMContentLoaded', () => {
             offset: "-90px"
         },
         {
-            src: "./Media/PlayerWallpapers/playerWallpaper3.jpg",
-            size: "1300px",
-            offset: "-100px"
-        },
-        {
             src: "./Media/PlayerWallpapers/playerWallpaper4.jpg",
             size: "1000px",
             offset: "-270px"

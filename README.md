@@ -75,10 +75,8 @@ Located at the top-center of the page, you'll find controls for:
 * Play from the Beginning of the Playlist
 * Play / Pause
 
----
-
 ### Loop Modes
-
+---
 The Loop button has two modes:
 
 * Loop Once
@@ -88,10 +86,8 @@ The Loop button has two modes:
 
 **Loop** continuously repeats the current track.
 
----
-
 ### Play Modes
-
+---
 The Play Mode button has two modes:
 
 * Auto Next
@@ -101,21 +97,19 @@ The Play Mode button has two modes:
 
 **Shuffle** randomly selects the next track when the current one ends.
 
----
-
 ### Combining Modes
-
+---
 The loop and play modes can also be combined.
 
-**Loop Once + Auto Next**
+ - **Loop Once + Auto Next**
 
 Each track is played twice before automatically moving to the next track.
 
-**Loop + Auto Next**
+ - **Loop + Auto Next**
 
 The entire playlist is played continuously. When the last track finishes, playback returns to the first track.
 
-**Loop Once + Shuffle**
+ - **Loop Once + Shuffle**
 
 The current track is played twice, then a random track from the playlist is selected and played twice as well.
 
