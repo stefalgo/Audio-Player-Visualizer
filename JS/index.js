@@ -2060,8 +2060,8 @@ eqPasteSetting.addEventListener("click", async () => {
             console.warn("Clipboard does not contain a valid equation setting.");
             return;
         }
-        await dialog.alert("ペーストしました！", eqPasteSetting, 0);
         equalizer.loadPreset(setting.data);
+        await dialog.alert("ペーストしました！", eqPasteSetting, 0);
     } catch (error) {
         console.warn("Clipboard does not contain a valid setting.");
     }
