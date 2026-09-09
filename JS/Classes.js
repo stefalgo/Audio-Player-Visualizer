@@ -784,21 +784,44 @@ class CanvasEQ {
 }
 
 class TooltipDialog {
-    static confirm(targetEl, message = "よろしいですか？", btn = 0) {
+    static confirm(
+        targetEl,
+        message = "よろしいですか？",
+        {
+            defaultButton = 0,
+            secondaryBtnText = "キャンセル",
+            primaryBtnText = "はい"
+        } = {}
+    ) {
         return new TooltipDialog(targetEl, {
             type: "confirm",
             message,
-            btn
+            secondaryBtnText,
+            primaryBtnText,
+            defaultButton
         }).show();
     }
-    static prompt(targetEl, message = "値を入力してください", defaultValue = "", btn = 0) {
+
+    static prompt(
+        targetEl,
+        message = "値を入力してください",
+        defaultValue = "",
+        {
+            defaultButton = 0,
+            secondaryBtnText = "キャンセル",
+            primaryBtnText = "はい"
+        } = {}
+    ) {
         return new TooltipDialog(targetEl, {
             type: "prompt",
             message,
             defaultValue,
-            btn
+            secondaryBtnText,
+            primaryBtnText,
+            defaultButton
         }).show();
     }
+
     static info(targetEl, message = "") {
         return new TooltipDialog(targetEl, {
             type: "info",
@@ -809,14 +832,18 @@ class TooltipDialog {
     constructor(targetEl, {
         type,
         message,
-        btn = 0,
-        defaultValue = ""
+        defaultButton = 0,
+        defaultValue = "",
+        secondaryBtnText,
+        primaryBtnText
     }) {
         this.targetEl = targetEl;
         this.type = type;
         this.message = message;
-        this.btn = btn;
+        this.defaultButton = defaultButton;
         this.defaultValue = defaultValue;
+        this.secondaryBtnText = secondaryBtnText;
+        this.primaryBtnText = primaryBtnText;
         this.box = null;
         this.resolve = null;
     }
@@ -840,7 +867,7 @@ class TooltipDialog {
                     this.input?.focus();
                     this.input?.select();
                 } else {
-                    (this.btn === 0 ? this.okBtn : this.cancelBtn)?.focus();
+                    (this.defaultButton === 0 ? this.primaryBtn : this.secondaryBtn)?.focus();
                 }
             }, 0);
 
@@ -855,8 +882,8 @@ class TooltipDialog {
             this.box.innerHTML = `
                 <div id="tc-msg">${this.message}</div>
                 <div class="tc-btns">
-                    <button id="tc-ok" class="tc-btn ok button">はい</button>
-                    <button id="tc-cancel" class="tc-btn cancel button">いいえ</button>
+                    <button id="tc-secondary" class="tc-btn cancel button">${this.secondaryBtnText}</button>
+                    <button id="tc-primary" class="tc-btn ok button">${this.primaryBtnText}</button>
                 </div>
             `;
         }
@@ -864,10 +891,12 @@ class TooltipDialog {
         else if (this.type === "prompt") {
             this.box.innerHTML = `
                 <div id="tc-msg">${this.message}</div>
-                <div class="tc-btns">
+                <div class="tc-btns-2">
                     <input id="tc-input" class="button" type="text" value="${this.defaultValue}">
-                    <button id="tc-ok" class="tc-btn ok button">確定</button>
-                    <button id="tc-cancel" class="tc-btn cancel button">キャンセル</button>
+                    <div>
+                        <button id="tc-secondary" class="tc-btn cancel button">${this.secondaryBtnText}</button>
+                        <button id="tc-primary" class="tc-btn ok button">${this.primaryBtnText}</button>
+                    </div>
                 </div>
             `;
         }
@@ -876,23 +905,23 @@ class TooltipDialog {
             this.box.innerHTML = `
                 <div id="tc-msg">${this.message}</div>
                 <div class="tc-btns">
-                    <button id="tc-ok" class="tc-btn ok button">OK</button>
+                    <button id="tc-primary" class="tc-btn ok button">閉じる</button>
                 </div>
             `;
         }
     }
 
     cache() {
-        this.okBtn = this.box.querySelector("#tc-ok");
-        this.cancelBtn = this.box.querySelector("#tc-cancel");
+        this.primaryBtn = this.box.querySelector("#tc-primary");
+        this.secondaryBtn = this.box.querySelector("#tc-secondary");
         this.input = this.box.querySelector("#tc-input");
     }
 
     styleButtons() {
         const green = "hsla(130, 100%, 50%, 0.2)";
         const grey = "hsla(0, 0%, 40%, 0.2)";
-        if (this.okBtn) this.okBtn.style.background = this.btn === 0 ? green : grey;
-        if (this.cancelBtn) this.cancelBtn.style.background = this.btn === 0 ? grey : green;
+        if (this.primaryBtn) this.primaryBtn.style.background = green//this.btn === 0 ? green : grey;
+        if (this.secondaryBtn) this.secondaryBtn.style.background = grey//this.btn === 0 ? grey : green;
     }
 
     position() {
@@ -925,8 +954,8 @@ class TooltipDialog {
             document.removeEventListener("mousedown", this.outsideHandler);
         };
 
-        if (this.okBtn) {
-            this.okBtn.onclick = () => {
+        if (this.primaryBtn) {
+            this.primaryBtn.onclick = () => {
                 cleanup();
                 if (this.type === "prompt") {
                     const val = this.input.value.trim();
@@ -937,8 +966,8 @@ class TooltipDialog {
             };
         }
 
-        if (this.cancelBtn) {
-            this.cancelBtn.onclick = () => {
+        if (this.secondaryBtn) {
+            this.secondaryBtn.onclick = () => {
                 cleanup();
                 this.resolve(false);
             };

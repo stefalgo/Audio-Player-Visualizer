@@ -972,12 +972,19 @@ input[type="file"]+label:hover {
     justify-content: flex-start;
 }
 
+.tc-btns-2 {
+    display: flex;
+    gap: 6px;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
 .tc-btn {
     font-size: 12px;
     padding: 4px var(--spacing-md);
 }
 
-.tc-btn.ok,
+.tc-btn.primary,
 .tc-btn.cancel {
     backdrop-filter: var(--backdrop-blur);
 }

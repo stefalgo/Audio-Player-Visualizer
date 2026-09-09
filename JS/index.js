@@ -88,8 +88,8 @@ const eqPasteSetting = $id("eqPasteSetting");
 
 const dialog = {
     alert: (message, targetEl) => TooltipDialog.info(targetEl, message),
-    confirm: (message, targetEl, btn = 0) => TooltipDialog.confirm(targetEl, message, btn),
-    prompt: (message, defaultValue = "", targetEl) => TooltipDialog.prompt(targetEl, message, defaultValue)
+    confirm: (message, targetEl, options = {}) => TooltipDialog.confirm(targetEl, message, options),
+    prompt: (message, defaultValue = "", targetEl, options = {}) => TooltipDialog.prompt(targetEl, message, defaultValue, options)
 };
 
 const SAMPLE_BYTES = 64 * 1024;
@@ -738,7 +738,7 @@ function addFilesToSongList(filesSelected) {
         });
 
         deleteButton.addEventListener('click', async () => {
-            if (await dialog.confirm("この曲をプレイリストから外しますか？", deleteButton, 1)) {
+            if (await dialog.confirm("この曲をプレイリストから外しますか？", deleteButton, {defaultButton: 1, primaryBtnText: "外す"})) {
                 removeFile(file);
             }
         });
@@ -771,7 +771,7 @@ function addSubtitleFilesToList(filesSelected) {
         });
 
         deleteButton.addEventListener('click', async () => {
-            if (await dialog.confirm("この字幕トラックをリストから外しますか？", deleteButton, 1)) {
+            if (await dialog.confirm("この字幕トラックをリストから外しますか？", deleteButton, {defaultButton: 1, primaryBtnText: "外す"})) {
                 removeSubtitle(file._fingerprint);
             }
         });
@@ -1985,7 +1985,7 @@ eqPresetSaveBtn.addEventListener("click", async () => {
         "プリセット名を入力してください",
         selected ? selected.textContent : "",
         eqPresetSaveBtn,
-        0
+        {primaryBtnText: "保存"}
     );
     if (!name || !name.trim()) return;
     const values = equalizer.getData().map(v => v.gain);
@@ -2003,7 +2003,10 @@ eqPresetSaveBtn.addEventListener("click", async () => {
         const ok = await dialog.confirm(
             `「${name}」プリセットを上書きしますか？`,
             eqPresetSaveBtn,
-            1
+            {
+                defaultButton: 1,
+                primaryBtnText: "上書き"
+            }
         );
         if (!ok) return;
     }
@@ -2021,14 +2024,10 @@ eqPresetRemoveBtn.addEventListener("click", async () => {
     if (!selected) return;
     const group = selected.parentElement;
     if (!group || group.label !== "User presets") {
-        await dialog.alert("ユーザーが保存したプリセットのみ削除できます", eqPresetRemoveBtn, 0);
+        await dialog.alert("ユーザーが保存したプリセットのみ削除できます", eqPresetRemoveBtn);
         return;
     }
-    const ok = await dialog.confirm(
-        "選択したプリセットを削除しますか？",
-        eqPresetRemoveBtn,
-        1
-    );
+    const ok = await dialog.confirm("選択したプリセットを削除しますか？", eqPresetRemoveBtn, {defaultButton: 1, primaryBtnText: "削除"});
     if (!ok) return;
     removeEQPreset(selected.textContent);
 });
@@ -2042,13 +2041,14 @@ eqCopySetting.addEventListener("click", async () => {
 
     try {
         await navigator.clipboard.writeText(JSON.stringify(setting));
-        await dialog.alert("コピーしました！", eqCopySetting, 0);
+        await dialog.alert("コピーしました！", eqCopySetting);
     } catch (error) {
         console.error("Could not copy setting:", error);
     }
 });
 
 eqPasteSetting.addEventListener("click", async () => {
+    if (!await dialog.confirm("ペーストしますか？", eqPasteSetting, {defaultButton: 1, primaryBtnText: "ペースト"})) return;
     try {
         const text = await navigator.clipboard.readText();
         const setting = JSON.parse(text);
@@ -2061,7 +2061,7 @@ eqPasteSetting.addEventListener("click", async () => {
             return;
         }
         equalizer.loadPreset(setting.data);
-        await dialog.alert("ペーストしました！", eqPasteSetting, 0);
+        await dialog.alert("ペーストしました！", eqPasteSetting);
     } catch (error) {
         console.warn("Clipboard does not contain a valid setting.");
     }
@@ -2104,7 +2104,7 @@ subtitleFont.addEventListener("change", (e) => {
 });
 
 removeAllSounds.addEventListener("click", async () => {
-    const ok = await dialog.confirm("プレイリストをクリアしますか？", removeAllSounds, 1);
+    const ok = await dialog.confirm("プレイリストをクリアしますか？", removeAllSounds, {defaultButton: 1, primaryBtnText: "クリア"});
     if (!ok) return;
     if (files.length > 1) {
         files.filter(file => file._fingerprint !== currentSelectedFile).forEach(removeFile);
@@ -2114,7 +2114,7 @@ removeAllSounds.addEventListener("click", async () => {
 });
 
 removeAllSubtitles.addEventListener("click", async () => {
-    const ok = await dialog.confirm("字幕をリストから外しますか？", removeAllSubtitles, 1);
+    const ok = await dialog.confirm("字幕をリストから外しますか？", removeAllSubtitles, {defaultButton: 1, primaryBtnText: "クリア"});
     if (!ok) return;
     if (subtitleList.length > 1) {
         subtitleList.filter(file => file._fingerprint !== selectedSubtitle).forEach(file => removeSubtitle(file._fingerprint));
