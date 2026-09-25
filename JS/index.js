@@ -260,7 +260,8 @@ const randomSongs = new HumanRandom()
 
 const renderHandler = new RenderHandler(canvas, ctx, audioCtx, { ...PLAYERCONFIG.renderer });
 
-renderHandler.video.setConfig("ForegroundVideo", PLAYERCONFIG.ForegroundVideoRender);
+renderHandler.renderers.video.setConfig("ForegroundVideo", PLAYERCONFIG.ForegroundVideoRender);
+//renderHandler.renderers.retro_video.setConfig("useColor", true);
 
 const equalizer = new CanvasEQ($id('eq'), EQ_BANDS, 12);
 
@@ -297,7 +298,7 @@ const timeline = new Timeline(
     }
 );
 
-const tapTempo = new TapTempo(metroTapTempoButton);
+const tapTempo = new TapTempo(metroTapTempoButton, videoEl);
 
 const pipVideo = document.createElement("video");
 pipVideo.playsInline = true;
@@ -738,7 +739,7 @@ function addFilesToSongList(filesSelected) {
         });
 
         deleteButton.addEventListener('click', async () => {
-            if (await dialog.confirm("この曲をプレイリストから外しますか？", deleteButton, {defaultButton: 1, primaryBtnText: "外す"})) {
+            if (await dialog.confirm("この曲をプレイリストから外しますか？", deleteButton, { defaultButton: 1, primaryBtnText: "外す" })) {
                 removeFile(file);
             }
         });
@@ -771,7 +772,7 @@ function addSubtitleFilesToList(filesSelected) {
         });
 
         deleteButton.addEventListener('click', async () => {
-            if (await dialog.confirm("この字幕トラックをリストから外しますか？", deleteButton, {defaultButton: 1, primaryBtnText: "外す"})) {
+            if (await dialog.confirm("この字幕トラックをリストから外しますか？", deleteButton, { defaultButton: 1, primaryBtnText: "外す" })) {
                 removeSubtitle(file._fingerprint);
             }
         });
@@ -1718,6 +1719,7 @@ function renderLoop() {
     const timeColor = PLAYERCONFIG.playback.rate < 1 ? '#ff4d4d' : PLAYERCONFIG.playback.rate > 1 ? '#4dff4d' : '';
     if (audioTimeText.style.color !== timeColor) {
         audioTimeText.style.color = timeColor;
+        metroTapTempoButton.textContent = PLAYERCONFIG.playback.rate < 1 || PLAYERCONFIG.playback.rate > 1 ? `Tap Tempo (bpm / ${videoEl.playbackRate})` : 'Tap Tempo';
     }
 
     const progress = Math.round(((elapsed / (videoEl.duration || 1)) * 1000)) / 10;
@@ -1746,30 +1748,34 @@ function renderLoop() {
     if (!PLAYERCONFIG.visualizer.paused) {
         switch (PLAYERCONFIG.visualizer.current) {
             case 'bar':
-                renderHandler.bar.render(freqData, analyser, 2, visualizerMF.value, analyserSmoothing);
+                renderHandler.renderers.bar.render(freqData, analyser, 2, visualizerMF.value, analyserSmoothing);
                 break;
 
             case 'waterfall':
-                renderHandler.waterfall.render(freqData, analyser, 2, visualizerMF.value, analyserSmoothing);
+                renderHandler.renderers.waterfall.render(freqData, analyser, 2, visualizerMF.value, analyserSmoothing);
                 break;
 
             case 'waveform':
-                renderHandler.wave.render(timeData);
+                renderHandler.renderers.wave.render(timeData);
                 break;
 
             case 'soundTrace':
-                renderHandler.soundTrace.render(dataL, dataR);
+                renderHandler.renderers.soundTrace.render(dataL, dataR);
                 break;
 
             case 'retro':
-                renderHandler.retro.render(freqDataFloat, analyser);
+                renderHandler.renderers.retro.render(freqDataFloat, analyser);
+                break;
+
+            case 'test':
+                renderHandler.renderers.retro_video.render(videoEl);
                 break;
 
             case 'video':
                 const track = subtitleList.find(
                     sub => sub._fingerprint === selectedSubtitle
                 );
-                renderHandler.video.render(videoEl, track);
+                renderHandler.renderers.video.render(videoEl, track);
                 break;
 
             default:
@@ -1985,7 +1991,7 @@ eqPresetSaveBtn.addEventListener("click", async () => {
         "プリセット名を入力してください",
         selected ? selected.textContent : "",
         eqPresetSaveBtn,
-        {primaryBtnText: "保存"}
+        { primaryBtnText: "保存" }
     );
     if (!name || !name.trim()) return;
     const values = equalizer.getData().map(v => v.gain);
@@ -2027,7 +2033,7 @@ eqPresetRemoveBtn.addEventListener("click", async () => {
         await dialog.alert("ユーザーが保存したプリセットのみ削除できます", eqPresetRemoveBtn);
         return;
     }
-    const ok = await dialog.confirm("選択したプリセットを削除しますか？", eqPresetRemoveBtn, {defaultButton: 1, primaryBtnText: "削除"});
+    const ok = await dialog.confirm("選択したプリセットを削除しますか？", eqPresetRemoveBtn, { defaultButton: 1, primaryBtnText: "削除" });
     if (!ok) return;
     removeEQPreset(selected.textContent);
 });
@@ -2048,7 +2054,7 @@ eqCopySetting.addEventListener("click", async () => {
 });
 
 eqPasteSetting.addEventListener("click", async () => {
-    if (!await dialog.confirm("ペーストしますか？", eqPasteSetting, {defaultButton: 1, primaryBtnText: "ペースト"})) return;
+    if (!await dialog.confirm("ペーストしますか？", eqPasteSetting, { defaultButton: 1, primaryBtnText: "ペースト" })) return;
     try {
         const text = await navigator.clipboard.readText();
         const setting = JSON.parse(text);
@@ -2104,7 +2110,7 @@ subtitleFont.addEventListener("change", (e) => {
 });
 
 removeAllSounds.addEventListener("click", async () => {
-    const ok = await dialog.confirm("プレイリストをクリアしますか？", removeAllSounds, {defaultButton: 1, primaryBtnText: "クリア"});
+    const ok = await dialog.confirm("プレイリストをクリアしますか？", removeAllSounds, { defaultButton: 1, primaryBtnText: "クリア" });
     if (!ok) return;
     if (files.length > 1) {
         files.filter(file => file._fingerprint !== currentSelectedFile).forEach(removeFile);
@@ -2114,7 +2120,7 @@ removeAllSounds.addEventListener("click", async () => {
 });
 
 removeAllSubtitles.addEventListener("click", async () => {
-    const ok = await dialog.confirm("字幕をリストから外しますか？", removeAllSubtitles, {defaultButton: 1, primaryBtnText: "クリア"});
+    const ok = await dialog.confirm("字幕をリストから外しますか？", removeAllSubtitles, { defaultButton: 1, primaryBtnText: "クリア" });
     if (!ok) return;
     if (subtitleList.length > 1) {
         subtitleList.filter(file => file._fingerprint !== selectedSubtitle).forEach(file => removeSubtitle(file._fingerprint));

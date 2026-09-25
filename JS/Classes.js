@@ -28,7 +28,9 @@ class AudioBands {
         const power = this.getBandPower(data, iLow, iHigh);
         const db = this.powerToDb(power);
         const norm = this.normalizeDb(db, minDb, maxDb);
-        return this.curve(norm);
+        const curved = this.curve(norm);
+        const curveMax = this.curve(1);
+        return curveMax > 0 ? curved / curveMax : 0;
     }
 
     static peakHoldUpdate({
@@ -706,31 +708,24 @@ class CanvasEQ {
 
     visualize(data, analyser) {
         this.draw();
-
-        const leds = this.leds;
-        const step = this.sliderH / leds;
+        const LEDS = this.leds;
+        const step = this.sliderH / LEDS;
         const nyquist = analyser.context.sampleRate / 2;
         const ratioPow = Math.pow(2, 1 / 6);
-
         if (!this.peakHold) this.peakHold = new Array(this.bands.length).fill(0);
-
         if (!this.peakTimer) this.peakTimer = new Array(this.bands.length).fill(0);
-
         const now = performance.now();
-
         for (let i = 0; i < this.bands.length; i++) {
-
             const x = this.x(i);
             const top = this.top();
             const ledX = x - 14;
             const sliderX = x + 2;
             const fCenter = this.bands[i].freq;
-            const fLow = Math.max(20, fCenter / ratioPow);
-            const fHigh = Math.min(16000, fCenter * ratioPow);
             const toIndex = (f) => Math.floor((f / nyquist) * data.length);
+            const fLow = Math.max(20, fCenter / ratioPow);
+            const fHigh = Math.min(nyquist, fCenter * ratioPow);
             const iLow = toIndex(fLow);
             const iHigh = toIndex(fHigh);
-
             const value = AudioBands.processBand(
                 data,
                 iLow,
@@ -738,11 +733,9 @@ class CanvasEQ {
                 this.VIS_MIN_DB ?? -90,
                 this.VIS_MAX_DB ?? -20
             );
-
-            const level = Math.floor(value * leds);
-
+            const level = value * LEDS;
             AudioBands.peakHoldUpdate({
-                level,
+                level: Math.min(level, LEDS - 1),
                 holdArray: this.peakHold,
                 timerArray: this.peakTimer,
                 index: i,
@@ -750,19 +743,12 @@ class CanvasEQ {
                 holdTime: 700,
                 releaseSpeed: 0.3
             });
-
             const peakLevel = Math.floor(this.peakHold[i]);
-
-            for (let l = 0; l < leds; l++) {
-
+            for (let l = 0; l < LEDS; l++) {
                 const y = top + this.sliderH - (l + 1) * step + step / 2;
-
                 const active = l < level || l === peakLevel;
-
-                const norm = l / leds;
-
+                const norm = l / LEDS;
                 let r = 0, g = 255, b = 70;
-
                 if (norm > 0.6) {
                     r = 255;
                     g = Math.floor(255 * (1 - norm));
@@ -770,9 +756,7 @@ class CanvasEQ {
                     r = Math.floor(255 * norm);
                     g = 255;
                 }
-
                 this.ctx.strokeStyle = active ? `rgb(${r},${g},${b})` : 'rgba(25,25,25,0.35)';
-
                 this.ctx.lineWidth = active ? 2 : 1;
                 this.ctx.beginPath();
                 this.ctx.moveTo(ledX, y);
@@ -1724,11 +1708,12 @@ class Timeline {
 }
 
 class TapTempo {
-    constructor(button, {
+    constructor(button, media, {
         timeout = 2000,
         minInterval = 120,
         maxInterval = 2000
     } = {}) {
+        this.media = media;
         this.button = button;
         this.timeout = timeout;
         this.minInterval = minInterval;
@@ -1765,7 +1750,7 @@ class TapTempo {
             if (intervals.length > 0) {
                 const average = intervals.reduce((sum, value) => sum + value, 0) / intervals.length;
                 const bpm = Math.round(60000 / average);
-                this.bpmChangeCallback?.(bpm);
+                this.bpmChangeCallback?.(Math.round(bpm/this.media.playbackRate));
             }
         }
         this.timer = setTimeout(() => {
