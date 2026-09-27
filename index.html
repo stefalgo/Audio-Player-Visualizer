@@ -88,13 +88,25 @@
             <label for="visualizerSL">Visualizer smoothing</label>
             <input type="range" data-tip="Visualizer smoothing: x%" id="visualizerSL" class="slider" min="0" max="0.9" value="0.8" step="0.1">
             <div style="display: flex; flex-direction: row;">
-                <label for="vizPauseVizBtn">Pause render</label>
                 <input data-tip="Pause Visualizer" type="checkbox" id="vizPauseVizBtn" class="checkbox">
+                <label for="vizPauseVizBtn">Pause render</label>
             </div>
+            <details>
+                <summary>Retro Visualizer</summary>
+                <fieldset>
+                    <div style="display: flex; flex-direction: row;">
+                        <input data-tip="Render Video Colors in Retro Visualizer" type="checkbox" id="vizRetroUseVideoFG" class="checkbox">
+                        <label for="vizRetroUseVideoFG">Colors</label>
+                    </div>
+                    <div style="display: flex; flex-direction: row;">
+                        <input data-tip="Use Video Luminance as a light Activation factor in Retro Visualizer" type="checkbox" id="vizRetroUseLuminance" class="checkbox">
+                        <label for="vizRetroUseLuminance">Luminance</label>
+                    </div>
+                </fieldset>
+            </details>
             <select id="visualizerType" data-tip="Visualizer type">
                 <option value="bar">Bar</option>
                 <option value="retro" selected>Retro</option>
-                <option value="test">Test</option>
                 <option value="waterfall">Waterfall</option>
                 <option value="waveform">Waveform</option>
                 <option value="soundTrace">Draw Sound Trace</option>

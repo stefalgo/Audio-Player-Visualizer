@@ -85,6 +85,8 @@ const metroBtn = $id("metroBtn");
 const metronomeWin = $id("metronomeWin");
 const eqCopySetting = $id("eqCopySetting");
 const eqPasteSetting = $id("eqPasteSetting");
+const vizRetroUseVideoFG = $id("vizRetroUseVideoFG");
+const vizRetroUseLuminance = $id("vizRetroUseLuminance")
 
 const dialog = {
     alert: (message, targetEl) => TooltipDialog.info(targetEl, message),
@@ -261,7 +263,6 @@ const randomSongs = new HumanRandom()
 const renderHandler = new RenderHandler(canvas, ctx, audioCtx, { ...PLAYERCONFIG.renderer });
 
 renderHandler.renderers.video.setConfig("ForegroundVideo", PLAYERCONFIG.ForegroundVideoRender);
-//renderHandler.renderers.retro_video.setConfig("useColor", true);
 
 const equalizer = new CanvasEQ($id('eq'), EQ_BANDS, 12);
 
@@ -1764,11 +1765,9 @@ function renderLoop() {
                 break;
 
             case 'retro':
-                renderHandler.renderers.retro.render(freqDataFloat, analyser);
-                break;
-
-            case 'test':
-                renderHandler.renderers.retro_video.render(videoEl);
+                renderHandler.renderers.retro.render(freqDataFloat, analyser, videoEl);
+                renderHandler.renderers.retro.setConfig("useLuminance", vizRetroUseLuminance.checked);
+                renderHandler.renderers.retro.setConfig("videoFG", vizRetroUseVideoFG.checked);
                 break;
 
             case 'video':

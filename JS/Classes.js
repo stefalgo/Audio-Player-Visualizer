@@ -1750,7 +1750,7 @@ class TapTempo {
             if (intervals.length > 0) {
                 const average = intervals.reduce((sum, value) => sum + value, 0) / intervals.length;
                 const bpm = Math.round(60000 / average);
-                this.bpmChangeCallback?.(Math.round(bpm/this.media.playbackRate));
+                this.bpmChangeCallback?.(Math.round(bpm / this.media.playbackRate));
             }
         }
         this.timer = setTimeout(() => {

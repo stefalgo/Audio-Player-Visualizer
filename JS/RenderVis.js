@@ -23,8 +23,12 @@ class Renderer {
      * @returns {Renderer} Returns this for chaining
      */
     setConfig(key, value) {
-        this.config[key] = value;
-        return this;
+        if (this.config[key] !== value) {
+            this.config[key] = value
+            return this;
+        } else {
+            return
+        };
     }
 
     /**
@@ -327,15 +331,19 @@ class RetroRenderer extends Renderer {
         this.config = config;
         this.peakHold = null;
         this.peakTimer = null;
+        this.videoCanvas = document.createElement('canvas');
+        this.videoCtx = this.videoCanvas.getContext('2d', { willReadFrequently: true });
         this.VIS_MIN_DB = config.visMinDb ?? -90;
         this.VIS_MAX_DB = config.visMaxDb ?? -20;
+        // this.config.videoFG = true;
+        // this.config.useLuminance = true;
     }
 
     formatFreq(f) {
         return f >= 1000 ? (f / 1000) + ' k' : `${f} `;
     }
 
-    render(floatData, analyser) {
+    render(floatData, analyser, videoEl) {
         const ctx = this.ctx;
         const cw = this.canvas.width;
         const ch = this.canvas.height;
@@ -346,15 +354,17 @@ class RetroRenderer extends Renderer {
         const headerH = 20;
         const ledAreaH = ch - headerH;
         const LEDS = Math.max(20, Math.floor(ledAreaH / LED_PITCH));
-        const usableX = 0;
+        // const usableX = 0;
         const usableY = headerH + 5;
-        const usableW = cw;
+        // const usableW = cw;
         const usableH = ledAreaH - 15;
         const actualPitch = (usableH - LED_HEIGHT) / (LEDS - 1);
         const nyquist = analyser.context.sampleRate / 2;
         const moduleW = cw / BANDS;
         const padX = 10;
         const dBGutter = 30;
+        let videoPixels = null;
+        if (videoEl) videoPixels = this.getVideoPixels(videoEl, BANDS, LEDS);
 
         if (!this.peakHold) {
             this.peakHold = new Array(BANDS).fill(0);
@@ -404,9 +414,15 @@ class RetroRenderer extends Renderer {
 
             for (let l = 0; l < LEDS; l++) {
                 const y = usableY + usableH - LED_HEIGHT - l * actualPitch;
-                const active = l < level || l === peakLevel;
                 const norm = l / (LEDS - 1);
                 let r = 0, g = 255, b = 70;
+                let pixelColor = null;
+                let active = null;
+                if (videoPixels && videoPixels[i] && videoPixels[i][l]) {
+                    active = this.config.useLuminance ? videoPixels[i][l].active : l < level || l === peakLevel;
+                    pixelColor = videoPixels[i][l].color;
+                }
+
                 if (norm > 0.6) {
                     r = 255;
                     g = Math.floor(255 * (1 - norm));
@@ -414,7 +430,7 @@ class RetroRenderer extends Renderer {
                     r = Math.floor(255 * norm);
                     g = 255;
                 }
-                ctx.fillStyle = active ? `rgb(${r},${g},${b})` : "rgba(25,25,25,0.35)";
+                ctx.fillStyle = active ? (this.config.videoFG && pixelColor ? `rgb(${pixelColor.r},${pixelColor.g},${pixelColor.b})` : `rgb(${r},${g},${b})`) : "rgba(25,25,25,0.35)";
                 ctx.fillRect(ledX, y, ledW, LED_HEIGHT);
             }
 
@@ -429,105 +445,6 @@ class RetroRenderer extends Renderer {
                 const ledIndex = Math.round(norm * (LEDS - 1));
                 const y = usableY + usableH - LED_HEIGHT / 2 - ledIndex * actualPitch;
                 ctx.fillText(dbMark.toString(), x + moduleW - 28, y + 3);
-            }
-        }
-    }
-}
-
-// test
-class RetroRenderer_video extends Renderer {
-    constructor(canvas, ctx, audioCtx, config = {}) {
-        super(canvas, ctx, audioCtx, config);
-        this.config = config;
-        this.videoCanvas = document.createElement('canvas');
-        this.videoCtx = this.videoCanvas.getContext('2d', { willReadFrequently: true });
-        this.VIS_MIN_DB = config.visMinDb ?? -90;
-        this.VIS_MAX_DB = config.visMaxDb ?? -20;
-        //this.config.useColor = true;
-    }
-
-    formatFreq(f) {
-        return f >= 1000 ? (f / 1000) + ' k' : `${f} `;
-    }
-
-    render(videoEl) {
-        const ctx = this.ctx;
-        const cw = this.canvas.width;
-        const ch = this.canvas.height;
-        ctx.clearRect(0, 0, cw, ch);
-        const LED_HEIGHT = 5;
-        const LED_PITCH = 10;
-        const BANDS = this.config.retroCenterFreqs.length;
-        const headerH = 20;
-        const ledAreaH = ch - headerH;
-        const LEDS = Math.max(20, Math.floor(ledAreaH / LED_PITCH));
-        const usableX = 0;
-        const usableY = headerH + 5;
-        const usableW = cw;
-        const usableH = ledAreaH - 15;
-        const actualPitch = (usableH - LED_HEIGHT) / (LEDS - 1);
-        const moduleW = cw / BANDS;
-        const padX = 10;
-        const dBGutter = 30;
-        let videoPixels = null;
-
-        if (videoEl) {
-            videoPixels = this.getVideoPixels(videoEl, BANDS, LEDS);
-        }
-
-        for (let i = 0; i < BANDS; i++) {
-            const fCenter = this.config.retroCenterFreqs[i];
-            const x = i * moduleW;
-            const ledX = x + padX;
-            const ledW = moduleW - padX * 2 - dBGutter;
-
-            ctx.fillStyle = "rgba(18,18,18,0.45)";
-            ctx.fillRect(x + 2, 0, moduleW - 4, ch);
-            ctx.strokeStyle = "rgba(255,255,255,0.06)";
-            ctx.strokeRect(x + 2, 0, moduleW - 4, ch);
-            ctx.fillStyle = "rgba(230,230,230,0.85)";
-            ctx.font = "10px monospace";
-            ctx.fillText(`${this.formatFreq(fCenter)}Hz`, ledX, 14);
-
-            for (let l = 0; l < LEDS; l++) {
-                const y = usableY + usableH - LED_HEIGHT - l * actualPitch;
-                let active = false;
-                let pixelColor = null;
-
-                if (videoPixels && videoPixels[i] && videoPixels[i][l]) {
-                    active = videoPixels[i][l].active;
-                    pixelColor = videoPixels[i][l].color;
-                }
-
-                const norm = l / (LEDS - 1);
-                let r = 0, g = 255, b = 70;
-                if (norm > 0.6) {
-                    r = 255;
-                    g = Math.floor(255 * (1 - norm));
-                } else if (norm > 0.3) {
-                    r = Math.floor(255 * norm);
-                    g = 255;
-                }
-
-                ctx.fillStyle = active ? (this.config.useColor && pixelColor ? `rgb(${pixelColor.r},${pixelColor.g},${pixelColor.b})` : `rgb(${r},${g},${b})`) : "rgba(25,25,25,0.35)";
-                ctx.fillRect(ledX, y, ledW, LED_HEIGHT);
-            }
-
-            ctx.fillStyle = "rgba(255,255,255,0.55)";
-            ctx.font = "9px monospace";
-            const dbStep = 10;
-            const startDb = Math.ceil(this.VIS_MIN_DB / dbStep) * dbStep;
-            const endDb = Math.floor(this.VIS_MAX_DB / dbStep) * dbStep;
-
-            for (let dbMark = startDb; dbMark <= endDb; dbMark += dbStep) {
-                const norm = (dbMark - this.VIS_MIN_DB) / (this.VIS_MAX_DB - this.VIS_MIN_DB);
-                const ledIndex = Math.round(norm * (LEDS - 1));
-                const y = usableY + usableH - LED_HEIGHT / 2 - ledIndex * actualPitch;
-                ctx.fillText(
-                    dbMark.toString(),
-                    x + moduleW - 28,
-                    y + 3
-                );
             }
         }
     }
@@ -826,7 +743,6 @@ class RenderHandler {
             wave: new WaveRenderer(canvas, ctx, audioCtx, config),
             soundTrace: new SoundTraceRenderer(canvas, ctx, audioCtx, config),
             retro: new RetroRenderer(canvas, ctx, audioCtx, config),
-            retro_video: new RetroRenderer_video(canvas, ctx, audioCtx, config),
             video: new VideoRender(canvas, ctx, audioCtx, config),
         };
     }
