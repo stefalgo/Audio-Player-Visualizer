@@ -2167,8 +2167,8 @@ pipButton.addEventListener("click", async () => {
         if (document.pictureInPictureElement) {
             await document.exitPictureInPicture();
         } else {
-            await pipVideo.requestPictureInPicture();
-            //await videoEl.requestPictureInPicture();
+            //await pipVideo.requestPictureInPicture();
+            await videoEl.requestPictureInPicture();
         }
     } catch (error) {
         //console.log("[PiP failed]\n", error);
@@ -2307,6 +2307,28 @@ function updatePlayButton() {
     pausePlayButton.dataset.state = videoEl.paused ? "play" : "pause";
 }
 
+// const pendingPipSyncEvents = [];
+
+// function syncPipPlayback(action) {
+//     const expectedEvent = { action };
+//     pendingPipSyncEvents.push(expectedEvent);
+//     const request = action === "play" ? pipVideo.play() : (pipVideo.pause(), null);
+//     request?.catch(error => {
+//         const index = pendingPipSyncEvents.indexOf(expectedEvent);
+//         if (index !== -1) pendingPipSyncEvents.splice(index, 1);
+//         if (error.name !== "AbortError") {
+//             console.warn("PiP video playback sync failed:", error);
+//         }
+//     });
+// }
+
+// function consumePipSyncEvent(action) {
+//     const index = pendingPipSyncEvents.findIndex(event => event.action === action);
+//     if (index === -1) return false;
+//     pendingPipSyncEvents.splice(index, 1);
+//     return true;
+// }
+
 function setupMediaSession() {
     if (!('mediaSession' in navigator)) return;
     navigator.mediaSession.setActionHandler('play', async () => {
@@ -2333,17 +2355,15 @@ function setupMediaSession() {
 }
 
 videoEl.addEventListener("play", () => {
-    if (pipVideo.paused) {
-        pipVideo.play().catch(err => {
-            console.warn("PiP video play failed:", err);
-        });
-    }
+    // if (pipVideo.paused) {
+    //     syncPipPlayback("play");
+    // }
     if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "playing";
     updatePlayButton();
 });
 
 videoEl.addEventListener("pause", () => {
-    if (!pipVideo.paused) pipVideo.pause();
+    //if (!pipVideo.paused) syncPipPlayback("pause");
     if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "paused";
     updatePlayButton();
 });
@@ -2353,19 +2373,20 @@ videoEl.addEventListener("ended", () => {
     updatePlayButton();
 });
 
-pipVideo.addEventListener("play", () => {
-    if (videoEl.paused) {
-        audioCtx.resume();
-        videoEl.play().catch(err => {
-            console.warn("Audio play failed:", err);
-            pipVideo.pause();
-        });
-    }
-});
+// pipVideo.addEventListener("play", () => {
+//     if (consumePipSyncEvent("play")) return;
+//     if (document.pictureInPictureElement === pipVideo && videoEl.paused) {
+//         audioCtx.resume();
+//         videoEl.play().catch(err => {
+//             if (err.name !== "AbortError") console.warn("Audio play failed:", err);
+//         });
+//     }
+// });
 
-pipVideo.addEventListener("pause", () => {
-    if (!videoEl.paused) videoEl.pause();
-});
+// pipVideo.addEventListener("pause", () => {
+//     if (consumePipSyncEvent("pause")) return;
+//     if (document.pictureInPictureElement === pipVideo && !videoEl.paused) videoEl.pause();
+// });
 
 function createFocusHandler(movableWindows) {
     return function focusWindow(window) {
@@ -2533,7 +2554,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // setInterval(() => {
     //     wallpaperswitch.nextRandom(wallpapers);
     // }, 63000);
-
 
     // const runCommonLoop = () => {
     //     commonLoop();
