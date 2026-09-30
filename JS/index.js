@@ -2176,17 +2176,17 @@ pipButton.addEventListener("click", async () => {
     }
 });
 
-pipVideo.addEventListener("enterpictureinpicture", () => {
+videoEl.addEventListener("enterpictureinpicture", () => {
     pipButton.dataset.inpip = "yes";
-    canvas.style.visibility = "hidden";
-    canvas.width = 1920;
-    canvas.height = 1080;
+    // canvas.style.visibility = "hidden";
+    // canvas.width = 1920;
+    // canvas.height = 1080;
 });
 
-pipVideo.addEventListener("leavepictureinpicture", () => {
+videoEl.addEventListener("leavepictureinpicture", () => {
     pipButton.dataset.inpip = "no";
-    canvas.style.removeProperty("visibility");
-    resizeCanvas();
+    // canvas.style.removeProperty("visibility");
+    // resizeCanvas();
 });
 
 audioTimeText.addEventListener("click", () => {
