@@ -125,8 +125,8 @@
                     <button class="button" id="eqPresetSetBtn">Set preset</button>
                     <button class="button" id="eqPresetSaveBtn">Save preset</button>
                     <button class="button" id="eqPresetRemoveBtn">Delete preset</button>
-                    <button id="eqCopySetting" class="button"></button>
-                    <button id="eqPasteSetting" class="button"></button>
+                    <button id="eqCopySetting" class="button svg-icon-bg"></button>
+                    <button id="eqPasteSetting" class="button svg-icon-bg"></button>
                 </div>
                 <div class="eq-row">
                     <label for="eqSliderLink">Smooth EQ</label>
@@ -331,6 +331,61 @@
         </div>
     </div>
 
+    <div id="menu" class="movable-window" data-controls="1">
+        <div class="window-topbar">メニュー</div>
+        <div class="window-content">
+            <button id="songListBtn" class="menuButton">
+                <span class="menuIcon"></span>
+                <span class="menuLabel">オーディオトラック</span>
+            </button>
+
+            <button id="subListBtn" class="menuButton">
+                <span class="menuIcon"></span>
+                <span class="menuLabel">字幕トラック</span>
+            </button>
+
+            <button id="eqBtn" class="menuButton">
+                <span class="menuIcon"></span>
+                <span class="menuLabel">イコライザーエディター</span>
+            </button>
+
+            <button id="otherEffectsBtn" class="menuButton">
+                <span class="menuIcon">FX</span>
+                <span class="menuLabel">オーディオエフェクト</span>
+            </button>
+
+            <button id="metroBtn" class="menuButton">
+                <span class="menuIcon"></span>
+                <span class="menuLabel">メトロノーム</span>
+            </button>
+
+            <button id="subVizOptBtn" class="menuButton">
+                <span class="menuIcon"></span>
+                <span class="menuLabel">ビジュアライザー設定</span>
+            </button>
+
+            <button id="radioBtn" class="menuButton">
+                <span class="menuIcon"></span>
+                <span class="menuLabel">ラジオ</span>
+            </button>
+
+            <div class="menuButton menuFolder">
+                <div class="folderButtons">
+                    <button type="button" class="folderButton svg-icon-bg" id="subBtn"></button>
+                    <button type="button" class="folderButton" id="subOptionsBtn">設定</button>
+                </div>
+                <span class="menuLabel">字幕</span>
+            </div>
+
+            <div class="menuButton menuFolder">
+                <div class="folderButtons">
+                    <button type="button" class="folderButton svg-icon-bg" id="pipButton"></button>
+                </div>
+                <span class="menuLabel">PiP</span>
+            </div>
+        </div>
+    </div>
+
     <div id="controls">
         <div id="wallpaper">
             <div class="wallpaper1"></div>
@@ -344,18 +399,18 @@
                 </label>
             </div>
             <div style="display: flex; margin-top: 5px;">
-                <button id="loopModeBtn" class="button"></button>
-                <button id="playModeBtn" class="button"></button>
+                <button id="loopModeBtn" class="button svg-icon-bg"></button>
+                <button id="playModeBtn" class="button svg-icon-bg"></button>
             </div>
 
             <div class="playback-container">
                 <span id="audio-currentTime" class="segment14" style="user-select: none; text-shadow: 0 0 7px #000000;">00 : 00 : 00 . 000 / 00 : 00 : 00 . 000</span>
                 <div style="display: flex; flex-direction: row; align-items: center;">
-                    <button id="topListBtn" class="button"></button>
-                    <button id="play-previous-button" class="button"></button>
-                    <button id="pause-play-button" class="button" data-state="play"></button>
-                    <button id="play-next-button" class="button"></button>
-                    <button id="play-next-random-button" class="button"></button>
+                    <button id="topListBtn" class="button svg-icon-bg"></button>
+                    <button id="play-previous-button" class="button svg-icon-bg"></button>
+                    <button id="pause-play-button" class="button svg-icon-bg" data-state="play"></button>
+                    <button id="play-next-button" class="button svg-icon-bg"></button>
+                    <button id="play-next-random-button" class="button svg-icon-bg"></button>
                 </div>
                 <div id="timeline" class="timeline">
                     <div class="timeline-buffer"></div>
@@ -370,7 +425,7 @@
 
             <span id="audio-volume">Volume: xx dB</span>
             <input type="range" id="volumeSlider" data-tip="Volume" class="slider" min="0" max="2" value="0.5" step="0.01">
-            <div style="display: flex; flex-direction: row; align-items: center;">
+            <!-- <div style="display: flex; flex-direction: row; align-items: center;">
                 <input type="button" id="songListBtn" class="button" value="オーディオトラック">
                 <input type="button" id="subListBtn" class="button" value="字幕トラック" style="margin-left: 5px;">
                 <input type="button" id="eqBtn" class="button" value="イコライザーエディター" style="margin-left: 5px;">
@@ -380,8 +435,9 @@
                 <input type="button" id="subOptionsBtn" class="button" value="字幕設定" style="margin-left: 5px;">
                 <input type="button" id="subVizOptBtn" class="button" value="ビジュアライザー設定" style="margin-left: 5px;">
                 <input type="button" id="radioBtn" class="button" value="ラジオ" style="margin-left: 5px;">
-                <button id="pipButton" class="button" style="margin-left: 5px;"></button>
-            </div>
+                <button id="pipButton" class="button svg-icon-bg" style="margin-left: 5px;"></button>
+            </div> -->
+            <input type="button" id="showMenuBtn" class="button" value="メニュー">
         </div>
     </div>
 

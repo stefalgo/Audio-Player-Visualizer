@@ -83,10 +83,12 @@ const metroBeatsPerBar = $id("metroBeatsPerBar");
 const metroVolume = $id("metroVolume");
 const metroBtn = $id("metroBtn");
 const metronomeWin = $id("metronomeWin");
+const menuWin = $id("menu");
 const eqCopySetting = $id("eqCopySetting");
 const eqPasteSetting = $id("eqPasteSetting");
 const vizRetroUseVideoFG = $id("vizRetroUseVideoFG");
-const vizRetroUseLuminance = $id("vizRetroUseLuminance")
+const vizRetroUseLuminance = $id("vizRetroUseLuminance");
+const showMenuBtn = $id("showMenuBtn");
 
 const dialog = {
     alert: (message, targetEl) => TooltipDialog.info(targetEl, message),
@@ -243,7 +245,6 @@ let currentLoadToken = 0; // e
 
 let playbackHPFilter = null;
 let playbackLPFilter = null;
-let soundEnded = false;
 let loopCounter = 0;
 
 let subtitleLastIndex = 0;
@@ -717,6 +718,8 @@ function addFilesToSongList(filesSelected) {
         const artwork = file._artworkURL;
         const songTitle = file._metadata?.title ? file._metadata.title : fileName;
 
+        playButton.classList.add('svg-icon-bg');
+
         songDiv.dataset.fileName = file._fingerprint;
         title.textContent = songTitle;
         title.dataset.tip = songTitle;
@@ -761,6 +764,8 @@ function addSubtitleFilesToList(filesSelected) {
         const deleteButton = clone.querySelector('.subtitleDeleteButton');
         const fileName = file.name.replace(/\.[^/.]+$/, "");
         const fileExt = file.name.replace(/^.*\./, "");
+
+        selectButton.classList.add('svg-icon-bg');
 
         subDiv.dataset.fileName = file._fingerprint;
         title.textContent = fileName;
@@ -1624,7 +1629,6 @@ function removeFile(file) {
         currentSelectedFile = '';
         selectedSubtitle = '';
         subtitleLastIndex = 0;
-        soundEnded = false;
         timeline.setValue(0);
         if (chooseAudioLabel) {
             chooseAudioLabel.textContent = 'No file selected';
@@ -1647,40 +1651,34 @@ function commonLoop() {
         timeline.setLive(videoEl.duration === Infinity);
     }
 
-    if (elapsed >= videoEl.duration && !soundEnded) {
-        soundEnded = true;
-        stopAudio(false, true);
+}
 
-        if (PLAYERCONFIG.playbackList.loopMode === 1) {
-            if (loopCounter === 0) {
-                loopCounter = 1;
-                playFrom(0);
-            } else {
-                loopCounter = 0;
-
-                if (PLAYERCONFIG.playbackList.playMode === 2) {
-                    loadRandom();
-                } else if (PLAYERCONFIG.playbackList.playMode === 1) {
-                    playNext(1, false);
-                }
-            }
-        } else if (PLAYERCONFIG.playbackList.loopMode === 2) {
-            if (PLAYERCONFIG.playbackList.playMode === 1) {
-                playNext(1);
-            } else {
-                playFrom(0);
-            }
+function handlePlaybackEnded() {
+    if (PLAYERCONFIG.playbackList.loopMode === 1) {
+        if (loopCounter === 0) {
+            loopCounter = 1;
+            playFrom(0);
         } else {
+            loopCounter = 0;
+
             if (PLAYERCONFIG.playbackList.playMode === 2) {
                 loadRandom();
             } else if (PLAYERCONFIG.playbackList.playMode === 1) {
                 playNext(1, false);
             }
         }
-    }
-
-    if (elapsed < videoEl.duration && soundEnded) {
-        soundEnded = false;
+    } else if (PLAYERCONFIG.playbackList.loopMode === 2) {
+        if (PLAYERCONFIG.playbackList.playMode === 1) {
+            playNext(1);
+        } else {
+            playFrom(0);
+        }
+    } else {
+        if (PLAYERCONFIG.playbackList.playMode === 2) {
+            loadRandom();
+        } else if (PLAYERCONFIG.playbackList.playMode === 1) {
+            playNext(1, false);
+        }
     }
 }
 
@@ -1960,6 +1958,7 @@ otherEffectsBtn.addEventListener("click", () => toggleWindow(otherEffectsDiv));
 subVizOptBtn.addEventListener("click", () => toggleWindow(visualizerOptionsDiv));
 radioBtn.addEventListener("click", () => toggleWindow(radioWin));
 metroBtn.addEventListener("click", () => toggleWindow(metronomeWin));
+showMenuBtn.addEventListener("click", () => toggleWindow(menuWin));
 
 //----------------------------------------------------------------------------------------------------------------------
 
@@ -2312,14 +2311,10 @@ function setupMediaSession() {
     if (!('mediaSession' in navigator)) return;
     navigator.mediaSession.setActionHandler('play', async () => {
         await videoEl.play();
-        await pipVideo.play();
-        navigator.mediaSession.playbackState = "playing";
     });
 
     navigator.mediaSession.setActionHandler('pause', () => {
         videoEl.pause();
-        pipVideo.pause();
-        navigator.mediaSession.playbackState = "paused";
     });
     navigator.mediaSession.setActionHandler('seekbackward', (details) => {
         const offset = details.seekOffset || 10;
@@ -2338,18 +2333,39 @@ function setupMediaSession() {
 }
 
 videoEl.addEventListener("play", () => {
-    pipVideo.play();
-    //navigator.mediaSession.playbackState = "playing";
+    if (pipVideo.paused) {
+        pipVideo.play().catch(err => {
+            console.warn("PiP video play failed:", err);
+        });
+    }
+    if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "playing";
     updatePlayButton();
 });
 
 videoEl.addEventListener("pause", () => {
-    pipVideo.pause();
-    //navigator.mediaSession.playbackState = "paused";
+    if (!pipVideo.paused) pipVideo.pause();
+    if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "paused";
     updatePlayButton();
 });
 
-videoEl.addEventListener("ended", updatePlayButton);
+videoEl.addEventListener("ended", () => {
+    handlePlaybackEnded();
+    updatePlayButton();
+});
+
+pipVideo.addEventListener("play", () => {
+    if (videoEl.paused) {
+        audioCtx.resume();
+        videoEl.play().catch(err => {
+            console.warn("Audio play failed:", err);
+            pipVideo.pause();
+        });
+    }
+});
+
+pipVideo.addEventListener("pause", () => {
+    if (!videoEl.paused) videoEl.pause();
+});
 
 function createFocusHandler(movableWindows) {
     return function focusWindow(window) {
@@ -2458,13 +2474,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const wallpapers = [
         {
             src: "./Media/PlayerWallpapers/playerWallpaper.jpg",
-            size: "1000px",
-            offset: "-90px"
-        },
-        {
-            src: "./Media/PlayerWallpapers/playerWallpaper2.jpg",
-            size: "1000px",
-            offset: "-90px"
+            size: "1400px",
+            offset: "-100px"
         },
         {
             src: "./Media/PlayerWallpapers/playerWallpaper4.jpg",
@@ -2481,7 +2492,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const wallpaperswitch = new WallpaperSwitcher($id("wallpaper"));
     wallpapers.forEach(wallpaper => {
         const img = new Image();
-        img.fetchPriority = "low";
         img.src = wallpaper.src;
         img.decode()
             .then(() => {
@@ -2519,9 +2529,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     observer.observe($id("canvasContainer"));
 
-    setInterval(() => {
-        wallpaperswitch.nextRandom(wallpapers);
-    }, 63000);
+    wallpaperswitch.setWallpaper($(".wallpaper1"), wallpapers[0]);
+    // setInterval(() => {
+    //     wallpaperswitch.nextRandom(wallpapers);
+    // }, 63000);
+
 
     // const runCommonLoop = () => {
     //     commonLoop();
