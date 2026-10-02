@@ -1296,14 +1296,14 @@ function showSubtitle(timeSeconds) {
     const h3 = subtitleTextEl;
     timeSeconds -= Number(subtitleOffsetInput.value || 0) / 1000;
     const entry = subtitleList.find(e => e._fingerprint === selectedSubtitle);
-    const titleEl = $id("subtitle-title");
+    //const titleEl = $id("subtitle-title");
     if (!entry || !entry.subs?.length) {
         if (h3.innerHTML !== "") h3.innerHTML = "";
         const title = "字幕 - No subtitles";
-        if (titleEl.textContent !== title) {
-            titleEl.textContent = title;
-            titleEl.dataset.tip = title;
-        }
+        // if (titleEl.textContent !== title) {
+        //     titleEl.textContent = title;
+        //     titleEl.dataset.tip = title;
+        // }
         if (lastSubtitleFingerprint !== null) {
             lastSubtitleFingerprint = null;
             $$('.subtitleItem.active').forEach(el => {
@@ -1315,8 +1315,8 @@ function showSubtitle(timeSeconds) {
     if (lastSubtitleFingerprint !== entry._fingerprint) {
         lastSubtitleFingerprint = entry._fingerprint;
         const titleText = `字幕 - ${entry.name || entry._fingerprint}`;
-        titleEl.textContent = titleText;
-        titleEl.dataset.tip = titleText;
+        //titleEl.textContent = titleText;
+        // titleEl.dataset.tip = titleText;
         $$('.subtitleItem').forEach(el => {
             el.classList.toggle(
                 'active',
