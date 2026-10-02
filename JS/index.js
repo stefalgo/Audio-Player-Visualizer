@@ -485,75 +485,75 @@ function getMediaDuration(file) {
     });
 }
 
-function getSupportedMediaFormats() {
-    const audio = document.createElement("audio");
-    const video = document.createElement("video");
+// function getSupportedMediaFormats() {
+//     const audio = document.createElement("audio");
+//     const video = document.createElement("video");
 
-    const formats = {
-        video: [
-            ["mp4", "video/mp4"],
-            ["m4v", "video/x-m4v"],
-            ["webm", "video/webm"],
-            ["mkv", "video/x-matroska"],
-            ["avi", "video/x-msvideo"],
-            ["mov", "video/quicktime"],
-            ["ogv", "video/ogg"],
-            ["mpeg", "video/mpeg"],
-            ["mpg", "video/mpeg"],
-            ["ts", "video/mp2t"],
-            ["m2ts", "video/mp2t"],
-            ["3gp", "video/3gpp"],
-            ["3g2", "video/3gpp2"],
-            ["flv", "video/x-flv"],
-            ["wmv", "video/x-ms-wmv"]
-        ],
-        audio: [
-            ["mp3", "audio/mpeg"],
-            ["wav", "audio/wav"],
-            ["flac", "audio/flac"],
-            ["m4a", "audio/mp4"],
-            ["aac", "audio/aac"],
-            ["ogg", "audio/ogg"],
-            ["oga", "audio/ogg"],
-            ["opus", "audio/opus"],
-            ["webm", "audio/webm"],
-            ["wma", "audio/x-ms-wma"],
-            ["aiff", "audio/aiff"],
-            ["aif", "audio/aiff"],
-            ["alac", "audio/mp4"],
-            ["amr", "audio/amr"],
-            ["au", "audio/basic"],
-            ["mid", "audio/midi"],
-            ["midi", "audio/midi"]
-        ]
-    };
+//     const formats = {
+//         video: [
+//             ["mp4", "video/mp4"],
+//             ["m4v", "video/x-m4v"],
+//             ["webm", "video/webm"],
+//             ["mkv", "video/x-matroska"],
+//             ["avi", "video/x-msvideo"],
+//             ["mov", "video/quicktime"],
+//             ["ogv", "video/ogg"],
+//             ["mpeg", "video/mpeg"],
+//             ["mpg", "video/mpeg"],
+//             ["ts", "video/mp2t"],
+//             ["m2ts", "video/mp2t"],
+//             ["3gp", "video/3gpp"],
+//             ["3g2", "video/3gpp2"],
+//             ["flv", "video/x-flv"],
+//             ["wmv", "video/x-ms-wmv"]
+//         ],
+//         audio: [
+//             ["mp3", "audio/mpeg"],
+//             ["wav", "audio/wav"],
+//             ["flac", "audio/flac"],
+//             ["m4a", "audio/mp4"],
+//             ["aac", "audio/aac"],
+//             ["ogg", "audio/ogg"],
+//             ["oga", "audio/ogg"],
+//             ["opus", "audio/opus"],
+//             ["webm", "audio/webm"],
+//             ["wma", "audio/x-ms-wma"],
+//             ["aiff", "audio/aiff"],
+//             ["aif", "audio/aiff"],
+//             ["alac", "audio/mp4"],
+//             ["amr", "audio/amr"],
+//             ["au", "audio/basic"],
+//             ["mid", "audio/midi"],
+//             ["midi", "audio/midi"]
+//         ]
+//     };
 
-    const alwaysLikelyAudio = [
-        ".opus",
-        ".flac",
-        ".ogg",
-        ".wav"
-    ];
+//     const alwaysLikelyAudio = [
+//         ".opus",
+//         ".flac",
+//         ".ogg",
+//         ".wav"
+//     ];
 
-    const check = (element, mime) => {
-        const result = element.canPlayType(mime);
-        return result === "probably" || result === "maybe";
-    };
+//     const check = (element, mime) => {
+//         const result = element.canPlayType(mime);
+//         return result === "probably" || result === "maybe";
+//     };
 
-    return {
-        video: formats.video
-            .filter(([_, mime]) => check(video, mime))
-            .map(([ext]) => "." + ext)
-            .sort(),
+//     return {
+//         video: formats.video
+//             .filter(([_, mime]) => check(video, mime))
+//             .map(([ext]) => "." + ext)
+//             .sort(),
 
-        audio: formats.audio
-            .filter(([ext, mime]) =>
-                check(audio, mime) || alwaysLikelyAudio.includes("." + ext)
-            )
-            .map(([ext]) => "." + ext)
-            .sort()
-    };
-}
+//         audio: formats.audio
+//             .filter(([ext, mime]) =>
+//                 check(audio, mime) || alwaysLikelyAudio.includes("." + ext)
+//             )
+//             .map(([ext]) => "." + ext)
+//             .sort()
+//     };
+// }
 
 // e
 function setPlaybackRate(rate) {
@@ -2525,14 +2525,14 @@ document.addEventListener('DOMContentLoaded', () => {
         wallpaper.image = img;
     });
 
-    const formats = getSupportedMediaFormats();
-    chooseAudioLabel.dataset.tip = `
-        <b>Audio</b><br>
-        ${formats.audio.join(", ")}
-        <hr>
-        <b>Video</b><br>
-        ${formats.video.join(", ")}
-    `;
+    // const formats = getSupportedMediaFormats();
+    // chooseAudioLabel.dataset.tip = `
+    //     <b>Audio</b><br>
+    //     ${formats.audio.join(", ")}
+    //     <hr>
+    //     <b>Video</b><br>
+    //     ${formats.video.join(", ")}
+    // `;
 
     eqPresetsDropdown();
     resizeCanvas();
