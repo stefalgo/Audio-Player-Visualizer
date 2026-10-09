@@ -89,6 +89,7 @@ const eqPasteSetting = $id("eqPasteSetting");
 const vizRetroUseVideoFG = $id("vizRetroUseVideoFG");
 const vizRetroUseLuminance = $id("vizRetroUseLuminance");
 const showMenuBtn = $id("showMenuBtn");
+const microphoneBtn = $id("microphoneBtn");
 
 const dialog = {
     alert: (message, targetEl) => TooltipDialog.info(targetEl, message),
@@ -231,6 +232,7 @@ let user_eq_presets = JSON.parse(localStorage.getItem("USER_EQ_PRESETS") || "{}"
 let isSeeking = false;
 let pendingSeek = 0;
 
+let micStream, micSource = null;
 let analyser, analyserL, analyserR, dataL, dataR;
 let gainNode;
 let effectChain = null;
@@ -255,6 +257,41 @@ let lastRenderTimestamp = 0;
 
 gainNode = audioCtx.createGain();
 gainNode.gain.value = PLAYERCONFIG.playback.volume;
+
+async function startMicrophone() {
+    try {
+        micStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+                echoCancellation: false,
+                noiseSuppression: false,
+                autoGainControl: false
+            }
+        });
+        if (audioCtx.state === "suspended") await audioCtx.resume();
+        micSource = audioCtx.createMediaStreamSource(micStream);
+        mediaSource.disconnect(gainNode);
+        micSource.connect(gainNode);
+        microphoneBtn.dataset.micon = "yes";
+        //setupEffects();
+    } catch (error) {
+        console.error("Microphone error:", error);
+        micStream?.getTracks().forEach(track => track.stop());
+        micStream = null;
+        micSource = null;
+        mediaSource.connect(gainNode);
+        microphoneBtn.dataset.micon = "no";
+    }
+}
+
+function stopMicrophone() {
+    if (!micSource) return;
+    micSource.disconnect();
+    micStream?.getTracks().forEach(track => track.stop());
+    micSource = null;
+    micStream = null;
+    mediaSource.connect(gainNode);
+    microphoneBtn.dataset.micon = "no";
+}
 
 mediaSource.connect(gainNode);
 //------------------------------------------------------------------------------------------------
@@ -603,8 +640,13 @@ function formatTime(s, format = '{hh} : {mm} : {ss} . {mls}') {
 
 function updateTotalDurationText() {
     let totalDuration = 0;
-    for (const file of files) totalDuration += file._duration || 0;
-    const avgTime = files.length ? totalDuration / files.length : 0;
+    let count = 0;
+    for (const file of files) {
+        if (typeof file._duration !== "number" || !Number.isFinite(file._duration)) continue;
+        totalDuration += file._duration;
+        count++;
+    }
+    const avgTime = count ? totalDuration / count : 0;
     songListTotalPlayTimeText.innerHTML = `Total: ${formatTime(totalDuration, '{hh}:{mm}:{ss}')} | Avg: ${formatTime(avgTime, '{hh}:{mm}:{ss}')}`;
 }
 
@@ -1729,7 +1771,7 @@ function renderLoop() {
     }
 
 
-    if (!videoEl.paused) {
+    if (!videoEl.paused || micSource) {
         analyser.getByteFrequencyData(freqData);
         analyser.getFloatFrequencyData(freqDataFloat);
         analyser.getByteTimeDomainData(timeData);
@@ -2175,6 +2217,14 @@ pipButton.addEventListener("click", async () => {
         await dialog.alert("この動画はピクチャーインピクチャーに対応していません", pipButton);
     }
 });
+
+microphoneBtn.addEventListener("click", async () => {
+    if (micSource) {
+        stopMicrophone();
+    } else {
+        await startMicrophone();
+    }
+})
 
 videoEl.addEventListener("enterpictureinpicture", () => {
     pipButton.dataset.inpip = "yes";
