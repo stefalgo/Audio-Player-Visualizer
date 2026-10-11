@@ -227,8 +227,8 @@ class WaterfallRenderer extends Renderer {
         this.historyCtx = this.historyCanvas.getContext("2d");
         this.overviewCanvas = document.createElement("canvas");
         this.overviewCtx = this.overviewCanvas.getContext("2d");
-        this.overviewCanvas.width = 160;
-        this.overviewCanvas.height = 72;
+        this.overviewCanvas.width = 160 * 1.5;
+        this.overviewCanvas.height = 72 * 1.5;
         this.overviewDirty = true;
         this.historyFilled = 0;
         this.historySeconds = 120;
@@ -545,7 +545,7 @@ class WaterfallRenderer extends Renderer {
         let deltaTime = this.lastTime === null ? 1 / 60 : now - this.lastTime;
         this.lastTime = now;
         if (deltaTime < 0 || deltaTime > 1) {
-            this.clearHistory();
+            //this.clearHistory();
             this.lastTime = now;
             deltaTime = 0;
         }
@@ -680,26 +680,6 @@ class WaterfallRenderer extends Renderer {
             ctx.restore();
         }
 
-        const isFrequencyZoomed = viewFrequencyRange < frequencyRange - 1;
-        const isTimePanned = this.panSeconds > 0.01;
-        const isTimeZoomed = this.zoom > 1.001;
-        this.overviewBounds = null;
-        if (isFrequencyZoomed || isTimePanned || isTimeZoomed) {
-            this._drawOverview({
-                ctx,
-                historyCanvas,
-                plotStart,
-                headerHeight,
-                plotWidth: nextPlotWidth,
-                plotHeight: nextPlotHeight,
-                minFrequency,
-                topFrequency,
-                nyquist,
-                visibleSpan,
-                sourceLeft
-            });
-        }
-
         const formatFrequency = frequency => frequency >= 1000
             ? `${Number.isInteger(frequency / 1000) ? frequency / 1000 : (frequency / 1000).toFixed(1)} kHz`
             : `${Math.round(frequency)} Hz`;
@@ -752,6 +732,27 @@ class WaterfallRenderer extends Renderer {
             ctx.fillStyle = "#ffcf3c";
             ctx.fillText("<<History Frozen>>", plotStart + nextPlotWidth / 2, headerHeight / 2);
         }
+
+        const isFrequencyZoomed = viewFrequencyRange < frequencyRange - 1;
+        const isTimePanned = this.panSeconds > 0.01;
+        const isTimeZoomed = this.zoom > 1.001;
+        this.overviewBounds = null;
+        if (isFrequencyZoomed || isTimePanned || isTimeZoomed) {
+            this._drawOverview({
+                ctx,
+                historyCanvas,
+                plotStart,
+                headerHeight,
+                plotWidth: nextPlotWidth,
+                plotHeight: nextPlotHeight,
+                minFrequency,
+                topFrequency,
+                nyquist,
+                visibleSpan,
+                sourceLeft
+            });
+        }
+
         if (this.pointer && this.isActive) {
             const px = this.pointer.x;
             const py = this.pointer.y;
@@ -778,6 +779,7 @@ class WaterfallRenderer extends Renderer {
                 ctx.fillText(readout, readoutX + 8, readoutY);
             }
         }
+
         ctx.restore();
     }
 

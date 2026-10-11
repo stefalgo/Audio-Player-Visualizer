@@ -1990,7 +1990,7 @@ dropdownVizType.addEventListener('change', () => {
 
 visualizerMF.addEventListener('input', () => {
     visualizerMF.dataset.tip = `Visualizer max frequency: ${visualizerMF.value} Hz`;
-    renderHandler.renderers.waterfall.clearHistory();
+    //renderHandler.renderers.waterfall.clearHistory();
 });
 
 visualizerQL.addEventListener('input', () => {
@@ -2032,21 +2032,21 @@ vizWaterfallDbFloor.addEventListener("input", () => {
     const waterfall = renderHandler.renderers.waterfall;
     waterfall.dbFloor = Number(vizWaterfallDbFloor.value);
     vizWaterfallDbFloorValue.textContent = `${waterfall.dbFloor} dB`;
-    waterfall.clearHistory();
+    //waterfall.clearHistory();
 });
 
 vizWaterfallDbRange.addEventListener("input", () => {
     const waterfall = renderHandler.renderers.waterfall;
     waterfall.dbRange = Number(vizWaterfallDbRange.value);
     vizWaterfallDbRangeValue.textContent = `${waterfall.dbRange} dB`;
-    waterfall.clearHistory();
+    //waterfall.clearHistory();
 });
 
 vizWaterfallContrast.addEventListener("input", () => {
     const waterfall = renderHandler.renderers.waterfall;
     waterfall.contrast = Number(vizWaterfallContrast.value);
     vizWaterfallContrastValue.textContent = `${waterfall.contrast.toFixed(1)}×`;
-    waterfall.clearHistory();
+    //waterfall.clearHistory();
 });
 
 vizWaterfallFreeze.addEventListener("change", () => {
