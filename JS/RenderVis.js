@@ -241,6 +241,8 @@ class WaterfallRenderer extends Renderer {
         this.frozen = false;
         this.peakHoldEnabled = false;
         this.showEdgeSpectrum = true;
+        this.panLocked = false;
+        this.showMap = 1;
         this.plotLeft = 54;
         this.plotPaddingLeft = 20;
         this.plotPaddingRight = 48;
@@ -284,19 +286,21 @@ class WaterfallRenderer extends Renderer {
                 y: (event.clientY - rect.top) * canvas.height / rect.height
             };
             if (this.dragStart && this.isActive) {
-                if (this.dragStart.mode === "overview") {
-                    this._panFromOverview(this.pointer.x, this.pointer.y, this.dragStart);
-                } else {
-                    const deltaX = this.pointer.x - this.dragStart.x;
-                    const deltaY = this.pointer.y - this.dragStart.y;
-                    this.panSeconds = this._clampPan(this.dragStart.panSeconds + deltaX / Math.max(1, this.plotWidth) * this._visibleSpan());
-                    const frequencyShift = deltaY / Math.max(1, this.plotHeight) * this.dragStart.frequencySpan;
-                    [this.frequencyViewMin, this.frequencyViewMax] = this._clampFrequencyView(
-                        this.dragStart.frequencyMin + frequencyShift,
-                        this.dragStart.frequencyMax + frequencyShift,
-                        this.dragStart.baseMin,
-                        this.dragStart.baseMax
-                    );
+                if (!this.panLocked) {
+                    if (this.dragStart.mode === "overview") {
+                        this._panFromOverview(this.pointer.x, this.pointer.y, this.dragStart);
+                    } else {
+                        const deltaX = this.pointer.x - this.dragStart.x;
+                        const deltaY = this.pointer.y - this.dragStart.y;
+                        this.panSeconds = this._clampPan(this.dragStart.panSeconds + deltaX / Math.max(1, this.plotWidth) * this._visibleSpan());
+                        const frequencyShift = deltaY / Math.max(1, this.plotHeight) * this.dragStart.frequencySpan;
+                        [this.frequencyViewMin, this.frequencyViewMax] = this._clampFrequencyView(
+                            this.dragStart.frequencyMin + frequencyShift,
+                            this.dragStart.frequencyMax + frequencyShift,
+                            this.dragStart.baseMin,
+                            this.dragStart.baseMax
+                        );
+                    }
                 }
                 this.overviewDirty = true;
             }
@@ -309,7 +313,7 @@ class WaterfallRenderer extends Renderer {
             }
         });
         canvas.addEventListener("pointerdown", event => {
-            if (!this.isActive || event.button !== 0) return;
+            if (!this.isActive || this.panLocked || event.button !== 0) return;
             const rect = canvas.getBoundingClientRect();
             const x = (event.clientX - rect.left) * canvas.width / rect.width;
             const y = (event.clientY - rect.top) * canvas.height / rect.height;
@@ -369,26 +373,44 @@ class WaterfallRenderer extends Renderer {
 
             event.preventDefault();
             const zoomFactor = event.deltaY < 0 ? 1.25 : 0.8;
+            const overview = this.overviewBounds;
+            const overOverview = this._isPointerOverOverview(pointerX, pointerY);
+            const currentMin = this.frequencyViewMin ?? this.baseMinFrequency;
+            const currentMax = this.frequencyViewMax ?? this.baseMaxFrequency;
             if (event.shiftKey) {
-                const plotY = (pointerY - this.headerHeight) / Math.max(1, this.plotHeight);
-                const currentMin = this.frequencyViewMin ?? this.baseMinFrequency;
-                const currentMax = this.frequencyViewMax ?? this.baseMaxFrequency;
                 const currentRange = currentMax - currentMin;
-                const anchorFrequency = currentMax - plotY * currentRange;
+                const anchorY = this.panLocked
+                    ? 1
+                    : overOverview
+                        ? (pointerY - overview.y) / overview.height
+                        : (pointerY - this.headerHeight) / Math.max(1, this.plotHeight);
+                const anchorFrequency = this.panLocked
+                    ? currentMin
+                    : overOverview
+                        ? overview.topFrequency - anchorY * (overview.topFrequency - overview.minFrequency)
+                        : currentMax - anchorY * currentRange;
                 const nextRange = currentRange / zoomFactor;
                 [this.frequencyViewMin, this.frequencyViewMax] = this._clampFrequencyView(
-                    anchorFrequency - plotY * nextRange,
-                    anchorFrequency + (1 - plotY) * nextRange,
+                    anchorFrequency - (1 - anchorY) * nextRange,
+                    anchorFrequency + anchorY * nextRange,
                     this.baseMinFrequency,
                     this.baseMaxFrequency
                 );
             } else {
-                const plotX = (pointerX - this.plotStart) / Math.max(1, this.plotWidth);
                 const currentSpan = this._visibleSpan();
-                const anchorTime = this.panSeconds + (1 - plotX) * currentSpan;
+                const anchorX = this.panLocked
+                    ? 1
+                    : overOverview
+                        ? (pointerX - overview.x) / overview.width
+                        : (pointerX - this.plotStart) / Math.max(1, this.plotWidth);
+                const anchorTime = this.panLocked
+                    ? this.panSeconds
+                    : overOverview
+                        ? (1 - anchorX) * this.historySeconds
+                        : this.panSeconds + (1 - anchorX) * currentSpan;
                 this.zoom = Math.max(1, Math.min(64, this.zoom * zoomFactor));
                 const nextSpan = this._visibleSpan();
-                this.panSeconds = this._clampPan(anchorTime - (1 - plotX) * nextSpan);
+                this.panSeconds = this._clampPan(anchorTime - (1 - anchorX) * nextSpan);
             }
             this.overviewDirty = true;
         }, { passive: false });
@@ -422,13 +444,22 @@ class WaterfallRenderer extends Renderer {
             this.canvas.style.cursor = "grabbing";
             return;
         }
-        const bounds = this.overviewBounds;
-        const overOverview = bounds && this.pointer &&
-            this.pointer.x >= bounds.x &&
-            this.pointer.x <= bounds.x + bounds.width &&
-            this.pointer.y >= bounds.y &&
-            this.pointer.y <= bounds.y + bounds.height;
+        const overOverview = !this.panLocked && this.pointer &&
+            this._isPointerOverOverview(this.pointer.x, this.pointer.y);
         this.canvas.style.cursor = overOverview ? "grab" : "crosshair";
+    }
+
+    _isPointerOverOverview(x, y) {
+        const bounds = this.overviewBounds;
+        return !!bounds &&
+            x >= bounds.x && x <= bounds.x + bounds.width &&
+            y >= bounds.y && y <= bounds.y + bounds.height;
+    }
+
+    setPanLocked(locked) {
+        this.panLocked = Boolean(locked);
+        if (this.panLocked) this.dragStart = null;
+        this._updateCursor();
     }
 
     _visibleSpan() {
@@ -737,7 +768,7 @@ class WaterfallRenderer extends Renderer {
         const isTimePanned = this.panSeconds > 0.01;
         const isTimeZoomed = this.zoom > 1.001;
         this.overviewBounds = null;
-        if (isFrequencyZoomed || isTimePanned || isTimeZoomed) {
+        if (((isFrequencyZoomed || isTimePanned || isTimeZoomed) && this.showMap===1) || this.showMap===2) {
             this._drawOverview({
                 ctx,
                 historyCanvas,
@@ -757,26 +788,59 @@ class WaterfallRenderer extends Renderer {
             const px = this.pointer.x;
             const py = this.pointer.y;
             if (px >= plotStart && px <= plotRight && py >= headerHeight && py <= headerHeight + nextPlotHeight) {
-                const xRatio = (px - plotStart) / nextPlotWidth;
-                const yRatio = (py - headerHeight) / nextPlotHeight;
-                const frequency = this.frequencyViewMax - yRatio * viewFrequencyRange;
-                const secondsAgo = this.panSeconds + (1 - xRatio) * visibleSpan;
-                ctx.beginPath();
-                ctx.moveTo(px, headerHeight);
-                ctx.lineTo(px, headerHeight + nextPlotHeight);
-                ctx.moveTo(plotStart, py);
-                ctx.lineTo(plotRight, py);
-                ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
-                ctx.stroke();
-                const readout = `${formatFrequency(frequency)}   -${secondsAgo.toFixed(2)} s`;
-                const readoutWidth = ctx.measureText(readout).width + 16;
-                const readoutX = Math.min(plotRight - readoutWidth - 4, Math.max(plotStart + 4, px + 10));
-                const readoutY = Math.max(headerHeight + 16, py - 14);
-                ctx.fillStyle = "rgba(5, 10, 16, 0.88)";
-                ctx.fillRect(readoutX, readoutY - 10, readoutWidth, 20);
-                ctx.fillStyle = "#ffffff";
-                ctx.textAlign = "left";
-                ctx.fillText(readout, readoutX + 8, readoutY);
+                const overview = this.overviewBounds;
+                const overOverview = overview &&
+                    px >= overview.x && px <= overview.x + overview.width &&
+                    py >= overview.y && py <= overview.y + overview.height;
+                if (overOverview) {
+                    const xRatio = (px - overview.x) / overview.width;
+                    const yRatio = (py - overview.y) / overview.height;
+                    const frequency = overview.topFrequency -
+                        yRatio * (overview.topFrequency - overview.minFrequency);
+                    const secondsAgo = (1 - xRatio) * overview.historySeconds;
+                    ctx.beginPath();
+                    ctx.moveTo(px, overview.y);
+                    ctx.lineTo(px, overview.y + overview.height);
+                    ctx.moveTo(overview.x, py);
+                    ctx.lineTo(overview.x + overview.width, py);
+                    ctx.strokeStyle = "rgba(255, 255, 255, 0.75)";
+                    ctx.stroke();
+                    const readout = `${formatFrequency(frequency)}   -${secondsAgo.toFixed(1)} s`;
+                    const readoutWidth = ctx.measureText(readout).width + 16;
+                    const readoutX = Math.min(
+                        overview.x + overview.width - readoutWidth - 2,
+                        Math.max(overview.x + 2, px + 8)
+                    );
+                    const readoutY = py - overview.y < overview.height / 2
+                        ? py + 18
+                        : py - 8;
+                    ctx.fillStyle = "rgba(5, 10, 16, 0.92)";
+                    ctx.fillRect(readoutX, readoutY - 10, readoutWidth, 20);
+                    ctx.fillStyle = "#ffffff";
+                    ctx.textAlign = "left";
+                    ctx.fillText(readout, readoutX + 8, readoutY);
+                } else {
+                    const xRatio = (px - plotStart) / nextPlotWidth;
+                    const yRatio = (py - headerHeight) / nextPlotHeight;
+                    const frequency = this.frequencyViewMax - yRatio * viewFrequencyRange;
+                    const secondsAgo = this.panSeconds + (1 - xRatio) * visibleSpan;
+                    ctx.beginPath();
+                    ctx.moveTo(px, headerHeight);
+                    ctx.lineTo(px, headerHeight + nextPlotHeight);
+                    ctx.moveTo(plotStart, py);
+                    ctx.lineTo(plotRight, py);
+                    ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
+                    ctx.stroke();
+                    const readout = `${formatFrequency(frequency)}   -${secondsAgo.toFixed(2)} s`;
+                    const readoutWidth = ctx.measureText(readout).width + 16;
+                    const readoutX = Math.min(plotRight - readoutWidth - 4, Math.max(plotStart + 4, px + 10));
+                    const readoutY = Math.max(headerHeight + 16, py - 14);
+                    ctx.fillStyle = "rgba(5, 10, 16, 0.88)";
+                    ctx.fillRect(readoutX, readoutY - 10, readoutWidth, 20);
+                    ctx.fillStyle = "#ffffff";
+                    ctx.textAlign = "left";
+                    ctx.fillText(readout, readoutX + 8, readoutY);
+                }
             }
         }
 
@@ -842,9 +906,14 @@ class WaterfallRenderer extends Renderer {
         const viewTop = overviewY + (topFrequency - this.frequencyViewMax) / baseFrequencyRange * overviewHeight;
         const viewHeight = Math.max(2, viewFrequencyRange / baseFrequencyRange * overviewHeight);
         const maxVisibleSpan = Math.min(this.historySeconds, this.visibleSeconds);
-        const maxViewRight = overviewX + (this.historySeconds - this.panSeconds) / this.historySeconds * overviewWidth;
         const maxViewWidth = maxVisibleSpan / this.historySeconds * overviewWidth;
-        const maxViewLeft = Math.max(overviewX, maxViewRight - maxViewWidth);
+        const maxViewLeft = Math.max(
+            overviewX,
+            Math.min(overviewX + overviewWidth - maxViewWidth,
+                overviewX + (this.historySeconds - this.panSeconds - maxVisibleSpan) /
+                    this.historySeconds * overviewWidth)
+        );
+        const maxViewRight = maxViewLeft + maxViewWidth;
         const viewport = {
             x: viewLeft,
             y: viewTop,
@@ -856,6 +925,9 @@ class WaterfallRenderer extends Renderer {
             y: overviewY,
             width: overviewWidth,
             height: overviewHeight,
+            historySeconds: this.historySeconds,
+            minFrequency,
+            topFrequency,
             viewport
         };
 

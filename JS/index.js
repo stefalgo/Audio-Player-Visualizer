@@ -99,8 +99,10 @@ const vizWaterfallContrastValue = $id("vizWaterfallContrastValue");
 const vizWaterfallFreeze = $id("vizWaterfallFreeze");
 const vizWaterfallPeakHold = $id("vizWaterfallPeakHold");
 const vizWaterfallEdgeSpectrum = $id("vizWaterfallEdgeSpectrum");
+const vizWaterfallPanLock = $id("vizWaterfallPanLock");
 const vizWaterfallClear = $id("vizWaterfallClear");
 const vizWaterfallResetView = $id("vizWaterfallResetView");
+const vizWaterfallMap = $id("vizWaterfallMap");
 const showMenuBtn = $id("showMenuBtn");
 const microphoneBtn = $id("microphoneBtn");
 
@@ -2062,6 +2064,14 @@ vizWaterfallPeakHold.addEventListener("change", () => {
 
 vizWaterfallEdgeSpectrum.addEventListener("change", () => {
     renderHandler.renderers.waterfall.showEdgeSpectrum = vizWaterfallEdgeSpectrum.checked;
+});
+
+vizWaterfallMap.addEventListener("change", () => {
+    renderHandler.renderers.waterfall.showMap = Number(vizWaterfallMap.value);
+});
+
+vizWaterfallPanLock.addEventListener("change", () => {
+    renderHandler.renderers.waterfall.setPanLocked(vizWaterfallPanLock.checked);
 });
 
 vizWaterfallClear.addEventListener("click", () => {

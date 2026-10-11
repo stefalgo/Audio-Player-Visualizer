@@ -158,10 +158,22 @@
                         <input type="checkbox" id="vizWaterfallEdgeSpectrum" class="checkbox" checked>
                     </div>
                     <div class="waterfall-options-row">
+                        <label for="vizWaterfallPanLock">Lock pan</label>
+                        <input type="checkbox" id="vizWaterfallPanLock" class="checkbox">
+                    </div>
+                    <div class="waterfall-options-row">
+                        <label for="vizWaterfallMap">Show spectrum map</label>
+                        <select id="vizWaterfallMap">
+                            <option value="0">Never</option>
+                            <option value="1" selected>Sometimes</option>
+                            <option value="2">Always</option>
+                        </select>
+                    </div>
+                    <div class="waterfall-options-row">
                         <button type="button" class="button" id="vizWaterfallClear">Clear history</button>
                         <button type="button" class="button" id="vizWaterfallResetView">Reset view</button>
                     </div>
-                    <small>Scroll: time zoom ・ Shift+scroll: frequency zoom ・ Drag: pan time/frequency</small>
+                    <small>Scroll: time zoom ・ Shift+scroll: frequency zoom ・ Hover/drag: pan ・ Lock pan disables panning</small>
                 </fieldset>
             </details>
         </div>
