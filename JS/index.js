@@ -88,6 +88,19 @@ const eqCopySetting = $id("eqCopySetting");
 const eqPasteSetting = $id("eqPasteSetting");
 const vizRetroUseVideoFG = $id("vizRetroUseVideoFG");
 const vizRetroUseLuminance = $id("vizRetroUseLuminance");
+const vizWaterfallTimeSpan = $id("vizWaterfallTimeSpan");
+const vizWaterfallTimeSpanValue = $id("vizWaterfallTimeSpanValue");
+const vizWaterfallDbFloor = $id("vizWaterfallDbFloor");
+const vizWaterfallDbFloorValue = $id("vizWaterfallDbFloorValue");
+const vizWaterfallDbRange = $id("vizWaterfallDbRange");
+const vizWaterfallDbRangeValue = $id("vizWaterfallDbRangeValue");
+const vizWaterfallContrast = $id("vizWaterfallContrast");
+const vizWaterfallContrastValue = $id("vizWaterfallContrastValue");
+const vizWaterfallFreeze = $id("vizWaterfallFreeze");
+const vizWaterfallPeakHold = $id("vizWaterfallPeakHold");
+const vizWaterfallEdgeSpectrum = $id("vizWaterfallEdgeSpectrum");
+const vizWaterfallClear = $id("vizWaterfallClear");
+const vizWaterfallResetView = $id("vizWaterfallResetView");
 const showMenuBtn = $id("showMenuBtn");
 const microphoneBtn = $id("microphoneBtn");
 
@@ -243,6 +256,7 @@ let selectedSubtitle = ''; // _fingerprint
 let lastSubtitleFingerprint = '';
 let currentSelectedFile = ''; // _fingerprint
 let freqData, freqDataFloat, timeData;
+let lastStereoWaveformUpdate = 0;
 let currentLoadToken = 0; // e
 
 let playbackHPFilter = null;
@@ -938,41 +952,38 @@ function parseASSTags(text) {
     const groups = text.match(/\{[^{}]*\}/g) || [];
     for (const group of groups) {
         const content = group.slice(1, -1);
-        let index = 0;
-        while (index < content.length) {
-            if (content[index] !== "\\") {
-                index++;
-                continue;
-            }
-            index++;
-            const nameMatch = content.slice(index).match(/^[A-Za-z]+/);
-            if (!nameMatch) {
-                continue;
-            }
-            const name = nameMatch[0];
-            index += name.length;
-            let args = "";
-            if (content[index] === "(") {
-                const end = content.indexOf(")", index);
-                if (end !== -1) {
-                    args = content.slice(index + 1, end);
-                    index = end + 1;
-                }
-            } else {
-                while (
-                    index < content.length &&
-                    /[0-9A-Za-z&.+#(),-]/.test(content[index])
-                ) {
-                    args += content[index];
-                    index++;
-                }
-            }
+        const commandPattern = /\\(1a|2a|3a|4a|1c|2c|3c|4c|fscx|fscy|frx|fry|frz|xshad|yshad|xbord|ybord|iclip|alpha|move|pos|org|fad|fade|blur|bord|shad|clip|fsp|fs|fn|an|be|kf|ko|k|q|r|b|c|i|s|u|a|fr|t|pbo|p)(?:\(([^()]*(?:\([^()]*\)[^()]*)*)\)|([^\\]*))/gi;
+        let match;
+        while ((match = commandPattern.exec(content))) {
+            const name = match[1].toLowerCase();
+            const args = (match[2] ?? match[3] ?? "").trim();
             switch (name) {
-                case "r":
+                case "r": {
+                    for (const key of [
+                        "fontSize", "fontName", "bold", "italic", "underline", "strike",
+                        "scaleX", "scaleY", "outline", "shadow", "blur", "rotation",
+                        "primaryColour", "secondaryColour", "outlineColour", "shadowColour",
+                        "primaryAlpha", "secondaryAlpha", "outlineAlpha", "shadowAlpha", "alpha",
+                        "alignment", "wrapStyle",
+                    ]) {
+                        delete tags[key];
+                    }
                     tags.resetStyle = args || true;
                     break;
+                }
                 case "an":
                     tags.alignment = Number(args);
+                    break;
+                case "a": {
+                    const legacyAlignment = Number(args);
+                    const alignmentMap = { 1: 1, 2: 2, 3: 3, 5: 7, 6: 8, 7: 9, 9: 4, 10: 5, 11: 6 };
+                    if (alignmentMap[legacyAlignment]) {
+                        tags.alignment = alignmentMap[legacyAlignment];
+                    }
+                    break;
+                }
+                case "q":
+                    tags.wrapStyle = Number(args);
                     break;
                 case "pos": {
                     const [x, y] = args.split(",").map(Number);
@@ -983,14 +994,14 @@ function parseASSTags(text) {
                 }
                 case "move": {
                     const v = args.split(",").map(Number);
-                    if (v.length >= 6) {
+                    if (v.length >= 4 && v.slice(0, 4).every(Number.isFinite)) {
                         tags.move = {
                             x1: v[0],
                             y1: v[1],
                             x2: v[2],
                             y2: v[3],
-                            t1: v[4],
-                            t2: v[5],
+                            t1: Number.isFinite(v[4]) ? v[4] : 0,
+                            t2: Number.isFinite(v[5]) ? v[5] : null,
                         };
                     }
                     break;
@@ -1004,10 +1015,9 @@ function parseASSTags(text) {
                 }
                 case "fad": {
                     const [a, b] = args.split(",").map(Number);
-                    tags.fade = {
-                        in: a / 1000,
-                        out: b / 1000,
-                    };
+                    if (Number.isFinite(a) && Number.isFinite(b)) {
+                        tags.fade = { in: a / 1000, out: b / 1000 };
+                    }
                     break;
                 }
                 case "fs":
@@ -1045,6 +1055,7 @@ function parseASSTags(text) {
                     tags.blur = Number(args);
                     break;
                 case "frz":
+                case "fr":
                     tags.rotation = Number(args);
                     break;
                 case "1c":
@@ -1060,13 +1071,21 @@ function parseASSTags(text) {
                 case "4c":
                     tags.shadowColour = args;
                     break;
+                case "alpha":
+                    tags.alpha = args;
+                    break;
+                case "1a":
+                case "2a":
+                case "3a":
+                case "4a":
+                    tags[`${name[0] === "1" ? "primary" : name[0] === "2" ? "secondary" : name[0] === "3" ? "outline" : "shadow"}Alpha`] = args;
+                    break;
                 case "t": {
                     const values = args.split(",");
-                    if (values.length >= 3) {
+                    if (values.length >= 2) {
                         tags.transform = {
-                            t1: Number(values[0]) || 0,
-                            t2: Number(values[1]) || 0,
-                            commands: values.slice(2).join(","),
+                            parameters: values.length > 3 ? values.slice(0, 3) : [],
+                            commands: values.slice(values.length > 3 ? 3 : 2).join(","),
                         };
                     }
                     break;
@@ -1101,7 +1120,8 @@ function parseASS(text) {
         styles: {
             format: [],
             styles: [],
-            stylesByName: {}
+            stylesByName: {},
+            legacy: false,
         }
     };
 
@@ -1137,7 +1157,9 @@ function parseASS(text) {
                 }
                 break;
             }
+            case "V4 Styles":
             case "V4+ Styles": {
+                assOptions.styles.legacy = section === "V4 Styles";
                 if (line.startsWith("Format:")) {
                     assOptions.styles.format =
                         line.slice(7)
@@ -1237,6 +1259,7 @@ async function loadSubtitles(files) {
         const text = await file.text();
         let subs = [];
         let assOptions = null;
+        let assContent = null;
         const lowerName = name.toLowerCase();
         const trimmed = text.trimStart();
         if (trimmed.startsWith("WEBVTT")) {
@@ -1250,6 +1273,7 @@ async function loadSubtitles(files) {
             const parsed = parseASS(text);
             subs = parsed.subs;
             assOptions = parsed.assOptions;
+            assContent = text;
 
         } else {
             subs = parseSRT(text);
@@ -1261,6 +1285,7 @@ async function loadSubtitles(files) {
             _language: file._language,
             name,
             subs,
+            ...(assContent !== null && { assContent }),
             ...(assOptions && { assOptions })
         };
 
@@ -1727,6 +1752,9 @@ function handlePlaybackEnded() {
 // Render stuff loop
 function renderLoop() {
     requestAnimationFrame(renderLoop);
+    if (PLAYERCONFIG.visualizer.current !== "video") {
+        renderHandler.renderers.video.hideASSOverlay();
+    }
     const now = performance.now();
     const minFrameTime = 1000 / PLAYERCONFIG.maxRenderFps;
     if (now - lastRenderTimestamp < minFrameTime) return;
@@ -1770,17 +1798,20 @@ function renderLoop() {
         lastProgress = progress;
     }
 
-
+    const isStereoWaveformActive = !PLAYERCONFIG.visualizer.paused && PLAYERCONFIG.visualizer.current === "waveform";
+    const updateStereoWaveform = !isStereoWaveformActive || now - lastStereoWaveformUpdate >= 1000 / 30;
     if (!videoEl.paused || micSource) {
         analyser.getByteFrequencyData(freqData);
         analyser.getFloatFrequencyData(freqDataFloat);
-        analyser.getByteTimeDomainData(timeData);
-        analyserL.getFloatTimeDomainData(dataL);
-        analyserR.getFloatTimeDomainData(dataR);
+        if (!PLAYERCONFIG.visualizer.paused &&
+            (PLAYERCONFIG.visualizer.current === "soundTrace" || (isStereoWaveformActive && updateStereoWaveform))) {
+            analyserL.getFloatTimeDomainData(dataL);
+            analyserR.getFloatTimeDomainData(dataR);
+            if (isStereoWaveformActive) lastStereoWaveformUpdate = now;
+        }
     } else {
         freqDataFloat.fill(analyser.minDecibels - 50);
         freqData.fill(0);
-        timeData.fill(128);
     }
 
     equalizer.visualize(freqDataFloat, analyser);
@@ -1789,32 +1820,51 @@ function renderLoop() {
     if (!PLAYERCONFIG.visualizer.paused) {
         switch (PLAYERCONFIG.visualizer.current) {
             case 'bar':
+                renderHandler.renderers.waterfall.setActive(false);
                 renderHandler.renderers.bar.render(freqData, analyser, 2, visualizerMF.value, analyserSmoothing);
                 break;
 
             case 'waterfall':
-                renderHandler.renderers.waterfall.render(freqData, analyser, 2, visualizerMF.value, analyserSmoothing);
+                renderHandler.renderers.waterfall.setActive(true);
+                renderHandler.renderers.waterfall.render(
+                    freqData,
+                    analyser,
+                    2,
+                    visualizerMF.value,
+                    analyserSmoothing,
+                    micSource ? performance.now() / 1000 : videoEl.currentTime
+                );
                 break;
 
             case 'waveform':
-                renderHandler.renderers.wave.render(timeData);
+                renderHandler.renderers.waterfall.setActive(false);
+                if (updateStereoWaveform) {
+                    renderHandler.renderers.wave.render(dataL);
+                }
                 break;
 
             case 'soundTrace':
+                renderHandler.renderers.waterfall.setActive(false);
                 renderHandler.renderers.soundTrace.render(dataL, dataR);
                 break;
 
             case 'retro':
+                renderHandler.renderers.waterfall.setActive(false);
                 renderHandler.renderers.retro.render(freqDataFloat, analyser, videoEl);
                 renderHandler.renderers.retro.setConfig("useLuminance", vizRetroUseLuminance.checked);
                 renderHandler.renderers.retro.setConfig("videoFG", vizRetroUseVideoFG.checked);
                 break;
 
             case 'video':
+                renderHandler.renderers.waterfall.setActive(false);
                 const track = subtitleList.find(
                     sub => sub._fingerprint === selectedSubtitle
                 );
-                renderHandler.renderers.video.render(videoEl, track);
+                renderHandler.renderers.video.render(
+                    videoEl,
+                    track,
+                    Number(subtitleOffsetInput.value || 0) / 1000
+                );
                 break;
 
             default:
@@ -1935,10 +1985,12 @@ window.addEventListener("drop", async (e) => {
 
 dropdownVizType.addEventListener('change', () => {
     PLAYERCONFIG.visualizer.current = dropdownVizType.value;
+    renderHandler.renderers.waterfall.setActive(dropdownVizType.value === "waterfall");
 });
 
 visualizerMF.addEventListener('input', () => {
     visualizerMF.dataset.tip = `Visualizer max frequency: ${visualizerMF.value} Hz`;
+    renderHandler.renderers.waterfall.clearHistory();
 });
 
 visualizerQL.addEventListener('input', () => {
@@ -1967,6 +2019,61 @@ visualizerSL.addEventListener('input', () => {
         analyser.smoothingTimeConstant = analyserSmoothing;
         updateAnalyser();
     }
+});
+
+vizWaterfallTimeSpan.addEventListener("input", () => {
+    const waterfall = renderHandler.renderers.waterfall;
+    waterfall.visibleSeconds = Number(vizWaterfallTimeSpan.value);
+    waterfall.panSeconds = waterfall._clampPan(waterfall.panSeconds);
+    vizWaterfallTimeSpanValue.textContent = `${waterfall.visibleSeconds} s`;
+});
+
+vizWaterfallDbFloor.addEventListener("input", () => {
+    const waterfall = renderHandler.renderers.waterfall;
+    waterfall.dbFloor = Number(vizWaterfallDbFloor.value);
+    vizWaterfallDbFloorValue.textContent = `${waterfall.dbFloor} dB`;
+    waterfall.clearHistory();
+});
+
+vizWaterfallDbRange.addEventListener("input", () => {
+    const waterfall = renderHandler.renderers.waterfall;
+    waterfall.dbRange = Number(vizWaterfallDbRange.value);
+    vizWaterfallDbRangeValue.textContent = `${waterfall.dbRange} dB`;
+    waterfall.clearHistory();
+});
+
+vizWaterfallContrast.addEventListener("input", () => {
+    const waterfall = renderHandler.renderers.waterfall;
+    waterfall.contrast = Number(vizWaterfallContrast.value);
+    vizWaterfallContrastValue.textContent = `${waterfall.contrast.toFixed(1)}×`;
+    waterfall.clearHistory();
+});
+
+vizWaterfallFreeze.addEventListener("change", () => {
+    renderHandler.renderers.waterfall.frozen = vizWaterfallFreeze.checked;
+});
+
+vizWaterfallPeakHold.addEventListener("change", () => {
+    const waterfall = renderHandler.renderers.waterfall;
+    waterfall.peakHoldEnabled = vizWaterfallPeakHold.checked;
+    waterfall.peakLevels?.fill(0);
+    waterfall.peakPositions?.fill(-1);
+});
+
+vizWaterfallEdgeSpectrum.addEventListener("change", () => {
+    renderHandler.renderers.waterfall.showEdgeSpectrum = vizWaterfallEdgeSpectrum.checked;
+});
+
+vizWaterfallClear.addEventListener("click", () => {
+    renderHandler.renderers.waterfall.clearHistory();
+});
+
+vizWaterfallResetView.addEventListener("click", () => {
+    const waterfall = renderHandler.renderers.waterfall;
+    waterfall.zoom = 1;
+    waterfall.panSeconds = 0;
+    waterfall.frequencyViewMin = null;
+    waterfall.frequencyViewMax = null;
 });
 
 volumeSlider.addEventListener('input', () => {

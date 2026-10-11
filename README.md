@@ -6,7 +6,7 @@ It's a music player and visualizer that lets you to play audio files, manage pla
 
 ---
 
-The project runs entirely locally, so there's no need to set up a local server or Docker. Simply download the project and open it in your browser.
+The project runs entirely locally, so there's no need for Docker. Most features work by opening the project in your browser; full ASS/SSA subtitle rendering requires opening it through a local web server because browsers restrict the workers used by the subtitle renderer on `file://` pages.
 
 ## The Player
 
@@ -20,7 +20,9 @@ The project runs entirely locally, so there's no need to set up a local server o
 
 ![Subtitles](./Media/Showcase/image3.png)
 
-Currently, subtitle support works with VTT files and may also work with SRT files.
+Subtitle tracks support VTT and SRT, with ASS/SSA rendered by the bundled libass WebAssembly renderer. ASS/SSA rendering includes libass's positioning, collision handling, styling, animation, and karaoke support. Its browser worker and WebAssembly assets are vendored in `JS/vendor/libass-wasm/`
+
+To use ASS/SSA subtitles, serve the project folder over localhost and open the local HTTP address in your browser. Direct `file://` opening remains available for other features, but without ASS/SSA support.
 
 The player also supports automatic subtitle selection. This works when the audio file and subtitle file have very similar names.
 
@@ -42,15 +44,22 @@ Your saved presets can be found at the end of the preset dropdown.
 
 ![Visualizer Options](./Media/Showcase/image5.png)
 
-Here you can adjust settings such as the maximum frequency.
-
-This affects the **Bar** and **Waterfall** visualization modes.
+Here you can adjust settings such as the maximum frequency and other visualizer related options.
 
 **Visualizer Quality** controls the analyzer's FFT size, which affects most visualization modes.
 
 **Visualizer Smoothing** smooths out the analyzer data to reduce sharp changes.
 
 **Pause Render** freezes the visualizer on its current frame without affecting audio playback.
+
+### Waterfall
+
+![Metronome](./Media/Showcase/Waterfall.png)
+
+a render mode that shows with a waterfall style the frequency history and volume
+You can pan with your mouse and zoom on the time axis
+if you want to zoom on the frequency axis you can hold down <kbd>Shift</kbd> while scrolling.
+There is also more options for this visualizer in the visualizer settings window.
 
 ### Metronome
 
@@ -113,17 +122,16 @@ The entire playlist is played continuously. When the last track finishes, playba
 
 The current track is played twice, then a random track from the playlist is selected and played twice as well.
 
-# license
+# License
 
-This project is under the [MIT License](./LICENSE)\
-Copyright (c) 2026 Stefalgo
+The [MIT License](./LICENSE) applies to this project's original code.
 
 # Third-party licenses
 
-## jsmediatags
-jsmediatags is used in this project for reading media metadata.\
-License: [BSD 3-Clause License](./licenses/jsmediatags.LICENSE.md)
-
-## DSEG
-DSEG fonts are used in this prooject.\
-License: [OFL-1.1 License](./licenses/DSEG-LICENSE.txt)
+Third-party components and bundled assets keep their own licenses. See the
+[jsmediatags BSD 3-Clause license](./licenses/jsmediatags.LICENSE.md),
+[DSEG OFL-1.1 license](./licenses/DSEG-LICENSE.txt),
+[Liberation Fonts OFL-1.1 license](./licenses/Liberation-Fonts-LICENSE.txt),
+and the [JavascriptSubtitlesOctopus MIT license](./licenses/libass-wasm.txt).
+The bundled subtitle renderer's other dependency notices and license texts are
+listed in its [COPYRIGHT file](./JS/vendor/libass-wasm/COPYRIGHT).

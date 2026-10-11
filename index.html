@@ -20,6 +20,7 @@
     <script src="./JS/Classes.js" defer></script>
     <script src="./JS/RenderVis.js" defer></script>
     <script src="./JS/AudioFilters.js" defer></script>
+    <script src="./JS/vendor/libass-wasm/subtitles-octopus.js" defer></script>
     <script src="./JS/index.js" defer></script>
 </head>
 
@@ -79,31 +80,6 @@
     <div id="VisualizerOptions" class="movable-window">
         <div class="window-topbar">ビジュアライザー設定</div>
         <div class="window-content">
-            <label for="visualizerMF">Visualizer max frequency</label>
-            <input type="range" data-tip="Visualizer max frequency: x Hz" id="visualizerMF" class="slider" min="1000" max="16000" value="16000" step="100">
-            <br>
-            <label for="visualizerQL">Visualizer quality</label>
-            <input type="range" data-tip="Visualizer quality: x fftSize" id="visualizerQL" class="slider" min="1" max="4" value="2" step="1">
-            <br>
-            <label for="visualizerSL">Visualizer smoothing</label>
-            <input type="range" data-tip="Visualizer smoothing: x%" id="visualizerSL" class="slider" min="0" max="0.9" value="0.8" step="0.1">
-            <div style="display: flex; flex-direction: row;">
-                <input data-tip="Pause Visualizer" type="checkbox" id="vizPauseVizBtn" class="checkbox">
-                <label for="vizPauseVizBtn">Pause render</label>
-            </div>
-            <details>
-                <summary>Retro Visualizer</summary>
-                <fieldset>
-                    <div style="display: flex; flex-direction: row;">
-                        <input data-tip="Render Video Colors in Retro Visualizer" type="checkbox" id="vizRetroUseVideoFG" class="checkbox">
-                        <label for="vizRetroUseVideoFG">Colors</label>
-                    </div>
-                    <div style="display: flex; flex-direction: row;">
-                        <input data-tip="Use Video Luminance as a light Activation factor in Retro Visualizer" type="checkbox" id="vizRetroUseLuminance" class="checkbox">
-                        <label for="vizRetroUseLuminance">Luminance</label>
-                    </div>
-                </fieldset>
-            </details>
             <select id="visualizerType" data-tip="Visualizer type">
                 <option value="bar">Bar</option>
                 <option value="retro" selected>Retro</option>
@@ -112,6 +88,82 @@
                 <option value="soundTrace">Draw Sound Trace</option>
                 <option value="video">Video</option>
             </select>
+            <div class="visualizer-toggle-row">
+                <input data-tip="Pause Visualizer" type="checkbox" id="vizPauseVizBtn" class="checkbox">
+                <label for="vizPauseVizBtn">Pause render</label>
+            </div>
+            <details>
+                <summary>Analyzer settings</summary>
+                <fieldset>
+                    <div class="visualizer-slider-setting">
+                        <label for="visualizerMF">Visualizer max frequency</label>
+                        <input type="range" data-tip="Visualizer max frequency: x Hz" id="visualizerMF" class="slider" min="1000" max="16000" value="16000" step="100">
+                    </div>
+                    <div class="visualizer-slider-setting">
+                        <label for="visualizerQL">Visualizer quality</label>
+                        <input type="range" data-tip="Visualizer quality: x fftSize" id="visualizerQL" class="slider" min="1" max="4" value="2" step="1">
+                    </div>
+                    <div class="visualizer-slider-setting">
+                        <label for="visualizerSL">Visualizer smoothing</label>
+                        <input type="range" data-tip="Visualizer smoothing: x%" id="visualizerSL" class="slider" min="0" max="0.9" value="0.8" step="0.1">
+                    </div>
+                </fieldset>
+            </details>
+            <details>
+                <summary>Retro Visualizer</summary>
+                <fieldset>
+                    <div class="visualizer-toggle-row">
+                        <input data-tip="Render Video Colors in Retro Visualizer" type="checkbox" id="vizRetroUseVideoFG" class="checkbox">
+                        <label for="vizRetroUseVideoFG">Colors</label>
+                    </div>
+                    <div class="visualizer-toggle-row">
+                        <input data-tip="Use Video Luminance as a light Activation factor in Retro Visualizer" type="checkbox" id="vizRetroUseLuminance" class="checkbox">
+                        <label for="vizRetroUseLuminance">Luminance</label>
+                    </div>
+                </fieldset>
+            </details>
+            <details>
+                <summary>Waterfall Visualizer</summary>
+                <fieldset>
+                    <div class="visualizer-slider-setting">
+                        <label for="vizWaterfallTimeSpan">Visible history: <span id="vizWaterfallTimeSpanValue">30 s</span></label>
+                        <input type="range" id="vizWaterfallTimeSpan" class="slider" min="5" max="60" value="30" step="5">
+                    </div>
+
+                    <div class="visualizer-slider-setting">
+                        <label for="vizWaterfallDbFloor">Noise floor: <span id="vizWaterfallDbFloorValue">-90 dB</span></label>
+                        <input type="range" id="vizWaterfallDbFloor" class="slider" min="-100" max="-40" value="-90" step="5">
+                    </div>
+
+                    <div class="visualizer-slider-setting">
+                        <label for="vizWaterfallDbRange">Dynamic range: <span id="vizWaterfallDbRangeValue">60 dB</span></label>
+                        <input type="range" id="vizWaterfallDbRange" class="slider" min="20" max="80" value="60" step="5">
+                    </div>
+
+                    <div class="visualizer-slider-setting">
+                        <label for="vizWaterfallContrast">Quiet detail: <span id="vizWaterfallContrastValue">1.4×</span></label>
+                        <input type="range" id="vizWaterfallContrast" class="slider" min="0.5" max="2.5" value="1.4" step="0.1">
+                    </div>
+
+                    <div class="waterfall-options-row">
+                        <label for="vizWaterfallFreeze">Freeze history</label>
+                        <input type="checkbox" id="vizWaterfallFreeze" class="checkbox">
+                    </div>
+                    <div class="waterfall-options-row">
+                        <label for="vizWaterfallPeakHold">Peak hold</label>
+                        <input type="checkbox" id="vizWaterfallPeakHold" class="checkbox">
+                    </div>
+                    <div class="waterfall-options-row">
+                        <label for="vizWaterfallEdgeSpectrum">Show edge spectrum</label>
+                        <input type="checkbox" id="vizWaterfallEdgeSpectrum" class="checkbox" checked>
+                    </div>
+                    <div class="waterfall-options-row">
+                        <button type="button" class="button" id="vizWaterfallClear">Clear history</button>
+                        <button type="button" class="button" id="vizWaterfallResetView">Reset view</button>
+                    </div>
+                    <small>Scroll: time zoom ・ Shift+scroll: frequency zoom ・ Drag: pan time/frequency</small>
+                </fieldset>
+            </details>
         </div>
     </div>
 
