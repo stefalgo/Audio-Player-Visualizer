@@ -204,7 +204,7 @@ let PLAYERCONFIG = {
         current: dropdownVizType.value
     },
     renderer: { // initial config
-        sensitivity: 2,
+        sensitivity: 1,
         maxFrequency: 16000,
         analyserSmoothing: analyserSmoothing,
         retroCenterFreqs: RETRO_CENTER_FREQS
@@ -365,51 +365,80 @@ pipVideo.srcObject = canvasStream;
 //------------------------------------------------------------------------------------------------
 function buildEffectsUI() {
     effectsContainer.innerHTML = "";
-    effectChain.forEach(({ name, effect }) => {
+    effectChain.forEach(({ name, effect }, effectIndex) => {
         if (!effect.getControls) return;
         const controls = effect.getControls();
-        const label = document.createElement("label");
-        label.className = "effectItem";
-        controls.forEach(control => {
-            if (control.type === "checkbox") {
-                const checkbox = document.createElement("input");
-                checkbox.type = "checkbox";
-                checkbox.className = "checkbox";
-                checkbox.checked = control.value;
-                checkbox.addEventListener("change", () =>
-                    control.onChange(checkbox.checked)
-                );
-                const text = document.createElement("span");
-                text.textContent = control.label;
-                label.append(
-                    checkbox,
-                    text
-                );
-            }
+        const card = document.createElement("section");
+        card.className = "effect-card";
+        card.dataset.effect = name;
+        const toggle = controls.find(control => control.type === "checkbox");
+        const title = toggle?.label || name;
+        const header = document.createElement("div");
+        header.className = "effect-card-header";
+        if (toggle) {
+            const label = document.createElement("label");
+            label.className = "effect-toggle";
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.className = "checkbox";
+            checkbox.checked = toggle.value;
+            checkbox.addEventListener("change", () => {
+                toggle.onChange(checkbox.checked);
+                card.dataset.enabled = String(checkbox.checked);
+            });
+            const text = document.createElement("span");
+            text.textContent = title;
+            label.append(checkbox, text);
+            header.appendChild(label);
+            card.dataset.enabled = String(checkbox.checked);
+        } else {
+            const heading = document.createElement("h3");
+            heading.className = "effect-card-title";
+            heading.textContent = title;
+            header.appendChild(heading);
+        }
+        card.appendChild(header);
 
+        const controlList = document.createElement("div");
+        controlList.className = "effect-controls";
+        controls.forEach(control => {
             if (control.type === "slider") {
-                const text = document.createElement("span");
-                text.textContent = control.label;
+                const row = document.createElement("div");
+                row.className = "effect-slider-setting";
+                const sliderId = `effect-${name}-${effectIndex}-${controlList.childElementCount}`;
+                const label = document.createElement("label");
+                label.htmlFor = sliderId;
+                label.textContent = control.label || "Amount";
+                const output = document.createElement("output");
+                const formatValue = value => control.formatValue
+                    ? control.formatValue(value)
+                    : `${value}${control.unit || ""}`;
+                output.className = "effect-slider-value";
+                output.htmlFor = sliderId;
+                output.textContent = formatValue(control.value);
                 const slider = document.createElement("input");
                 slider.type = "range";
                 slider.className = "slider";
+                slider.id = sliderId;
                 slider.min = control.min;
                 slider.max = control.max;
                 slider.step = control.step;
                 slider.value = control.value;
-                slider.dataset.tip = control.value;
+                slider.setAttribute("aria-label", `${title}: ${control.label || "Amount"}`);
+                slider.dataset.tip = formatValue(control.value);
                 slider.addEventListener("input", () => {
                     const value = Number(slider.value);
                     control.onChange(value);
-                    slider.dataset.tip = value;
+                    const formattedValue = formatValue(value);
+                    output.textContent = formattedValue;
+                    slider.dataset.tip = formattedValue;
                 });
-                label.append(
-                    text,
-                    slider
-                );
+                row.append(label, output, slider);
+                controlList.appendChild(row);
             }
         });
-        effectsContainer.appendChild(label);
+        if (controlList.childElementCount) card.appendChild(controlList);
+        effectsContainer.appendChild(card);
     });
 }
 
@@ -449,6 +478,9 @@ function createAnalyser(node) {
     analyser = audioCtx.createAnalyser();
     analyser.fftSize = analyserffsize;
     analyser.smoothingTimeConstant = analyserSmoothing;
+    analyser.minDecibels = -100 // -100
+    analyser.maxDecibels = 0 // -30
+
     node.connect(analyser);
     analyser.connect(audioCtx.destination);
     freqData = new Uint8Array(analyser.frequencyBinCount);
@@ -464,6 +496,10 @@ function setupEffects() {
             audioCtx,
             EQ_BANDS
         )
+    );
+    effectChain.add(
+        "frequencyFilter",
+        new FrequencyFilterEffect(audioCtx, 100, 2000)
     );
     effectChain.add(
         "compressor",
@@ -1823,7 +1859,7 @@ function renderLoop() {
         switch (PLAYERCONFIG.visualizer.current) {
             case 'bar':
                 renderHandler.renderers.waterfall.setActive(false);
-                renderHandler.renderers.bar.render(freqData, analyser, 2, visualizerMF.value, analyserSmoothing);
+                renderHandler.renderers.bar.render(freqData, analyser, null, visualizerMF.value, analyserSmoothing);
                 break;
 
             case 'waterfall':
@@ -1831,10 +1867,11 @@ function renderLoop() {
                 renderHandler.renderers.waterfall.render(
                     freqData,
                     analyser,
-                    2,
+                    null,
                     visualizerMF.value,
                     analyserSmoothing,
-                    micSource ? performance.now() / 1000 : videoEl.currentTime
+                    micSource ? performance.now() / 1000 : videoEl.currentTime,
+                    videoEl.playbackRate
                 );
                 break;
 

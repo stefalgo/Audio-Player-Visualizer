@@ -82,8 +82,8 @@
         <div class="window-content">
             <select id="visualizerType" data-tip="Visualizer type">
                 <option value="bar">Bar</option>
-                <option value="retro" selected>Retro</option>
-                <option value="waterfall">Waterfall</option>
+                <option value="retro">Retro</option>
+                <option value="waterfall" selected>Waterfall</option>
                 <option value="waveform">Waveform</option>
                 <option value="soundTrace">Draw Sound Trace</option>
                 <option value="video">Video</option>
@@ -97,7 +97,7 @@
                 <fieldset>
                     <div class="visualizer-slider-setting">
                         <label for="visualizerMF">Visualizer max frequency</label>
-                        <input type="range" data-tip="Visualizer max frequency: x Hz" id="visualizerMF" class="slider" min="1000" max="16000" value="16000" step="100">
+                        <input type="range" data-tip="Visualizer max frequency: x Hz" id="visualizerMF" class="slider" min="1000" max="24000" value="16000" step="100">
                     </div>
                     <div class="visualizer-slider-setting">
                         <label for="visualizerQL">Visualizer quality</label>
@@ -127,7 +127,7 @@
                 <fieldset>
                     <div class="visualizer-slider-setting">
                         <label for="vizWaterfallTimeSpan">Visible history: <span id="vizWaterfallTimeSpanValue">30 s</span></label>
-                        <input type="range" id="vizWaterfallTimeSpan" class="slider" min="5" max="60" value="30" step="5">
+                        <input type="range" id="vizWaterfallTimeSpan" class="slider" min="5" max="120" value="30" step="5">
                     </div>
 
                     <div class="visualizer-slider-setting">
@@ -299,9 +299,7 @@
     <div id="otherEffects" class="movable-window" style="display: none;">
         <div class="window-topbar">オーディオエフェクト</div>
         <div class="window-content">
-            <div style="display: flex; flex-direction: column; align-items: flex-start;">
-                <div style="display: flex; flex-direction: column; width: 100%;" id="effectsContainer"></div>
-            </div>
+            <div id="effectsContainer"></div>
         </div>
     </div>
 

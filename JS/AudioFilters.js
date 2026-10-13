@@ -177,6 +177,8 @@ class ReverbEffect extends AudioEffect {
             },
             {
                 type: "slider",
+                label: "Amount",
+                unit: "%",
                 min: 0,
                 max: 100,
                 step: 1,
@@ -231,6 +233,113 @@ class CompressorEffect extends AudioEffect {
 
     destroy() {
         try { this.compressor.disconnect(); } catch { }
+        super.destroy();
+    }
+}
+
+
+class FrequencyFilterEffect extends AudioEffect {
+    constructor(ctx, minFrequency = 100, maxFrequency = 2000) {
+        super(ctx);
+
+        this.input.disconnect();
+        this.highPass = ctx.createBiquadFilter();
+        this.highPass.type = "highpass";
+        this.highPass.Q.value = Math.SQRT1_2;
+
+        this.lowPass = ctx.createBiquadFilter();
+        this.lowPass.type = "lowpass";
+        this.lowPass.Q.value = Math.SQRT1_2;
+
+        this.input.connect(this.highPass);
+        this.highPass.connect(this.lowPass);
+        this.lowPass.connect(this.output);
+
+        this.enabled = false;
+        this.minFrequency = minFrequency;
+        this.maxFrequency = maxFrequency;
+
+        this.setFrequencies(minFrequency, maxFrequency);
+        this.setEnabled(false);
+    }
+
+    setFrequencies(minFrequency, maxFrequency) {
+        const nyquist = this.ctx.sampleRate / 2;
+        const min = Math.max(10, Math.min(minFrequency, nyquist));
+        const max = Math.max(10, Math.min(maxFrequency, nyquist));
+
+        this.minFrequency = Math.min(min, max);
+        this.maxFrequency = Math.max(min, max);
+
+        const now = this.ctx.currentTime;
+
+        this.highPass.frequency.setTargetAtTime(
+            this.minFrequency,
+            now,
+            0.015
+        );
+
+        this.lowPass.frequency.setTargetAtTime(
+            this.maxFrequency,
+            now,
+            0.015
+        );
+    }
+
+    setMinFrequency(value) {
+        this.setFrequencies(value, this.maxFrequency);
+    }
+
+    setMaxFrequency(value) {
+        this.setFrequencies(this.minFrequency, value);
+    }
+
+    setEnabled(enabled) {
+        this.enabled = enabled;
+        const now = this.ctx.currentTime;
+        if (enabled) {
+            this.input.disconnect();
+            this.input.connect(this.highPass);
+        } else {
+            this.input.disconnect();
+            this.input.connect(this.output);
+        }
+    }
+
+    getControls() {
+        return [
+            {
+                type: "checkbox",
+                label: "Frequency Filter",
+                value: this.enabled,
+                onChange: value => this.setEnabled(value)
+            },
+            {
+                type: "slider",
+                label: "Low cutoff",
+                unit: " Hz",
+                min: 20,
+                max: 2000,
+                step: 10,
+                value: this.minFrequency,
+                onChange: value => this.setMinFrequency(value)
+            },
+            {
+                type: "slider",
+                label: "High cutoff",
+                unit: " Hz",
+                min: 100,
+                max: Math.min(20000, this.ctx.sampleRate / 2),
+                step: 50,
+                value: this.maxFrequency,
+                onChange: value => this.setMaxFrequency(value)
+            }
+        ];
+    }
+
+    destroy() {
+        try { this.highPass.disconnect(); } catch { }
+        try { this.lowPass.disconnect(); } catch { }
         super.destroy();
     }
 }

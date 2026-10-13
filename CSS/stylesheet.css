@@ -893,18 +893,87 @@ input[type="file"]+label {
 #otherEffects {
     right: 0;
     bottom: 0;
+    width: min(400px, calc(100vw - 16px));
+    max-height: min(var(--window-max-height), calc(100vh - 16px));
+}
+
+#otherEffects .window-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: var(--spacing-md);
     overflow-y: auto;
-    width: 400px;
+    overscroll-behavior: contain;
 }
 
-.effectItem {
+#effectsContainer {
     display: flex;
-    flex-direction: row;
-    align-items: center;
+    flex-direction: column;
+    gap: var(--spacing-md);
 }
 
-.effectItem .slider {
+#effectsContainer .effect-card {
+    padding: var(--spacing-md);
+    background: var(--bg-card);
+    border: var(--border-card);
+}
+
+.effect-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 24px;
+}
+
+.effect-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
     width: 100%;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.effect-toggle .checkbox {
+    flex: 0 0 20px;
+    margin: 0;
+}
+
+.effect-card-title {
+    margin: 0;
+    font-size: 1em;
+    font-weight: 600;
+}
+
+.effect-controls {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-md);
+}
+
+.effect-slider-setting {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--spacing-xs) var(--spacing-md);
+}
+
+.effect-slider-setting label {
+    min-width: 0;
+    color: var(--text-faded);
+    font-size: 0.9em;
+}
+
+.effect-slider-value {
+    color: var(--text-muted);
+    font-size: 0.85em;
+    font-variant-numeric: tabular-nums;
+}
+
+.effect-slider-setting .slider {
+    grid-column: 1 / -1;
+    width: 100%;
+    margin: 0;
 }
 
 /*------------------------------------------------*/

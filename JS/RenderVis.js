@@ -72,7 +72,7 @@ class Renderer {
 class BarRenderer extends Renderer {
     constructor(canvas, ctx, audioCtx, config = {}) {
         super(canvas, ctx, audioCtx, config);
-        this.sensitivity = config.sensitivity || 2;
+        this.sensitivity = config.sensitivity || 1;
         this.maxFrequency = config.maxFrequency || 16000;
         this.minFrequency = 20;
         this.spectrumLevels = new Float32Array(0);
@@ -220,7 +220,7 @@ class BarRenderer extends Renderer {
 class WaterfallRenderer extends Renderer {
     constructor(canvas, ctx, audioCtx, config = {}) {
         super(canvas, ctx, audioCtx, config);
-        this.sensitivity = config.sensitivity || 2;
+        this.sensitivity = config.sensitivity || 1;
         this.maxFrequency = config.maxFrequency || 16000;
         this.analyserSmoothing = config.analyserSmoothing || 0.8;
         this.historyCanvas = document.createElement("canvas");
@@ -317,6 +317,12 @@ class WaterfallRenderer extends Renderer {
             const rect = canvas.getBoundingClientRect();
             const x = (event.clientX - rect.left) * canvas.width / rect.width;
             const y = (event.clientY - rect.top) * canvas.height / rect.height;
+
+            if (
+                x < this.plotStart || x > this.plotRight ||
+                y < this.headerHeight || y > this.headerHeight + this.plotHeight
+            ) return;
+
             const bounds = this.overviewBounds;
             if (bounds && x >= bounds.x && x <= bounds.x + bounds.width && y >= bounds.y && y <= bounds.y + bounds.height) {
                 const viewport = bounds.viewport;
@@ -444,9 +450,16 @@ class WaterfallRenderer extends Renderer {
             this.canvas.style.cursor = "grabbing";
             return;
         }
-        const overOverview = !this.panLocked && this.pointer &&
-            this._isPointerOverOverview(this.pointer.x, this.pointer.y);
-        this.canvas.style.cursor = overOverview ? "grab" : "crosshair";
+        if (this.pointer && !(
+            this.pointer.x < this.plotStart || this.pointer.x > this.plotRight ||
+            this.pointer.y < this.headerHeight || this.pointer.y > this.headerHeight + this.plotHeight
+        )
+        ) {
+            const overOverview = !this.panLocked && this.pointer && this._isPointerOverOverview(this.pointer.x, this.pointer.y);
+            this.canvas.style.cursor = overOverview ? "grab" : "crosshair";
+        } else {
+            this.canvas.style.cursor = "";
+        };
     }
 
     _isPointerOverOverview(x, y) {
@@ -505,7 +518,7 @@ class WaterfallRenderer extends Renderer {
      * @param {number} sensitivity - Custom sensitivity
      * @param {number} maxFrequency - Custom max frequency
      */
-    render(data, analyser, sensitivity = this.sensitivity, maxFrequency = this.maxFrequency, analyserSmoothing = this.analyserSmoothing, playbackTime = performance.now() / 1000) {
+    render(data, analyser, sensitivity = this.sensitivity, maxFrequency = this.maxFrequency, analyserSmoothing = this.analyserSmoothing, playbackTime = performance.now() / 1000, playbackRate = 1) {
         const { canvas, ctx, historyCanvas, historyCtx } = this;
         const width = canvas.width;
         const height = canvas.height;
@@ -746,11 +759,11 @@ class WaterfallRenderer extends Renderer {
 
         ctx.fillStyle = "#7d909f";
         ctx.textAlign = "center";
-        const timeDivisions = 4;
+        const timeDivisions = 8;
         for (let division = 0; division <= timeDivisions; division++) {
             const ratio = division / timeDivisions;
             const x = plotStart + ratio * nextPlotWidth;
-            const secondsAgo = this.panSeconds + (1 - ratio) * visibleSpan;
+            const secondsAgo = (this.panSeconds + (1 - ratio) * visibleSpan) / playbackRate;
             ctx.beginPath();
             ctx.moveTo(x, headerHeight + nextPlotHeight);
             ctx.lineTo(x, height - footerHeight + 2);
@@ -768,7 +781,7 @@ class WaterfallRenderer extends Renderer {
         const isTimePanned = this.panSeconds > 0.01;
         const isTimeZoomed = this.zoom > 1.001;
         this.overviewBounds = null;
-        if (((isFrequencyZoomed || isTimePanned || isTimeZoomed) && this.showMap===1) || this.showMap===2) {
+        if (((isFrequencyZoomed || isTimePanned || isTimeZoomed) && this.showMap === 1) || this.showMap === 2) {
             this._drawOverview({
                 ctx,
                 historyCanvas,
@@ -797,7 +810,7 @@ class WaterfallRenderer extends Renderer {
                     const yRatio = (py - overview.y) / overview.height;
                     const frequency = overview.topFrequency -
                         yRatio * (overview.topFrequency - overview.minFrequency);
-                    const secondsAgo = (1 - xRatio) * overview.historySeconds;
+                    const secondsAgo = ((1 - xRatio) * overview.historySeconds) / playbackRate;
                     ctx.beginPath();
                     ctx.moveTo(px, overview.y);
                     ctx.lineTo(px, overview.y + overview.height);
@@ -805,25 +818,47 @@ class WaterfallRenderer extends Renderer {
                     ctx.lineTo(overview.x + overview.width, py);
                     ctx.strokeStyle = "rgba(255, 255, 255, 0.75)";
                     ctx.stroke();
+
+                    // const mainXRatio = 1 - ((secondsAgo * playbackRate - this.panSeconds) / visibleSpan);
+                    // const mainX = plotStart + mainXRatio * nextPlotWidth;
+                    // const mainYRatio = (this.frequencyViewMax - frequency) / viewFrequencyRange;
+                    // const mainY = headerHeight + mainYRatio * nextPlotHeight;
+                    // ctx.beginPath();
+                    // if (mainX >= plotStart && mainX <= plotStart + nextPlotWidth) {
+                    //     ctx.moveTo(mainX, headerHeight);
+                    //     ctx.lineTo(mainX, headerHeight + nextPlotHeight);
+                    // }
+                    // if (mainY >= headerHeight && mainY <= headerHeight + nextPlotHeight) {
+                    //     ctx.moveTo(plotStart, mainY);
+                    //     ctx.lineTo(plotStart + nextPlotWidth, mainY);
+                    // }
+                    // ctx.strokeStyle = "rgba(255, 255, 255, 0.75)";
+                    // ctx.stroke();
+
                     const readout = `${formatFrequency(frequency)}   -${secondsAgo.toFixed(1)} s`;
                     const readoutWidth = ctx.measureText(readout).width + 16;
-                    const readoutX = Math.min(
-                        overview.x + overview.width - readoutWidth - 2,
-                        Math.max(overview.x + 2, px + 8)
-                    );
-                    const readoutY = py - overview.y < overview.height / 2
-                        ? py + 18
-                        : py - 8;
-                    ctx.fillStyle = "rgba(5, 10, 16, 0.92)";
+                    // const readoutX = Math.min(
+                    //     overview.x + overview.width - readoutWidth - 2,
+                    //     Math.max(overview.x + 2, px + 8)
+                    // );
+                    // const readoutY = py - overview.y < overview.height / 2
+                    //     ? py + 18
+                    //     : py - 8;
+                    // const readoutX = Math.min(plotRight - readoutWidth - 4, Math.max(plotStart + 4, px + 10));
+                    // const readoutY = Math.max(headerHeight + 16, py - 14);
+
+                    const readoutX = overview.x - 3;
+                    const readoutY = overview.y - 13;
+                    ctx.fillStyle = "#ffcf3c";
                     ctx.fillRect(readoutX, readoutY - 10, readoutWidth, 20);
-                    ctx.fillStyle = "#ffffff";
+                    ctx.fillStyle = "#141414";
                     ctx.textAlign = "left";
                     ctx.fillText(readout, readoutX + 8, readoutY);
                 } else {
                     const xRatio = (px - plotStart) / nextPlotWidth;
                     const yRatio = (py - headerHeight) / nextPlotHeight;
                     const frequency = this.frequencyViewMax - yRatio * viewFrequencyRange;
-                    const secondsAgo = this.panSeconds + (1 - xRatio) * visibleSpan;
+                    const secondsAgo = (this.panSeconds + (1 - xRatio) * visibleSpan) / playbackRate;
                     ctx.beginPath();
                     ctx.moveTo(px, headerHeight);
                     ctx.lineTo(px, headerHeight + nextPlotHeight);
@@ -831,6 +866,88 @@ class WaterfallRenderer extends Renderer {
                     ctx.lineTo(plotRight, py);
                     ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
                     ctx.stroke();
+
+                    const overview = this.overviewBounds;
+                    if (overview && overview.width > 0 && overview.height > 0) {
+                        const overviewYRatio = (overview.topFrequency - frequency) / (overview.topFrequency - overview.minFrequency);
+                        const overviewY = overview.y + overviewYRatio * overview.height;
+                        const overviewXRatio = 1 - (secondsAgo * playbackRate) / overview.historySeconds;
+                        const overviewX = overview.x + overviewXRatio * overview.width;
+
+                        const left = overview.x;
+                        const right = overview.x + overview.width;
+                        const top = overview.y;
+                        const bottom = overview.y + overview.height;
+                        const insideX = overviewX >= left && overviewX <= right;
+                        const insideY = overviewY >= top && overviewY <= bottom;
+                        // ctx.beginPath();
+                        // ctx.setLineDash([3, 2]);
+                        // if (insideX && insideY) {
+                        //     ctx.moveTo(overviewX, top);
+                        //     ctx.lineTo(overviewX, overviewY - 10);
+                        //     ctx.moveTo(overviewX, overviewY + 10);
+                        //     ctx.lineTo(overviewX, bottom);
+
+                        //     ctx.moveTo(left, overviewY);
+                        //     ctx.lineTo(overviewX - 10, overviewY);
+                        //     ctx.moveTo(overviewX + 10, overviewY);
+                        //     ctx.lineTo(right, overviewY);
+                        // } else {
+                        //     if (insideX) {
+                        //         ctx.moveTo(overviewX, top);
+                        //         ctx.lineTo(overviewX, bottom);
+                        //     }
+                        //     if (insideY) {
+                        //         ctx.moveTo(left, overviewY);
+                        //         ctx.lineTo(right, overviewY);
+                        //     }
+                        // }
+                        // ctx.strokeStyle = "rgba(255, 255, 255, 0.75)";
+                        // ctx.stroke();
+                        // ctx.setLineDash([]);
+                        // if (insideX && insideY) {
+                        //     ctx.beginPath();
+                        //     ctx.moveTo(overviewX - 5, overviewY);
+                        //     ctx.lineTo(overviewX + 5, overviewY);
+                        //     ctx.moveTo(overviewX, overviewY - 5);
+                        //     ctx.lineTo(overviewX, overviewY + 5);
+                        //     ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
+                        //     ctx.stroke();
+                        // }
+
+                        // -----------------------------------------------------------//
+
+                        // ctx.beginPath();
+                        // ctx.setLineDash([3, 2]);
+                        // if (insideX && insideY) {
+                        //     ctx.moveTo(overviewX, overview.y);
+                        //     ctx.lineTo(overviewX, overview.y + overview.height);
+
+                        //     ctx.moveTo(overview.x, overviewY);
+                        //     ctx.lineTo(overview.x + overview.width, overviewY);
+                        // }
+                        // ctx.strokeStyle = "#ffcf3cbf";
+                        // ctx.stroke();
+
+                        // -----------------------------------------------------------//
+
+                        ctx.beginPath();
+                        ctx.setLineDash([3, 2]);
+                        if (insideX && insideY) {
+                            ctx.moveTo(overviewX, overviewY);
+                            ctx.lineTo(overviewX, top);
+                            ctx.moveTo(overviewX, overviewY);
+                            ctx.lineTo(overviewX, bottom);
+
+                            ctx.moveTo(overviewX, overviewY);
+                            ctx.lineTo(left, overviewY);
+                            ctx.moveTo(overviewX, overviewY);
+                            ctx.lineTo(right, overviewY);
+                        }
+                        ctx.strokeStyle = "#ff3c3c"; //"#ff3c3cbf";
+                        ctx.stroke();
+                    }
+
                     const readout = `${formatFrequency(frequency)}   -${secondsAgo.toFixed(2)} s`;
                     const readoutWidth = ctx.measureText(readout).width + 16;
                     const readoutX = Math.min(plotRight - readoutWidth - 4, Math.max(plotStart + 4, px + 10));
@@ -862,6 +979,8 @@ class WaterfallRenderer extends Renderer {
             overviewCtx.fillStyle = "#080d13";
             overviewCtx.fillRect(0, 0, overviewWidth, overviewHeight);
             if (this.historyFilled > 0) {
+                overviewCtx.imageSmoothingEnabled = true;
+                overviewCtx.imageSmoothingQuality = "low";
                 const sourceY = Math.max(0, (nyquist - topFrequency) / nyquist * historyCanvas.height);
                 const sourceHeight = Math.min(
                     historyCanvas.height - sourceY,
@@ -911,7 +1030,7 @@ class WaterfallRenderer extends Renderer {
             overviewX,
             Math.min(overviewX + overviewWidth - maxViewWidth,
                 overviewX + (this.historySeconds - this.panSeconds - maxVisibleSpan) /
-                    this.historySeconds * overviewWidth)
+                this.historySeconds * overviewWidth)
         );
         const maxViewRight = maxViewLeft + maxViewWidth;
         const viewport = {
