@@ -159,6 +159,23 @@ class MovableWindow {
         this.bar.style.cursor = "grab";
         this.win.addEventListener("pointerdown", this.onFocus);
 
+        this.resizable = Number(this.win.dataset.movable ?? 0);
+        this.resizable = [0, 1, 2, 3].includes(this.resizable)
+            ? this.resizable
+            : 0;
+        this.resizing = false;
+        this.resizeMode = null;
+        this.resizeStart = null;
+        this.resizeHandles = [];
+
+        this.minWidth = this.win.offsetWidth
+            ? parseFloat(getComputedStyle(this.win).minWidth) || 150
+            : 150;
+
+        this.minHeight = parseFloat(getComputedStyle(this.win).minHeight) || 100;
+
+        this.createResizeHandles();
+
         const title = this.bar.textContent.trim();
         this.bar.innerHTML = `
             <span class="window-title" data-tip="${title}">
@@ -193,7 +210,159 @@ class MovableWindow {
         window.addEventListener("pointerup", this.onPointerUp);
         window.addEventListener("pointercancel", this.onPointerUp);
         window.addEventListener("resize", this.keepInsideViewport);
+        window.addEventListener("pointermove", this.onResizeMove);
+        window.addEventListener("pointerup", this.onResizeEnd);
+        window.addEventListener("pointercancel", this.onResizeEnd);
     }
+
+    createResizeHandles = () => {
+        if (![1, 2, 3].includes(this.resizable)) return;
+
+        const addHandle = (mode, cursor, styles) => {
+            const handle = document.createElement("div");
+
+            handle.className = `window-resize-handle resize-${mode}`;
+            Object.assign(handle.style, {
+                position: "absolute",
+                zIndex: "10",
+                touchAction: "none",
+                cursor,
+                ...styles
+            });
+
+            handle.addEventListener("pointerdown", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const rect = this.win.getBoundingClientRect();
+                this.resizing = true;
+                this.resizeMode = mode;
+                this.resizeStart = {
+                    x: e.clientX,
+                    y: e.clientY,
+                    left: rect.left,
+                    top: rect.top,
+                    width: rect.width,
+                    height: rect.height
+                };
+
+                this.win.style.left = `${rect.left}px`;
+                this.win.style.top = `${rect.top}px`;
+                this.win.style.right = "auto";
+                this.win.style.bottom = "auto";
+
+                this.onFocus();
+                document.body.style.userSelect = "none";
+                handle.setPointerCapture(e.pointerId);
+            });
+
+            this.win.append(handle);
+            this.resizeHandles.push(handle);
+        };
+
+        if (this.resizable === 1 || this.resizable === 3) {
+            addHandle("top", "ns-resize", {
+                top: "0",
+                left: "8px",
+                right: "8px",
+                height: "6px"
+            });
+            addHandle("bottom", "ns-resize", {
+                bottom: "0",
+                left: "8px",
+                right: "8px",
+                height: "6px"
+            });
+
+        }
+        if (this.resizable === 2 || this.resizable === 3) {
+            addHandle("left", "ew-resize", {
+                left: "0",
+                top: "8px",
+                bottom: "8px",
+                width: "6px"
+            });
+            addHandle("right", "ew-resize", {
+                right: "0",
+                top: "8px",
+                bottom: "8px",
+                width: "6px"
+            });
+        }
+        if (this.resizable === 3) {
+            addHandle("corner", "nwse-resize", {
+                right: "0",
+                bottom: "0",
+                width: "12px",
+                height: "12px",
+                background: "transparent"
+            });
+        }
+    };
+
+    onResizeMove = (e) => {
+        if (!this.resizing || !this.resizeStart) return;
+
+        const s = this.resizeStart;
+        const dx = e.clientX - s.x;
+        const dy = e.clientY - s.y;
+        const mode = this.resizeMode;
+
+        let left = s.left;
+        let top = s.top;
+        let width = s.width;
+        let height = s.height;
+
+        if (mode === "right" || mode === "corner") {
+            width = s.width + dx;
+        }
+        if (mode === "left") {
+            width = s.width - dx;
+            left = s.left + dx;
+        }
+        if (mode === "bottom" || mode === "corner") {
+            height = s.height + dy;
+        }
+        if (mode === "top") {
+            height = s.height - dy;
+            top = s.top + dy;
+        }
+
+        const minWidth = Math.max(
+            this.minWidth,
+            parseFloat(getComputedStyle(this.win).minWidth) || 0
+        );
+        const minHeight = Math.max(
+            this.minHeight,
+            parseFloat(getComputedStyle(this.win).minHeight) || 0
+        );
+
+        if (width < minWidth) {
+            if (mode === "left") left = s.left + s.width - minWidth;
+            width = minWidth;
+        }
+        if (height < minHeight) {
+            if (mode === "top") top = s.top + s.height - minHeight;
+            height = minHeight;
+        }
+
+        width = Math.min(width, window.innerWidth);
+        height = Math.min(height, window.innerHeight);
+        left = Math.max(0, Math.min(left, window.innerWidth - width));
+        top = Math.max(0, Math.min(top, window.innerHeight - height));
+
+        this.win.style.left = `${left}px`;
+        this.win.style.top = `${top}px`;
+        this.win.style.width = `${width}px`;
+        this.win.style.height = `${height}px`;
+    };
+
+    onResizeEnd = () => {
+        if (!this.resizing) return;
+        this.resizing = false;
+        this.resizeMode = null;
+        this.resizeStart = null;
+        document.body.style.userSelect = "";
+    };
 
     keepInsideViewport = () => {
         if (this.win.offsetWidth === 0 || this.win.offsetHeight === 0) return;
@@ -220,16 +389,11 @@ class MovableWindow {
         }
     };
 
-    onClose = () => {
-        this.win.style.display = "none";
-    };
-
-    onFocus = () => {
-        this.onFocusCallback?.(this);
-    };
+    onClose = () => { this.win.style.display = "none"; };
+    onFocus = () => { this.onFocusCallback?.(this); };
 
     onPointerDown = (e) => {
-        if (e.target.closest(".minimize, .close")) return;
+        if (e.target.closest(".minimize, .close, .window-resize-handle")) return;
         e.preventDefault();
         const rect = this.win.getBoundingClientRect();
         this.win.style.left = `${rect.left}px`;
@@ -246,6 +410,7 @@ class MovableWindow {
     };
 
     onPointerMove = (e) => {
+        if (this.resizing) return;
         if (!this.dragging) return;
         let x = e.clientX - this.offsetX;
         let y = e.clientY - this.offsetY;
@@ -273,6 +438,12 @@ class MovableWindow {
         this.minimizeBtn?.removeEventListener("click", this.onMinimize);
         this.closeBtn?.removeEventListener("click", this.onClose);
         window.removeEventListener("resize", this.keepInsideViewport);
+        window.removeEventListener("pointermove", this.onResizeMove);
+        window.removeEventListener("pointerup", this.onResizeEnd);
+        window.removeEventListener("pointercancel", this.onResizeEnd);
+
+        this.resizeHandles.forEach(handle => handle.remove());
+        this.resizeHandles = [];
     }
 }
 
@@ -1786,5 +1957,238 @@ class TapTempo {
         clearTimeout(this.timer);
         this.timer = null;
         this.taps = [];
+    }
+}
+
+class ListDragHandler {
+    constructor({
+        container,
+        getItems,
+        setItems,
+        itemSelector,
+        handleSelector = ".dragHandle",
+        getElementKey,
+        getItemKey,
+        originalDraggingClass = "is-dragging-original",
+        previewClass = "dragPreview",
+        containerDraggingClass = "is-reordering",
+        onReorder = null
+    }) {
+        if (
+            !container ||
+            typeof getItems !== "function" ||
+            typeof setItems !== "function" ||
+            !itemSelector ||
+            typeof getElementKey !== "function" ||
+            typeof getItemKey !== "function"
+        ) {
+            throw new TypeError("Invalid ListDragHandler configuration.");
+        }
+
+        this.container = container;
+        this.getItems = getItems;
+        this.setItems = setItems;
+        this.itemSelector = itemSelector;
+        this.handleSelector = handleSelector;
+        this.getElementKey = getElementKey;
+        this.getItemKey = getItemKey;
+        this.originalDraggingClass = originalDraggingClass;
+        this.previewClass = previewClass;
+        this.containerDraggingClass = containerDraggingClass;
+        this.onReorder = onReorder;
+        this.drag = null;
+
+        this.onPointerDown = this.onPointerDown.bind(this);
+        this.onPointerMove = this.onPointerMove.bind(this);
+        this.onPointerUp = this.onPointerUp.bind(this);
+        this.onPointerCancel = this.onPointerCancel.bind(this);
+        this.onKeyDown = this.onKeyDown.bind(this);
+
+        container.addEventListener("pointerdown", this.onPointerDown);
+
+        window.addEventListener("pointermove", this.onPointerMove);
+        window.addEventListener("pointerup", this.onPointerUp);
+        window.addEventListener("pointercancel", this.onPointerCancel);
+        window.addEventListener("keydown", this.onKeyDown);
+    }
+
+    getElements() {
+        return Array.from(this.container.children).filter(
+            element => element.matches(this.itemSelector)
+        );
+    }
+
+    onPointerDown(event) {
+        if (this.drag || event.button !== 0) return;
+        const handle = event.target.closest(this.handleSelector);
+
+        if (!handle || !this.container.contains(handle)) return;
+        const element = handle.closest(this.itemSelector);
+
+        if (!element || !this.container.contains(element)) return;
+        const key = this.getElementKey(element);
+        const items = this.getItems();
+        const oldIndex = items.findIndex(
+            item => Object.is(this.getItemKey(item), key)
+        );
+
+        if (oldIndex === -1) return;
+        if (key == null) return;
+
+        event.preventDefault();
+
+        const rect = element.getBoundingClientRect();
+        const preview = element.cloneNode(true);
+
+        preview.classList.add(this.previewClass);
+
+        Object.assign(preview.style, {
+            width: `${rect.width}px`,
+            height: `${rect.height}px`,
+            left: `${rect.left}px`,
+            top: `${rect.top}px`
+        });
+
+        element.classList.add(this.originalDraggingClass);
+        document.body.appendChild(preview);
+
+        this.drag = {
+            element,
+            preview,
+            key,
+            oldIndex,
+            pointerId: event.pointerId,
+            offsetX: event.clientX - rect.left,
+            offsetY: event.clientY - rect.top
+        };
+
+        this.container.classList.add(
+            this.containerDraggingClass
+        );
+    }
+
+    onPointerMove(event) {
+        const drag = this.drag;
+        if (!drag || event.pointerId !== drag.pointerId) return;
+        const { element, preview } = drag;
+
+        preview.style.left = `${event.clientX - drag.offsetX}px`;
+        preview.style.top = `${event.clientY - drag.offsetY}px`;
+
+        const siblings = this.getElements().filter(item => item !== element);
+        let insertBefore = null;
+
+        for (const sibling of siblings) {
+            const rect = sibling.getBoundingClientRect();
+            if (event.clientY < rect.top + rect.height / 2) {
+                insertBefore = sibling;
+                break;
+            }
+        }
+
+        if (insertBefore) {
+            if (element.nextElementSibling !== insertBefore) {
+                this.container.insertBefore(element, insertBefore);
+            }
+        } else if (siblings.length && siblings[siblings.length - 1].nextElementSibling !== element) {
+            this.container.appendChild(element);
+        }
+    }
+
+    onPointerUp(event) {
+        if (!this.drag || event.pointerId !== this.drag.pointerId) return;
+        this.finishDrag(true);
+    }
+
+    onPointerCancel(event) {
+        if (!this.drag || event.pointerId !== this.drag.pointerId) return;
+        this.finishDrag(false);
+    }
+
+    onKeyDown(event) {
+        if (event.key === "Escape" && this.drag) {
+            this.finishDrag(false);
+        }
+    }
+
+    finishDrag(commit) {
+        const drag = this.drag;
+        if (!drag) return;
+
+        const { element, preview, key, oldIndex } = drag;
+
+        preview.remove();
+        element.classList.remove(this.originalDraggingClass);
+        this.container.classList.remove(this.containerDraggingClass);
+        this.drag = null;
+
+        if (!commit) {
+            this.restoreArrayOrder();
+            return;
+        }
+
+        const elements = this.getElements();
+        const items = this.getItems();
+        const itemMap = new Map();
+
+        for (const item of items) {
+            const itemKey = this.getItemKey(item);
+            if (itemKey == null || itemMap.has(itemKey)) {
+                console.error("List items must have unique, non-null keys.");
+                this.restoreArrayOrder();
+                return;
+            }
+            itemMap.set(itemKey, item);
+        }
+
+        const elementKeys = elements.map(
+            item => this.getElementKey(item)
+        );
+
+        if (
+            elements.length !== items.length ||
+            new Set(elementKeys).size !== elementKeys.length ||
+            elementKeys.some(itemKey => !itemMap.has(itemKey))
+        ) {
+            console.error("DOM order could not be synchronised with the array.");
+            this.restoreArrayOrder();
+            return;
+        }
+
+        const reorderedItems = elementKeys.map(itemKey => itemMap.get(itemKey));
+        const newIndex = elementKeys.findIndex(itemKey => Object.is(itemKey, key));
+        this.setItems(reorderedItems);
+        const delta = newIndex - oldIndex;
+
+        if (delta !== 0 && this.onReorder) {
+            this.onReorder({
+                key,
+                oldIndex,
+                newIndex,
+                movedUp: delta < 0,
+                movedDown: delta > 0,
+                positionsMoved: Math.abs(delta),
+                items: reorderedItems
+            });
+        }
+    }
+
+    restoreArrayOrder() {
+        for (const item of this.getItems()) {
+            const key = this.getItemKey(item);
+            const element = this.getElements().find(
+                el => Object.is(this.getElementKey(el), key)
+            );
+            if (element) this.container.appendChild(element);
+        }
+    }
+
+    destroy() {
+        if (this.drag) this.finishDrag(false);
+        this.container.removeEventListener("pointerdown", this.onPointerDown);
+        window.removeEventListener("pointermove", this.onPointerMove);
+        window.removeEventListener("pointerup", this.onPointerUp);
+        window.removeEventListener("pointercancel", this.onPointerCancel);
+        window.removeEventListener("keydown", this.onKeyDown);
     }
 }

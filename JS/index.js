@@ -192,8 +192,6 @@ let PLAYERCONFIG = {
     playback: {
         rate: 1.0, /// 1.0: Normal, <1: slow, >1: fast
         volume: volumeSlider.value, /// 0.0 - 1.0
-        lowFreq: 0, /// Not used yet
-        highFreq: 0 /// Not used yet
     },
     playbackList: {
         playMode: 0, /// 0: off, 1: autoplay, 2: random
@@ -521,12 +519,16 @@ function setupEffects() {
     buildEffectsUI();
 }
 
-function getArtworkURL(picture) {
-    if (!picture || !picture.data) return null;
-    const blob = new Blob(
-        [new Uint8Array(picture.data)],
-        { type: picture.format }
-    );
+async function getArtworkURL(picture, file) {
+    let blob;
+    if (picture?.data?.length && picture.format) {
+        blob = new Blob(
+            [new Uint8Array(picture.data)],
+            { type: picture.format }
+        );
+    } /* else {
+        blob = await generateVideoThumbnail(file, 64);
+    } */
     return URL.createObjectURL(blob);
 }
 
@@ -1529,11 +1531,36 @@ function loadFile(file) {
         url = URL.createObjectURL(file);
         videoEl._objectURL = url;
     }
-
     videoEl.src = url;
-    videoEl.load();
-    videoEl.addEventListener("loadeddata", () => {
+    let settled = false;
+
+    const failLoad = (msg) => {
+        if (settled || loadToken !== currentLoadToken) return;
+        settled = true;
+        //clearTimeout(loadTimeout);
+        songElement?.classList.remove('loading', 'active');
+        songElement?.classList.add('error');
+        chooseAudioLabel.textContent = `Failed to load ${file.name}`;
+        console.warn(`Failed to load "${file.name}":`, msg);
+    };
+
+    // const loadTimeout = setTimeout(() => {
+    //     failLoad("Loading timed out");
+    // }, 15000);
+
+    videoEl.addEventListener("error", () => {
+        failLoad(videoEl.error || "Unknown media error");
+    }, { once: true });
+
+    videoEl.addEventListener("abort", () => {
         if (loadToken !== currentLoadToken) return;
+        failLoad("Loading aborted");
+    }, { once: true });
+
+    videoEl.addEventListener("loadeddata", () => {
+        if (settled || loadToken !== currentLoadToken) return;
+        settled = true;
+        //clearTimeout(loadTimeout);
         videoEl.currentTime = 0;
         $$('.songItem').forEach(el => {
             el.classList.remove('active', 'loading');
@@ -1555,6 +1582,7 @@ function loadFile(file) {
             artwork: file?._artworkURL ?? null
         });
     }, { once: true });
+    videoEl.load();
 }
 
 function togglePlayPause() {
@@ -1592,9 +1620,9 @@ function jumpAt(time = 5) {
     let t = videoEl.currentTime + time;
     if (t < 0) t = 0;
     if (t >= videoEl.duration) {
-        if (!PLAYERCONFIG.playbackList.playMode === 1) {
-            playNext(1, true);
-        }
+        //if (!PLAYERCONFIG.playbackList.playMode === 1) {
+        playNext(1, true);
+        //}
         return;
     }
     videoEl.currentTime = t;
@@ -1627,7 +1655,7 @@ async function addFiles(filesARG) {
         try {
             const tags = await getTags(file);
             file._metadata = tags;
-            file._artworkURL = useFileArtwork ? getArtworkURL(tags?.picture) : null;
+            file._artworkURL = useFileArtwork ? await getArtworkURL(tags?.picture, file) : null;
         } catch (error) {
             //console.log("No metadata:", file.name);
             file._metadata = {};
@@ -2727,6 +2755,36 @@ document.addEventListener('DOMContentLoaded', () => {
         //     console.log(`${wallpaper.src} failed to decode`);
         // });
         wallpaper.image = img;
+    });
+
+    const songListDragHandler = new ListDragHandler({
+        container: songListContainer,
+        getItems: () => files,
+        setItems: reorderedFiles => {
+            files = reorderedFiles;
+        },
+        itemSelector: ".songItem",
+        handleSelector: ".dragHandle",
+        getElementKey: element => element.dataset.fileName,
+        getItemKey: file => file._fingerprint,
+        onReorder: result => {
+            console.log("Song reordered:", result);
+        }
+    });
+
+    const subtitleListDragHandler = new ListDragHandler({
+        container: subListContainer,
+        getItems: () => subtitleList,
+        setItems: reorderedSubtitles => {
+            subtitleList = reorderedSubtitles;
+        },
+        itemSelector: ".subtitleItem",
+        handleSelector: ".dragHandle",
+        getElementKey: element => element.dataset.fileName,
+        getItemKey: subtitle => subtitle._fingerprint,
+        onReorder: result => {
+            console.log("Subtitle reordered:", result);
+        }
     });
 
     // const formats = getSupportedMediaFormats();

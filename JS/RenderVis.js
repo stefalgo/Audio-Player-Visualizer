@@ -274,6 +274,8 @@ class WaterfallRenderer extends Renderer {
             [0.86, 255, 128, 58],
             [1, 255, 245, 220]
         ];
+        this.pinIcon = new Image();
+        this.pinIcon.src = "./Media/SVGs/svg-pin.svg";
         this._bindInteractions();
     }
 
@@ -511,6 +513,10 @@ class WaterfallRenderer extends Renderer {
         this.panSeconds = 0;
     }
 
+    formatFrequency = frequency => frequency >= 1000
+        ? `${Number.isInteger(frequency / 1000) ? frequency / 1000 : (frequency / 1000).toFixed(1)} kHz`
+        : `${Math.round(frequency)} Hz`;
+
     /**
      * Waterfall render method
      * @param {Uint8Array} data - Frequency data
@@ -724,9 +730,6 @@ class WaterfallRenderer extends Renderer {
             ctx.restore();
         }
 
-        const formatFrequency = frequency => frequency >= 1000
-            ? `${Number.isInteger(frequency / 1000) ? frequency / 1000 : (frequency / 1000).toFixed(1)} kHz`
-            : `${Math.round(frequency)} Hz`;
         ctx.save();
         ctx.font = "10px sans-serif";
         ctx.textBaseline = "middle";
@@ -745,7 +748,7 @@ class WaterfallRenderer extends Renderer {
             ctx.lineWidth = 1;
             ctx.stroke();
             ctx.textAlign = "right";
-            ctx.fillText(formatFrequency(frequency), axisWidth - 8, y);
+            ctx.fillText(this.formatFrequency(frequency), axisWidth - 8, y);
         }
 
         for (let division = 1; division < 8; division++) {
@@ -769,7 +772,7 @@ class WaterfallRenderer extends Renderer {
             ctx.lineTo(x, height - footerHeight + 2);
             ctx.strokeStyle = "rgba(185, 205, 220, 0.2)";
             ctx.stroke();
-            ctx.fillText(`-${secondsAgo.toFixed(1)} s`, x, height - footerHeight / 2);
+            ctx.fillText(`${(-secondsAgo).toFixed(2)} s`, x, height - footerHeight / 2);
         }
         if (this.frozen) {
             ctx.textAlign = "center";
@@ -793,7 +796,8 @@ class WaterfallRenderer extends Renderer {
                 topFrequency,
                 nyquist,
                 visibleSpan,
-                sourceLeft
+                sourceLeft,
+                playbackRate: playbackRate,
             });
         }
 
@@ -808,8 +812,7 @@ class WaterfallRenderer extends Renderer {
                 if (overOverview) {
                     const xRatio = (px - overview.x) / overview.width;
                     const yRatio = (py - overview.y) / overview.height;
-                    const frequency = overview.topFrequency -
-                        yRatio * (overview.topFrequency - overview.minFrequency);
+                    const frequency = overview.topFrequency - yRatio * (overview.topFrequency - overview.minFrequency);
                     const secondsAgo = ((1 - xRatio) * overview.historySeconds) / playbackRate;
                     ctx.beginPath();
                     ctx.moveTo(px, overview.y);
@@ -835,7 +838,7 @@ class WaterfallRenderer extends Renderer {
                     // ctx.strokeStyle = "rgba(255, 255, 255, 0.75)";
                     // ctx.stroke();
 
-                    const readout = `${formatFrequency(frequency)}   -${secondsAgo.toFixed(1)} s`;
+                    const readout = `${this.formatFrequency(frequency)}   ${(-secondsAgo).toFixed(2)} s`;
                     const readoutWidth = ctx.measureText(readout).width + 16;
                     // const readoutX = Math.min(
                     //     overview.x + overview.width - readoutWidth - 2,
@@ -848,7 +851,7 @@ class WaterfallRenderer extends Renderer {
                     // const readoutY = Math.max(headerHeight + 16, py - 14);
 
                     const readoutX = overview.x - 3;
-                    const readoutY = overview.y - 13;
+                    const readoutY = (overview.y - 12) - 20;
                     ctx.fillStyle = "#ffcf3c";
                     ctx.fillRect(readoutX, readoutY - 10, readoutWidth, 20);
                     ctx.fillStyle = "#141414";
@@ -880,56 +883,6 @@ class WaterfallRenderer extends Renderer {
                         const bottom = overview.y + overview.height;
                         const insideX = overviewX >= left && overviewX <= right;
                         const insideY = overviewY >= top && overviewY <= bottom;
-                        // ctx.beginPath();
-                        // ctx.setLineDash([3, 2]);
-                        // if (insideX && insideY) {
-                        //     ctx.moveTo(overviewX, top);
-                        //     ctx.lineTo(overviewX, overviewY - 10);
-                        //     ctx.moveTo(overviewX, overviewY + 10);
-                        //     ctx.lineTo(overviewX, bottom);
-
-                        //     ctx.moveTo(left, overviewY);
-                        //     ctx.lineTo(overviewX - 10, overviewY);
-                        //     ctx.moveTo(overviewX + 10, overviewY);
-                        //     ctx.lineTo(right, overviewY);
-                        // } else {
-                        //     if (insideX) {
-                        //         ctx.moveTo(overviewX, top);
-                        //         ctx.lineTo(overviewX, bottom);
-                        //     }
-                        //     if (insideY) {
-                        //         ctx.moveTo(left, overviewY);
-                        //         ctx.lineTo(right, overviewY);
-                        //     }
-                        // }
-                        // ctx.strokeStyle = "rgba(255, 255, 255, 0.75)";
-                        // ctx.stroke();
-                        // ctx.setLineDash([]);
-                        // if (insideX && insideY) {
-                        //     ctx.beginPath();
-                        //     ctx.moveTo(overviewX - 5, overviewY);
-                        //     ctx.lineTo(overviewX + 5, overviewY);
-                        //     ctx.moveTo(overviewX, overviewY - 5);
-                        //     ctx.lineTo(overviewX, overviewY + 5);
-                        //     ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
-                        //     ctx.stroke();
-                        // }
-
-                        // -----------------------------------------------------------//
-
-                        // ctx.beginPath();
-                        // ctx.setLineDash([3, 2]);
-                        // if (insideX && insideY) {
-                        //     ctx.moveTo(overviewX, overview.y);
-                        //     ctx.lineTo(overviewX, overview.y + overview.height);
-
-                        //     ctx.moveTo(overview.x, overviewY);
-                        //     ctx.lineTo(overview.x + overview.width, overviewY);
-                        // }
-                        // ctx.strokeStyle = "#ffcf3cbf";
-                        // ctx.stroke();
-
-                        // -----------------------------------------------------------//
 
                         ctx.beginPath();
                         ctx.setLineDash([3, 2]);
@@ -948,7 +901,7 @@ class WaterfallRenderer extends Renderer {
                         ctx.stroke();
                     }
 
-                    const readout = `${formatFrequency(frequency)}   -${secondsAgo.toFixed(2)} s`;
+                    const readout = `${this.formatFrequency(frequency)}   ${(-secondsAgo).toFixed(2)} s`;
                     const readoutWidth = ctx.measureText(readout).width + 16;
                     const readoutX = Math.min(plotRight - readoutWidth - 4, Math.max(plotStart + 4, px + 10));
                     const readoutY = Math.max(headerHeight + 16, py - 14);
@@ -964,7 +917,7 @@ class WaterfallRenderer extends Renderer {
         ctx.restore();
     }
 
-    _drawOverview({ ctx, historyCanvas, plotStart, headerHeight, plotWidth, plotHeight, minFrequency, topFrequency, nyquist, visibleSpan, sourceLeft }) {
+    _drawOverview({ ctx, historyCanvas, plotStart, headerHeight, plotWidth, plotHeight, minFrequency, topFrequency, nyquist, visibleSpan, sourceLeft, playbackRate }) {
         const overviewCtx = this.overviewCtx;
         const overviewWidth = this.overviewCanvas.width;
         const overviewHeight = this.overviewCanvas.height;
@@ -1068,6 +1021,34 @@ class WaterfallRenderer extends Renderer {
         ctx.strokeStyle = "#ffcf3c";
         ctx.lineWidth = 1;
         ctx.strokeRect(overviewX - 2.5, overviewY - 2.5, overviewWidth + 5, overviewHeight + 5);
+
+        const readout = `[${this.formatFrequency(this.frequencyViewMin)} ${this.formatFrequency(this.frequencyViewMax)}][${(-((this.panSeconds + visibleSpan) / playbackRate)).toFixed(2)} s ${(-(this.panSeconds / playbackRate)).toFixed(2)} s]`;
+        const readoutWidth = ctx.measureText(readout).width + 16;
+
+        const readoutX = overviewX - 3//(overviewX + overviewWidth) - readoutWidth + 3;
+        const readoutY = overviewY - 12;
+        ctx.fillStyle = "#dfdfdf";
+        ctx.fillRect(readoutX, readoutY - 10, readoutWidth, 20);
+        ctx.fillStyle = "#141414";
+        ctx.textAlign = "left";
+        ctx.fillText(readout, readoutX + 8, readoutY);
+
+        if (this.showMap === 2) {
+            const iconX = readoutX - 14 + overviewWidth;
+            const iconY = readoutY - 10;
+            const iconSize = 20;
+
+            ctx.fillStyle = "#ffcf3c";
+            ctx.fillRect(iconX, iconY, iconSize, iconSize);
+
+            const icon = this.pinIcon;
+            if (icon.complete && icon.naturalWidth > 0) {
+                ctx.save();
+                ctx.filter = "brightness(0.1)";
+                ctx.drawImage(icon, iconX, iconY, iconSize, iconSize);
+                ctx.restore();
+            }
+        }
     }
 }
 
