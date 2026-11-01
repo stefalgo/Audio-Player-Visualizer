@@ -535,6 +535,27 @@ class HumanRandom {
         const key = this.getKey(item);
         this.history = this.history.filter(k => k !== key);
     }
+
+    pickWeighted(songs) {
+        if (!songs.length) return null;
+        const weights = songs.map(song => Math.max(0, song._Weight ?? 0));
+        const totalWeight = weights.reduce((total, weight) => total + weight, 0);
+
+        if (totalWeight <= 0) {
+            return songs[Math.floor(Math.random() * songs.length)];
+        }
+
+        let random = Math.random() * totalWeight;
+
+        for (let i = 0; i < songs.length; i++) {
+            random -= weights[i];
+            if (random < 0) {
+                return songs[i];
+            }
+        }
+
+        return songs[songs.length - 1];
+    }
 }
 
 class SpaceController {

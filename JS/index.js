@@ -360,6 +360,25 @@ document.body.appendChild(pipVideo);
 const canvasStream = canvas.captureStream(30);
 pipVideo.srcObject = canvasStream;
 
+const weightManager = {
+    penalty: 2,
+
+    markPlayed(song, songs = files) {
+        const effectivePenalty = Math.min(
+            Math.max(0, this.penalty),
+            Math.max(0, songs.length - 1)
+        );
+
+        for (const other of songs) {
+            if (other === song) {
+                other._Weight = -Math.max(0, effectivePenalty - 1);
+            } else {
+                other._Weight = (other._Weight ?? 1) + 1;
+            }
+        }
+    }
+};
+
 //------------------------------------------------------------------------------------------------
 function buildEffectsUI() {
     effectsContainer.innerHTML = "";
@@ -1542,6 +1561,11 @@ function loadFile(file) {
         songElement?.classList.add('error');
         chooseAudioLabel.textContent = `Failed to load ${file.name}`;
         console.warn(`Failed to load "${file.name}":`, msg);
+
+        $$('.songItem').forEach(el => {
+            el.classList.remove('active', 'loading');
+        });
+        currentSelectedFile = null;
     };
 
     // const loadTimeout = setTimeout(() => {
@@ -1570,10 +1594,12 @@ function loadFile(file) {
         selectedSubtitle = getSubtitle(file);
         subtitleLastIndex = 0;
         loopCounter = 0;
-        randomSongs.remember(file);
+        //randomSongs.remember(file);
         chooseAudioLabel.textContent = file.name;
         document.title = `${file.name} - ${pageOriginalTitle}`;
         playFrom(0);
+
+        weightManager.markPlayed(file);
 
         updateMediaSession({
             title: file._metadata?.title ?? file.name,
@@ -1609,10 +1635,20 @@ function playNext(jump = 1, loop = true) {
 }
 
 function loadRandom() {
-    const randomSong = randomSongs.pick(files);
+    const randomSong = randomSongs.pickWeighted(files);
+
     if (randomSong) {
         loadFile(randomSong);
     }
+
+    console.table(files.map(f => ({
+        name: f.name,
+        weight: f._Weight,
+        lastPlayed: (() => {
+            const s = Math.floor((Date.now() - f._LastPlayed) / 1000);
+            return `${Math.floor(s / 3600)}h ${Math.floor(s % 3600 / 60)}m ${s % 60}s ago`;
+        })()
+    })));
 }
 
 function jumpAt(time = 5) {
@@ -1650,7 +1686,6 @@ async function addFiles(filesARG) {
     const newFiles = selectedFiles.filter(file => file.type.startsWith('audio/') || file.type.startsWith('video/'));
 
     if (newFiles.length === 0) return;
-
     for (const file of newFiles) {
         try {
             const tags = await getTags(file);
@@ -1663,6 +1698,7 @@ async function addFiles(filesARG) {
         }
         file._fingerprint = await fileFingerprint(file);
         file._duration = await getMediaDuration(file);
+        file._Weight = 1;
     }
 
     const uniqueNewFiles = newFiles.filter(file => { return !files.some(existing => existing._fingerprint === file._fingerprint); });
@@ -1670,7 +1706,7 @@ async function addFiles(filesARG) {
     if (uniqueNewFiles.length === 0) return;
     files = files.concat(uniqueNewFiles);
     addFilesToSongList(uniqueNewFiles);
-    randomSongs.setMemory(files.length)
+    //randomSongs.setMemory(files.length)
     const file = uniqueNewFiles[0];
     if (!file) {
         console.warn('This file does not exist in the array.');
@@ -1704,7 +1740,7 @@ async function addRadioUrl(url) {
     if (files.some(existing => existing._fingerprint === radio._fingerprint)) return;
     files.push(radio);
     addFilesToSongList([radio]);
-    randomSongs.setMemory(files.length);
+    //randomSongs.setMemory(files.length);
     if (!audioCtx || videoEl.paused) {
         loadFile(radio);
     }
@@ -1744,7 +1780,7 @@ function removeFile(file) {
     const el = $(`[data-file-name="${file._fingerprint}"]`);
     if (index !== -1) files.splice(index, 1);
     if (el) el.remove();
-    randomSongs.forget(file);
+    //randomSongs.forget(file);
     const isCurrent = currentSelectedFile === file._fingerprint;
     if (file._artworkURL) {
         URL.revokeObjectURL(file._artworkURL);

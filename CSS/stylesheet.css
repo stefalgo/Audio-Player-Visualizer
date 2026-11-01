@@ -104,6 +104,7 @@
     --svg-microphone-on: url("../Media/SVGs/svg-microphone-on.svg");
     --svg-microphone-off: url("../Media/SVGs/svg-microphone-off.svg");
     --svg-drag: url("../Media/SVGs/svg-drag.svg");
+    --svg-reload: url("../Media/SVGs/svg-reload.svg");
 }
 
 :focus-visible {
@@ -672,7 +673,7 @@ body:has(#pause-play-button[data-state="pause"]) .songItem.active .songItemPlayB
 }
 
 .songItem.error .songItemPlayButton::before {
-    background-image: var(--svg-x);
+    background-image: var(--svg-reload);
 }
 
 .songItem.loading .songItemPlayButton::before {
