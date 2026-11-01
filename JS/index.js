@@ -1643,11 +1643,11 @@ function loadRandom() {
 
     console.table(files.map(f => ({
         name: f.name,
-        weight: f._Weight,
-        lastPlayed: (() => {
-            const s = Math.floor((Date.now() - f._LastPlayed) / 1000);
-            return `${Math.floor(s / 3600)}h ${Math.floor(s % 3600 / 60)}m ${s % 60}s ago`;
-        })()
+        weight: f._Weight
+        // lastPlayed: (() => {
+        //     const s = Math.floor((Date.now() - f._LastPlayed) / 1000);
+        //     return `${Math.floor(s / 3600)}h ${Math.floor(s % 3600 / 60)}m ${s % 60}s ago`;
+        // })()
     })));
 }
 
