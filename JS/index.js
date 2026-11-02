@@ -362,6 +362,22 @@ pipVideo.srcObject = canvasStream;
 
 const weightManager = {
     penalty: 5,
+    frequencyRate: 0.1,
+
+    clampFrequency(value) {
+        return Math.min(1, Math.max(0, value));
+    },
+
+    updatePlayFrequencies(playedSong, songs = files) {
+        for (const song of songs) {
+            const frequency = this.clampFrequency(song._PlayFrequency ?? 0);
+
+            const target = song === playedSong ? 1 : 0;
+
+            song._PlayFrequency = frequency +
+                this.frequencyRate * (target - frequency);
+        }
+    },
 
     getAverageWeight(songs = files) {
         const positiveWeights = songs.map(song => song._Weight ?? 0).filter(weight => weight > 0);
@@ -374,12 +390,8 @@ const weightManager = {
 
         for (const song of newSongs) {
             song._Weight = average;
+            song._PlayFrequency = 0;
         }
-
-        console.table(files.map(f => ({
-            name: f.name,
-            weight: f._Weight
-        })));
     },
 
     markPlayed(song, songs = files) {
@@ -388,17 +400,23 @@ const weightManager = {
             Math.max(0, Math.floor(songs.length / 2))
         );
 
+        this.updatePlayFrequencies(song, songs);
+
         for (const other of songs) {
             if (other === song) {
                 other._Weight = -Math.max(0, effectivePenalty - 1);
-            } else {
-                other._Weight = (other._Weight ?? 1) + 1;
+            } /*else if ((other._Weight ?? 1) < 0) {
+                other._Weight += 1;
+            }*/ else {
+                const frequency = this.clampFrequency(other._PlayFrequency ?? 0);
+                other._Weight += 1 - frequency;
             }
         }
 
         console.table(files.map(f => ({
             name: f.name,
-            weight: f._Weight
+            weight: f._Weight,
+            frequency: f._PlayFrequency
         })));
     }
 };
