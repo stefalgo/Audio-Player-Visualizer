@@ -375,6 +375,11 @@ const weightManager = {
         for (const song of newSongs) {
             song._Weight = average;
         }
+
+        console.table(files.map(f => ({
+            name: f.name,
+            weight: f._Weight
+        })));
     },
 
     markPlayed(song, songs = files) {
@@ -390,6 +395,11 @@ const weightManager = {
                 other._Weight = (other._Weight ?? 1) + 1;
             }
         }
+
+        console.table(files.map(f => ({
+            name: f.name,
+            weight: f._Weight
+        })));
     }
 };
 
@@ -1654,15 +1664,6 @@ function loadRandom() {
     if (randomSong) {
         loadFile(randomSong);
     }
-
-    console.table(files.map(f => ({
-        name: f.name,
-        weight: f._Weight
-        // lastPlayed: (() => {
-        //     const s = Math.floor((Date.now() - f._LastPlayed) / 1000);
-        //     return `${Math.floor(s / 3600)}h ${Math.floor(s % 3600 / 60)}m ${s % 60}s ago`;
-        // })()
-    })));
 }
 
 function jumpAt(time = 5) {
