@@ -361,12 +361,26 @@ const canvasStream = canvas.captureStream(30);
 pipVideo.srcObject = canvasStream;
 
 const weightManager = {
-    penalty: 2,
+    penalty: 5,
+
+    getAverageWeight(songs = files) {
+        const positiveWeights = songs.map(song => song._Weight ?? 0).filter(weight => weight > 0);
+        if (!positiveWeights.length) return 1;
+        return positiveWeights.reduce((sum, weight) => sum + weight, 0) / positiveWeights.length;
+    },
+
+    initialiseNewSongs(newSongs, songs = files) {
+        const average = this.getAverageWeight(songs);
+
+        for (const song of newSongs) {
+            song._Weight = average;
+        }
+    },
 
     markPlayed(song, songs = files) {
         const effectivePenalty = Math.min(
             Math.max(0, this.penalty),
-            Math.max(0, songs.length - 1)
+            Math.max(0, Math.floor(songs.length / 2))
         );
 
         for (const other of songs) {
@@ -1698,12 +1712,14 @@ async function addFiles(filesARG) {
         }
         file._fingerprint = await fileFingerprint(file);
         file._duration = await getMediaDuration(file);
-        file._Weight = 1;
     }
 
     const uniqueNewFiles = newFiles.filter(file => { return !files.some(existing => existing._fingerprint === file._fingerprint); });
 
     if (uniqueNewFiles.length === 0) return;
+
+    weightManager.initialiseNewSongs(uniqueNewFiles);
+
     files = files.concat(uniqueNewFiles);
     addFilesToSongList(uniqueNewFiles);
     //randomSongs.setMemory(files.length)
