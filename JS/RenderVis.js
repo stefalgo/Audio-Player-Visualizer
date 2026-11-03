@@ -82,8 +82,8 @@ class BarRenderer extends Renderer {
      * Main render method
      * @param {Uint8Array} data - Frequency data
      * @param {AnalyserNode} analyser - Analyser node
-     * @param {number} sensitivity - Custom sensitivity value
-     * @param {number} maxFrequency - Custom max frequency
+     * @param {number} sensitivity - Sensitivity this.sensitivity
+     * @param {number} maxFrequency - Max frequency this.maxFrequency
      */
     render(data, analyser, sensitivity = this.sensitivity, maxFrequency = this.maxFrequency) {
         const { canvas, ctx } = this;
@@ -521,8 +521,8 @@ class WaterfallRenderer extends Renderer {
      * Waterfall render method
      * @param {Uint8Array} data - Frequency data
      * @param {AnalyserNode} analyser - Analyser node
-     * @param {number} sensitivity - Custom sensitivity
-     * @param {number} maxFrequency - Custom max frequency
+     * @param {number} sensitivity - Sensitivity this.sensitivity
+     * @param {number} maxFrequency - Max frequency this.maxFrequency
      */
     render(data, analyser, sensitivity = this.sensitivity, maxFrequency = this.maxFrequency, analyserSmoothing = this.analyserSmoothing, playbackTime = performance.now() / 1000, playbackRate = 1) {
         const { canvas, ctx, historyCanvas, historyCtx } = this;
@@ -1564,6 +1564,13 @@ class VideoRender extends Renderer {
         this.assCanvasWidth = 0;
         this.assCanvasHeight = 0;
     }
+
+    /**
+     * Render video
+     * @param {Element} videoEl - The video dom element
+     * @param {Array} subtitleData - The subtitle track
+     * @param {number} subtitleOffset - offset to display subtitles in seconds
+     */
     render(videoEl, subtitleData = null, subtitleOffset = 0) {
         const ctx = this.ctx;
         const canvasW = this.canvas.width;

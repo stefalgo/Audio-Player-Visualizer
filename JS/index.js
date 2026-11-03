@@ -371,11 +371,8 @@ const weightManager = {
     updatePlayFrequencies(playedSong, songs = files) {
         for (const song of songs) {
             const frequency = this.clampFrequency(song._PlayFrequency ?? 0);
-
             const target = song === playedSong ? 1 : 0;
-
-            song._PlayFrequency = frequency +
-                this.frequencyRate * (target - frequency);
+            song._PlayFrequency = frequency + this.frequencyRate * (target - frequency);
         }
     },
 
@@ -1946,10 +1943,10 @@ function renderLoop() {
             analyserR.getFloatTimeDomainData(dataR);
             if (isStereoWaveformActive) lastStereoWaveformUpdate = now;
         }
-    } else {
+    } /* else {
         freqDataFloat.fill(analyser.minDecibels - 50);
         freqData.fill(0);
-    }
+    } */
 
     equalizer.visualize(freqDataFloat, analyser);
     metro.render();
