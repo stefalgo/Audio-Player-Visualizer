@@ -187,6 +187,45 @@ class BarRenderer extends Renderer {
             this.spectrumLevels[column] = level;
         }
 
+        const colorStops = [
+            [0.04, 9, 15, 30],
+            [0.12, 20, 47, 92],
+            [0.28, 22, 120, 165],
+            [0.48, 37, 190, 165],
+            [0.68, 240, 207, 91],
+            [0.86, 255, 128, 58],
+            [1, 255, 245, 220]
+        ];
+        
+        for (let column = 0; column < sampleCount; column++) {
+            const level = (this.spectrumLevels[column] + this.spectrumLevels[column + 1]) / 2;
+            const x1 = left + (column / sampleCount) * plotWidth;
+            const x2 = left + ((column + 1) / sampleCount) * plotWidth;
+            const y1 = bottom - this.spectrumLevels[column] * plotHeight;
+            const y2 = bottom - this.spectrumLevels[column + 1] * plotHeight;
+            let upperStopIndex = colorStops.findIndex(([position]) => level <= position);
+            if (upperStopIndex === -1) upperStopIndex = colorStops.length - 1;
+            const lowerStopIndex = Math.max(0, upperStopIndex - 1);
+            const lowerStop = colorStops[lowerStopIndex];
+            const upperStop = colorStops[upperStopIndex];
+            const colorAmount = upperStopIndex === lowerStopIndex ? 0 : (level - lowerStop[0]) / (upperStop[0] - lowerStop[0]);
+            const red = Math.round(lowerStop[1] * (1 - colorAmount) + upperStop[1] * colorAmount);
+            const green = Math.round(lowerStop[2] * (1 - colorAmount) + upperStop[2] * colorAmount);
+            const blue = Math.round(lowerStop[3] * (1 - colorAmount) + upperStop[3] * colorAmount);
+            const t = Math.max(0, Math.min(1, level));
+            const smooth = t * t * (3 - 2 * t);
+            const alpha = 0.12 + smooth * 0.58;
+
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.lineTo(x2, bottom);
+            ctx.lineTo(x1, bottom);
+            ctx.closePath();
+            ctx.fillStyle = `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+            ctx.fill();
+        }
+
         ctx.beginPath();
         for (let column = 0; column <= sampleCount; column++) {
             const x = left + (column / sampleCount) * plotWidth;
@@ -194,21 +233,7 @@ class BarRenderer extends Renderer {
             if (column === 0) ctx.moveTo(x, y);
             else ctx.lineTo(x, y);
         }
-
-        ctx.lineTo(right, bottom);
-        ctx.lineTo(left, bottom);
-        ctx.closePath();
-        ctx.fillStyle = "rgba(215, 166, 106, 0.12)";
-        ctx.fill();
-
-        ctx.beginPath();
-        for (let column = 0; column <= sampleCount; column++) {
-            const x = left + (column / sampleCount) * plotWidth;
-            const y = bottom - this.spectrumLevels[column] * plotHeight;
-            if (column === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
-        }
-        ctx.strokeStyle = "#d7b27f";
+        ctx.strokeStyle = "#F0CF5B";
         ctx.lineWidth = 1.6;
         ctx.lineJoin = "round";
         ctx.stroke();
