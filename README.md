@@ -122,6 +122,11 @@ The entire playlist is played continuously. When the last track finishes, playba
 
 The current track is played twice, then a random track from the playlist is selected and played twice as well.
 
+ - **Loop + Shuffle**
+
+The entire playlist is played continuously. When the last track finishes,
+The playlist is shuffled And then playback returns to the first track.
+
 # License
 
 The [MIT License](./LICENSE) applies to this project's original code.

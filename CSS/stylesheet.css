@@ -105,6 +105,7 @@
     --svg-microphone-off: url("../Media/SVGs/svg-microphone-off.svg");
     --svg-drag: url("../Media/SVGs/svg-drag.svg");
     --svg-reload: url("../Media/SVGs/svg-reload.svg");
+    --svg-repeat-shuffle: url("../media/SVGs/svg-repeat-shuffle.svg");
 }
 
 :focus-visible {
@@ -645,6 +646,10 @@ input[type="range"]::-moz-range-track {
 
 #loopModeBtn[data-mode="loop"]::before {
     background-image: var(--svg-repeat);
+}
+
+#playModeBtn[data-mode="shuffleloop"]::before {
+    background-image: var(--svg-repeat-shuffle);
 }
 
 

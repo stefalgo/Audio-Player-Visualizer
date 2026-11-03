@@ -536,9 +536,15 @@ class HumanRandom {
         this.history = this.history.filter(k => k !== key);
     }
 
+    getSelectionWeight(song) {
+        const weight = Math.max(0, song._Weight ?? 0);
+        const frequency = Math.max(0, Math.min(1, song._PlayFrequency ?? 0));
+        return weight / (1 + frequency);
+    }
+
     pickWeighted(songs) {
         if (!songs.length) return null;
-        const weights = songs.map(song => Math.max(0, song._Weight ?? 0));
+        const weights = songs.map(song => this.getSelectionWeight(song));
         const totalWeight = weights.reduce((total, weight) => total + weight, 0);
 
         if (totalWeight <= 0) {

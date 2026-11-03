@@ -105,6 +105,7 @@ const vizWaterfallResetView = $id("vizWaterfallResetView");
 const vizWaterfallMap = $id("vizWaterfallMap");
 const showMenuBtn = $id("showMenuBtn");
 const microphoneBtn = $id("microphoneBtn");
+const shufflePlaylist = $id("shufflePlaylist");
 
 const dialog = {
     alert: (message, targetEl) => TooltipDialog.info(targetEl, message),
@@ -194,7 +195,7 @@ let PLAYERCONFIG = {
         volume: volumeSlider.value, /// 0.0 - 1.0
     },
     playbackList: {
-        playMode: 0, /// 0: off, 1: autoplay, 2: random
+        playMode: 0, /// 0: off, 1: autoplay, 2: random, ////3: shuffle loop////
         loopMode: 0 /// 0: off, 1: loop once, 2: loop forever
     },
     visualizer: {
@@ -1541,6 +1542,33 @@ function updateAnalyser() {
 
 //----------------------------------------------------------------------------------------------------------------------
 
+function shuffleSongs() {
+    const remainingFiles = [...files];
+    const shuffledFiles = [];
+
+    while (remainingFiles.length) {
+        const selectedSong = randomSongs.pickWeighted(remainingFiles);
+        shuffledFiles.push(selectedSong);
+        remainingFiles.splice(remainingFiles.indexOf(selectedSong), 1);
+    }
+
+    files = shuffledFiles;
+
+    const elementsByKey = new Map(
+        Array.from(songListContainer.children)
+            .filter(element => element.matches(".songItem"))
+            .map(element => [element.dataset.fileName, element])
+    );
+
+    for (const file of files) {
+        const element = elementsByKey.get(file._fingerprint);
+
+        if (element) {
+            songListContainer.appendChild(element);
+        }
+    }
+}
+
 function playFrom(offset) {
     audioCtx.resume();
 
@@ -1861,7 +1889,6 @@ function handlePlaybackEnded() {
             playFrom(0);
         } else {
             loopCounter = 0;
-
             if (PLAYERCONFIG.playbackList.playMode === 2) {
                 loadRandom();
             } else if (PLAYERCONFIG.playbackList.playMode === 1) {
@@ -1871,6 +1898,14 @@ function handlePlaybackEnded() {
     } else if (PLAYERCONFIG.playbackList.loopMode === 2) {
         if (PLAYERCONFIG.playbackList.playMode === 1) {
             playNext(1);
+        } else if (PLAYERCONFIG.playbackList.playMode === 2) {
+            const currentIndex = findIndexByIdentifier(currentSelectedFile);
+            if (currentIndex >= files.length - 1) {
+                shuffleSongs();
+                loadFile(files[0]);
+            } else {
+                playNext(1, false);
+            }
         } else {
             playFrom(0);
         }
@@ -2409,6 +2444,12 @@ removeAllSounds.addEventListener("click", async () => {
     }
 });
 
+shufflePlaylist.addEventListener("click", async () => {
+    const ok = await dialog.confirm("シャッフルしますか？", shufflePlaylist, { defaultButton: 1, primaryBtnText: "シャッフル" });
+    if (!ok) return;
+    shuffleSongs();
+})
+
 removeAllSubtitles.addEventListener("click", async () => {
     const ok = await dialog.confirm("字幕をリストから外しますか？", removeAllSubtitles, { defaultButton: 1, primaryBtnText: "クリア" });
     if (!ok) return;
@@ -2706,6 +2747,7 @@ function isBrowserFullscreen() {
     // );
     return window.matchMedia('(display-mode: fullscreen)').matches;
 }
+
 window.addEventListener("resize", () => {
     if (isBrowserFullscreen()) {
         controlsEl.classList.add("hidden");
