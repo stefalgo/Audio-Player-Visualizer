@@ -1543,13 +1543,10 @@ function updateAnalyser() {
 //----------------------------------------------------------------------------------------------------------------------
 
 function shuffleSongs() {
-    const remainingFiles = [...files];
-    const shuffledFiles = [];
-
-    while (remainingFiles.length) {
-        const selectedSong = randomSongs.pickWeighted(remainingFiles);
-        shuffledFiles.push(selectedSong);
-        remainingFiles.splice(remainingFiles.indexOf(selectedSong), 1);
+    const shuffledFiles = [...files];
+    for (let i = shuffledFiles.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffledFiles[i], shuffledFiles[j]] = [shuffledFiles[j], shuffledFiles[i]];
     }
 
     files = shuffledFiles;
@@ -1562,10 +1559,7 @@ function shuffleSongs() {
 
     for (const file of files) {
         const element = elementsByKey.get(file._fingerprint);
-
-        if (element) {
-            songListContainer.appendChild(element);
-        }
+        if (element) songListContainer.appendChild(element);
     }
 }
 
