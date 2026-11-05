@@ -291,9 +291,9 @@ class WaterfallRenderer extends Renderer {
         this.peakLevels = null;
         this.peakPositions = null;
         this.logRender = config.logRender ?? false;
-        this.logScalePower = Number.isFinite(config.logScalePower) && config.logScalePower > 0
-            ? config.logScalePower
-            : 0.5;
+        this.logScaleOffsetHz = Number.isFinite(config.logScaleOffsetHz) && config.logScaleOffsetHz >= 0
+            ? config.logScaleOffsetHz
+            : 500;
         this.historyLogRender = this.logRender;
         this.colorStops = [
             [0.04, 9, 15, 30],
@@ -560,15 +560,20 @@ class WaterfallRenderer extends Renderer {
     }
 
     _frequencyScale(frequency) {
-        return this.logRender
-            ? Math.pow(Math.max(Number.EPSILON, frequency), this.logScalePower)
-            : frequency;
+        if (!this.logRender) return frequency;
+        const f = Math.max(Number.MIN_VALUE, frequency);
+        const offset = this.logScaleOffsetHz;
+        return offset === 0
+            ? Math.log(f)
+            : Math.log1p(f / offset);
     }
 
     _frequencyFromScale(value) {
         if (!this.logRender) return value;
-
-        const frequency = Math.pow(Math.max(Number.EPSILON, value), 1 / this.logScalePower);
+        const offset = this.logScaleOffsetHz;
+        const frequency = offset === 0
+            ? Math.exp(value)
+            : offset * Math.expm1(Math.max(0, value));
         for (const boundary of [this.baseMinFrequency, this.baseMaxFrequency]) {
             if (!Number.isFinite(boundary) || boundary <= 0) continue;
             const boundaryScale = this._frequencyScale(boundary);
