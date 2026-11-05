@@ -543,7 +543,19 @@ class WaterfallRenderer extends Renderer {
         const baseRange = Math.max(Number.EPSILON, baseMaxScale - baseMinScale);
         const minRange = Math.max(this.logRender ? Number.EPSILON : 1, baseRange / 16);
         const range = Math.min(baseRange, Math.max(minRange, maxScale - minScale));
+        const tolerance = Math.max(
+            baseRange * 1e-12,
+            Number.EPSILON * Math.max(1, Math.abs(baseMinScale), Math.abs(baseMaxScale)) * 16
+        );
+        if (baseRange - range <= tolerance) return [baseMinScale, baseMaxScale];
+
         const clampedMinScale = Math.max(baseMinScale, Math.min(baseMaxScale - range, minScale));
+        if (clampedMinScale - baseMinScale <= tolerance) {
+            return [baseMinScale, clampedMinScale + range];
+        }
+        if (baseMaxScale - (clampedMinScale + range) <= tolerance) {
+            return [clampedMinScale, baseMaxScale];
+        }
         return [clampedMinScale, clampedMinScale + range];
     }
 
@@ -554,9 +566,16 @@ class WaterfallRenderer extends Renderer {
     }
 
     _frequencyFromScale(value) {
-        return this.logRender
-            ? Math.pow(Math.max(Number.EPSILON, value), 1 / this.logScalePower)
-            : value;
+        if (!this.logRender) return value;
+
+        const frequency = Math.pow(Math.max(Number.EPSILON, value), 1 / this.logScalePower);
+        for (const boundary of [this.baseMinFrequency, this.baseMaxFrequency]) {
+            if (!Number.isFinite(boundary) || boundary <= 0) continue;
+            const boundaryScale = this._frequencyScale(boundary);
+            const tolerance = Number.EPSILON * Math.max(1, Math.abs(value), Math.abs(boundaryScale)) * 16;
+            if (Math.abs(value - boundaryScale) <= tolerance) return boundary;
+        }
+        return frequency;
     }
 
     _frequencyAtRatio(ratio, minFrequency, maxFrequency) {
@@ -829,7 +848,7 @@ class WaterfallRenderer extends Renderer {
         ctx.font = "10px sans-serif";
         ctx.textBaseline = "middle";
         ctx.fillStyle = "#aab8c5";
-        ctx.fillText("FREQUENCY", 8, headerHeight / 2);
+        ctx.fillText(this.logRender ? "FREQUENCY (LOG)" : "FREQUENCY", 8, headerHeight / 2);
         ctx.fillStyle = "#7d909f";
         const frequencyDivisions = 8;
         for (let division = 0; division <= frequencyDivisions; division++) {
@@ -858,6 +877,42 @@ class WaterfallRenderer extends Renderer {
             ctx.strokeStyle = "rgba(185, 205, 220, 0.08)";
             ctx.stroke();
         }
+
+        const frequencyTicks = [];
+        const tickFrequencyRange = this.frequencyViewMax - this.frequencyViewMin;
+        const roughMajorStep = tickFrequencyRange / 8;
+        const stepPower = Math.pow(10, Math.floor(Math.log10(roughMajorStep)));
+        const stepScale = roughMajorStep / stepPower;
+        const majorStep = (stepScale <= 1 ? 1 : stepScale <= 2 ? 2 : stepScale <= 5 ? 5 : 10) * stepPower;
+        const minorStep = majorStep / 4;
+        const firstTick = Math.ceil(this.frequencyViewMin / minorStep);
+        const lastTick = Math.floor(this.frequencyViewMax / minorStep);
+        for (let tick = firstTick; tick <= lastTick; tick++) {
+            frequencyTicks.push({
+                frequency: tick * minorStep,
+                major: tick % 4 === 0
+            });
+        }
+
+        ctx.save();
+        ctx.lineWidth = 1;
+        for (const tick of frequencyTicks) {
+            const ratio = this._frequencyRatio(
+                tick.frequency,
+                this.frequencyViewMin,
+                this.frequencyViewMax
+            );
+            const y = headerHeight + ratio * (nextPlotHeight - 1);
+            const tickLength = tick.major ? 7 : 4;
+            ctx.beginPath();
+            ctx.moveTo(plotStart - tickLength, y);
+            ctx.lineTo(plotStart, y);
+            ctx.strokeStyle = tick.major
+                ? "rgba(185, 205, 220, 0.7)"
+                : "rgba(185, 205, 220, 0.38)";
+            ctx.stroke();
+        }
+        ctx.restore();
 
         ctx.fillStyle = "#7d909f";
         ctx.textAlign = "center";
