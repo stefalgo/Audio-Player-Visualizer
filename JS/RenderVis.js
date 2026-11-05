@@ -196,7 +196,7 @@ class BarRenderer extends Renderer {
             [0.86, 255, 128, 58],
             [1, 255, 245, 220]
         ];
-        
+
         for (let column = 0; column < sampleCount; column++) {
             const level = (this.spectrumLevels[column] + this.spectrumLevels[column + 1]) / 2;
             const x1 = left + (column / sampleCount) * plotWidth;
@@ -290,6 +290,11 @@ class WaterfallRenderer extends Renderer {
         this.isActive = false;
         this.peakLevels = null;
         this.peakPositions = null;
+        this.logRender = config.logRender ?? false;
+        this.logScalePower = Number.isFinite(config.logScalePower) && config.logScalePower > 0
+            ? config.logScalePower
+            : 0.5;
+        this.historyLogRender = this.logRender;
         this.colorStops = [
             [0.04, 9, 15, 30],
             [0.12, 20, 47, 92],
@@ -302,6 +307,15 @@ class WaterfallRenderer extends Renderer {
         this.pinIcon = new Image();
         this.pinIcon.src = "./Media/SVGs/svg-pin.svg";
         this._bindInteractions();
+    }
+
+    setLogRender(enabled) {
+        const nextValue = Boolean(enabled);
+        if (this.logRender === nextValue) return;
+        this.logRender = nextValue;
+        this.historyLogRender = nextValue;
+        this.clearHistory();
+        this.overviewBounds = null;
     }
 
     _bindInteractions() {
@@ -321,12 +335,12 @@ class WaterfallRenderer extends Renderer {
                         const deltaY = this.pointer.y - this.dragStart.y;
                         this.panSeconds = this._clampPan(this.dragStart.panSeconds + deltaX / Math.max(1, this.plotWidth) * this._visibleSpan());
                         const frequencyShift = deltaY / Math.max(1, this.plotHeight) * this.dragStart.frequencySpan;
-                        [this.frequencyViewMin, this.frequencyViewMax] = this._clampFrequencyView(
+                        [this.frequencyViewMin, this.frequencyViewMax] = this._clampFrequencyScaleView(
                             this.dragStart.frequencyMin + frequencyShift,
                             this.dragStart.frequencyMax + frequencyShift,
                             this.dragStart.baseMin,
                             this.dragStart.baseMax
-                        );
+                        ).map(frequency => this._frequencyFromScale(frequency));
                     }
                 }
                 this.overviewDirty = true;
@@ -361,8 +375,8 @@ class WaterfallRenderer extends Renderer {
                     offsetY: insideViewport ? y - (viewport.y + viewport.height / 2) : 0,
                     bounds,
                     visibleSpan: this._visibleSpan(),
-                    frequencySpan: (this.frequencyViewMax ?? this.baseMaxFrequency) -
-                        (this.frequencyViewMin ?? this.baseMinFrequency),
+                    frequencySpan: this._frequencyScale(this.frequencyViewMax ?? this.baseMaxFrequency) -
+                        this._frequencyScale(this.frequencyViewMin ?? this.baseMinFrequency),
                     baseMin: this.baseMinFrequency,
                     baseMax: this.baseMaxFrequency
                 };
@@ -377,8 +391,8 @@ class WaterfallRenderer extends Renderer {
                 y,
                 panSeconds: this.panSeconds
             };
-            this.dragStart.frequencyMin = this.frequencyViewMin ?? this.baseMinFrequency;
-            this.dragStart.frequencyMax = this.frequencyViewMax ?? this.baseMaxFrequency;
+            this.dragStart.frequencyMin = this._frequencyScale(this.frequencyViewMin ?? this.baseMinFrequency);
+            this.dragStart.frequencyMax = this._frequencyScale(this.frequencyViewMax ?? this.baseMaxFrequency);
             this.dragStart.frequencySpan = this.dragStart.frequencyMax - this.dragStart.frequencyMin;
             this.dragStart.baseMin = this.baseMinFrequency;
             this.dragStart.baseMax = this.baseMaxFrequency;
@@ -411,24 +425,26 @@ class WaterfallRenderer extends Renderer {
             const currentMin = this.frequencyViewMin ?? this.baseMinFrequency;
             const currentMax = this.frequencyViewMax ?? this.baseMaxFrequency;
             if (event.shiftKey) {
-                const currentRange = currentMax - currentMin;
+                const currentMinScale = this._frequencyScale(currentMin);
+                const currentMaxScale = this._frequencyScale(currentMax);
+                const currentRange = currentMaxScale - currentMinScale;
                 const anchorY = this.panLocked
                     ? 1
                     : overOverview
                         ? (pointerY - overview.y) / overview.height
                         : (pointerY - this.headerHeight) / Math.max(1, this.plotHeight);
-                const anchorFrequency = this.panLocked
-                    ? currentMin
+                const anchorScale = this.panLocked
+                    ? currentMinScale
                     : overOverview
-                        ? overview.topFrequency - anchorY * (overview.topFrequency - overview.minFrequency)
-                        : currentMax - anchorY * currentRange;
+                        ? this._frequencyScale(this._frequencyAtRatio(anchorY, overview.minFrequency, overview.topFrequency))
+                        : currentMaxScale - anchorY * currentRange;
                 const nextRange = currentRange / zoomFactor;
-                [this.frequencyViewMin, this.frequencyViewMax] = this._clampFrequencyView(
-                    anchorFrequency - (1 - anchorY) * nextRange,
-                    anchorFrequency + anchorY * nextRange,
+                [this.frequencyViewMin, this.frequencyViewMax] = this._clampFrequencyScaleView(
+                    anchorScale - (1 - anchorY) * nextRange,
+                    anchorScale + anchorY * nextRange,
                     this.baseMinFrequency,
                     this.baseMaxFrequency
-                );
+                ).map(frequency => this._frequencyFromScale(frequency));
             } else {
                 const currentSpan = this._visibleSpan();
                 const anchorX = this.panLocked
@@ -458,14 +474,15 @@ class WaterfallRenderer extends Renderer {
             this.historySeconds - centerTimeRatio * this.historySeconds - visibleSpan / 2
         );
 
-        const baseRange = baseMax - baseMin;
-        const centerFrequency = baseMax - (centerY / bounds.height) * baseRange;
-        [this.frequencyViewMin, this.frequencyViewMax] = this._clampFrequencyView(
-            centerFrequency - frequencySpan / 2,
-            centerFrequency + frequencySpan / 2,
+        const baseMinScale = this._frequencyScale(baseMin);
+        const baseMaxScale = this._frequencyScale(baseMax);
+        const centerScale = baseMaxScale - (centerY / bounds.height) * (baseMaxScale - baseMinScale);
+        [this.frequencyViewMin, this.frequencyViewMax] = this._clampFrequencyScaleView(
+            centerScale - frequencySpan / 2,
+            centerScale + frequencySpan / 2,
             baseMin,
             baseMax
-        );
+        ).map(frequency => this._frequencyFromScale(frequency));
     }
 
     _updateCursor() {
@@ -512,11 +529,47 @@ class WaterfallRenderer extends Renderer {
     }
 
     _clampFrequencyView(minFrequency, maxFrequency, baseMin, baseMax) {
-        const baseRange = Math.max(1, baseMax - baseMin);
-        const minRange = Math.max(1, baseRange / 16);
-        const range = Math.min(baseRange, Math.max(minRange, maxFrequency - minFrequency));
-        const min = Math.max(baseMin, Math.min(baseMax - range, minFrequency));
-        return [min, min + range];
+        return this._clampFrequencyScaleView(
+            this._frequencyScale(minFrequency),
+            this._frequencyScale(maxFrequency),
+            baseMin,
+            baseMax
+        ).map(frequency => this._frequencyFromScale(frequency));
+    }
+
+    _clampFrequencyScaleView(minScale, maxScale, baseMin, baseMax) {
+        const baseMinScale = this._frequencyScale(baseMin);
+        const baseMaxScale = this._frequencyScale(baseMax);
+        const baseRange = Math.max(Number.EPSILON, baseMaxScale - baseMinScale);
+        const minRange = Math.max(this.logRender ? Number.EPSILON : 1, baseRange / 16);
+        const range = Math.min(baseRange, Math.max(minRange, maxScale - minScale));
+        const clampedMinScale = Math.max(baseMinScale, Math.min(baseMaxScale - range, minScale));
+        return [clampedMinScale, clampedMinScale + range];
+    }
+
+    _frequencyScale(frequency) {
+        return this.logRender
+            ? Math.pow(Math.max(Number.EPSILON, frequency), this.logScalePower)
+            : frequency;
+    }
+
+    _frequencyFromScale(value) {
+        return this.logRender
+            ? Math.pow(Math.max(Number.EPSILON, value), 1 / this.logScalePower)
+            : value;
+    }
+
+    _frequencyAtRatio(ratio, minFrequency, maxFrequency) {
+        const clampedRatio = Math.max(0, Math.min(1, ratio));
+        const maxScale = this._frequencyScale(maxFrequency);
+        const minScale = this._frequencyScale(minFrequency);
+        return this._frequencyFromScale(maxScale - clampedRatio * (maxScale - minScale));
+    }
+
+    _frequencyRatio(frequency, minFrequency, maxFrequency) {
+        const maxScale = this._frequencyScale(maxFrequency);
+        const minScale = this._frequencyScale(minFrequency);
+        return (maxScale - this._frequencyScale(frequency)) / (maxScale - minScale);
     }
 
     setActive(active) {
@@ -593,6 +646,10 @@ class WaterfallRenderer extends Renderer {
             minFrequency * 1.01,
             Math.min(Number(maxFrequency) || this.maxFrequency, nyquist)
         );
+        if (this.historyLogRender !== this.logRender) {
+            this.clearHistory();
+            this.historyLogRender = this.logRender;
+        }
         if (
             (this.historySampleRate && this.historySampleRate !== sampleRate) ||
             (this.historyTopFrequency && this.historyTopFrequency !== topFrequency)
@@ -635,7 +692,7 @@ class WaterfallRenderer extends Renderer {
         shift = Math.min(shift, historyCanvas.width);
 
         const palette = this.colorStops;
-        const frequencyRange = topFrequency - minFrequency;
+        const frequencyRange = this._frequencyScale(topFrequency) - this._frequencyScale(minFrequency);
         const gainDb = 20 * Math.log10(Math.max(0.01, Number(sensitivity) || 1));
         const imageData = shift > 0 ? historyCtx.createImageData(shift, historyHeight) : null;
         const elapsedForPeaks = Math.max(0, deltaTime);
@@ -645,7 +702,12 @@ class WaterfallRenderer extends Renderer {
 
         if (shift > 0) {
             for (let y = 0; y < historyHeight; y++) {
-                const bin = historyHeight - 1 - y;
+                const bin = this.logRender
+                    ? Math.max(0, Math.min(data.length - 1, Math.round(
+                        this._frequencyAtRatio(y / Math.max(1, historyHeight - 1), minFrequency, topFrequency) /
+                        nyquist * (data.length - 1)
+                    )))
+                    : historyHeight - 1 - y;
                 const db = minDecibels + (data[bin] / 255) * (maxDecibels - minDecibels) + gainDb;
                 const normalized = Math.max(0, Math.min(1, (db - this.dbFloor) / this.dbRange));
                 const level = Math.pow(normalized, 1 / Math.max(0.25, this.contrast));
@@ -705,12 +767,14 @@ class WaterfallRenderer extends Renderer {
         const sourceLeft = ((this.historyHead - panPixels - sourceWidth) % historyCanvas.width + historyCanvas.width) % historyCanvas.width;
         const firstWidth = Math.min(sourceWidth, historyCanvas.width - sourceLeft);
         const firstDestinationWidth = nextPlotWidth * firstWidth / sourceWidth;
-        const viewFrequencyRange = this.frequencyViewMax - this.frequencyViewMin;
-        const sourceY = Math.max(0, (nyquist - this.frequencyViewMax) / nyquist * historyHeight);
-        const sourceHeight = Math.min(
-            historyHeight - sourceY,
-            Math.max(1, viewFrequencyRange / nyquist * historyHeight)
-        );
+        const viewFrequencyRange = this._frequencyScale(this.frequencyViewMax) - this._frequencyScale(this.frequencyViewMin);
+        const sourceY = this.logRender
+            ? this._frequencyRatio(this.frequencyViewMax, minFrequency, topFrequency) * historyHeight
+            : Math.max(0, (nyquist - this.frequencyViewMax) / nyquist * historyHeight);
+        const sourceBottom = this.logRender
+            ? this._frequencyRatio(this.frequencyViewMin, minFrequency, topFrequency) * historyHeight
+            : (nyquist - this.frequencyViewMin) / nyquist * historyHeight;
+        const sourceHeight = Math.min(historyHeight - sourceY, Math.max(1, sourceBottom - sourceY));
         ctx.save();
         ctx.imageSmoothingEnabled = false;
         ctx.drawImage(historyCanvas, sourceLeft, sourceY, firstWidth, sourceHeight, plotStart, headerHeight, firstDestinationWidth, nextPlotHeight);
@@ -745,10 +809,16 @@ class WaterfallRenderer extends Renderer {
                 if (position < 0) continue;
                 const distance = (position - sourceLeft + historyCanvas.width) % historyCanvas.width;
                 if (distance > sourceWidth) continue;
-                const frequency = (historyHeight - 1 - y) * nyquist / historyHeight;
+                const frequency = this.logRender
+                    ? this._frequencyAtRatio(y / Math.max(1, historyHeight - 1), minFrequency, topFrequency)
+                    : (historyHeight - 1 - y) * nyquist / historyHeight;
                 if (frequency < this.frequencyViewMin || frequency > this.frequencyViewMax) continue;
                 const x = plotStart + (distance / sourceWidth) * nextPlotWidth;
-                const peakY = headerHeight + ((this.frequencyViewMax - frequency) / viewFrequencyRange) * nextPlotHeight;
+                const peakY = headerHeight + this._frequencyRatio(
+                    frequency,
+                    this.frequencyViewMin,
+                    this.frequencyViewMax
+                ) * nextPlotHeight;
                 ctx.fillStyle = `rgba(255, 255, 255, ${Math.min(0.9, 0.25 + this.peakLevels[y] * 0.65)})`;
                 ctx.fillRect(x, peakY, 2, 1);
             }
@@ -764,7 +834,11 @@ class WaterfallRenderer extends Renderer {
         const frequencyDivisions = 8;
         for (let division = 0; division <= frequencyDivisions; division++) {
             const ratio = division / frequencyDivisions;
-            const frequency = this.frequencyViewMax - viewFrequencyRange * ratio;
+            const frequency = this._frequencyAtRatio(
+                ratio,
+                this.frequencyViewMin,
+                this.frequencyViewMax
+            );
             const y = headerHeight + ratio * (nextPlotHeight - 1);
             ctx.beginPath();
             ctx.moveTo(plotStart, y);
@@ -805,7 +879,7 @@ class WaterfallRenderer extends Renderer {
             ctx.fillText("<<History Frozen>>", plotStart + nextPlotWidth / 2, headerHeight / 2);
         }
 
-        const isFrequencyZoomed = viewFrequencyRange < frequencyRange - 1;
+        const isFrequencyZoomed = viewFrequencyRange < frequencyRange - (this.logRender ? 1e-6 : 1);
         const isTimePanned = this.panSeconds > 0.01;
         const isTimeZoomed = this.zoom > 1.001;
         this.overviewBounds = null;
@@ -837,7 +911,7 @@ class WaterfallRenderer extends Renderer {
                 if (overOverview) {
                     const xRatio = (px - overview.x) / overview.width;
                     const yRatio = (py - overview.y) / overview.height;
-                    const frequency = overview.topFrequency - yRatio * (overview.topFrequency - overview.minFrequency);
+                    const frequency = this._frequencyAtRatio(yRatio, overview.minFrequency, overview.topFrequency);
                     const secondsAgo = ((1 - xRatio) * overview.historySeconds) / playbackRate;
                     ctx.beginPath();
                     ctx.moveTo(px, overview.y);
@@ -885,7 +959,11 @@ class WaterfallRenderer extends Renderer {
                 } else {
                     const xRatio = (px - plotStart) / nextPlotWidth;
                     const yRatio = (py - headerHeight) / nextPlotHeight;
-                    const frequency = this.frequencyViewMax - yRatio * viewFrequencyRange;
+                    const frequency = this._frequencyAtRatio(
+                        yRatio,
+                        this.frequencyViewMin,
+                        this.frequencyViewMax
+                    );
                     const secondsAgo = (this.panSeconds + (1 - xRatio) * visibleSpan) / playbackRate;
                     ctx.beginPath();
                     ctx.moveTo(px, headerHeight);
@@ -897,7 +975,11 @@ class WaterfallRenderer extends Renderer {
 
                     const overview = this.overviewBounds;
                     if (overview && overview.width > 0 && overview.height > 0) {
-                        const overviewYRatio = (overview.topFrequency - frequency) / (overview.topFrequency - overview.minFrequency);
+                        const overviewYRatio = this._frequencyRatio(
+                            frequency,
+                            overview.minFrequency,
+                            overview.topFrequency
+                        );
                         const overviewY = overview.y + overviewYRatio * overview.height;
                         const overviewXRatio = 1 - (secondsAgo * playbackRate) / overview.historySeconds;
                         const overviewX = overview.x + overviewXRatio * overview.width;
@@ -959,11 +1041,15 @@ class WaterfallRenderer extends Renderer {
             if (this.historyFilled > 0) {
                 overviewCtx.imageSmoothingEnabled = true;
                 overviewCtx.imageSmoothingQuality = "low";
-                const sourceY = Math.max(0, (nyquist - topFrequency) / nyquist * historyCanvas.height);
-                const sourceHeight = Math.min(
-                    historyCanvas.height - sourceY,
-                    Math.max(1, (topFrequency - minFrequency) / nyquist * historyCanvas.height)
-                );
+                const sourceY = this.logRender
+                    ? 0
+                    : Math.max(0, (nyquist - topFrequency) / nyquist * historyCanvas.height);
+                const sourceHeight = this.logRender
+                    ? historyCanvas.height
+                    : Math.min(
+                        historyCanvas.height - sourceY,
+                        Math.max(1, (topFrequency - minFrequency) / nyquist * historyCanvas.height)
+                    );
                 const sourceWidth = historyCanvas.width;
                 if (this.historyFilled < sourceWidth) {
                     const destinationWidth = overviewWidth * this.historyFilled / sourceWidth;
@@ -996,12 +1082,11 @@ class WaterfallRenderer extends Renderer {
         ctx.fillRect(overviewX - 3, overviewY - 3, overviewWidth + 6, overviewHeight + 6);
         ctx.drawImage(this.overviewCanvas, overviewX, overviewY);
 
-        const baseFrequencyRange = Math.max(1, topFrequency - minFrequency);
-        const viewFrequencyRange = this.frequencyViewMax - this.frequencyViewMin;
         const viewLeft = overviewX + (this.historySeconds - this.panSeconds - visibleSpan) / this.historySeconds * overviewWidth;
         const viewWidth = visibleSpan / this.historySeconds * overviewWidth;
-        const viewTop = overviewY + (topFrequency - this.frequencyViewMax) / baseFrequencyRange * overviewHeight;
-        const viewHeight = Math.max(2, viewFrequencyRange / baseFrequencyRange * overviewHeight);
+        const viewTop = overviewY + this._frequencyRatio(this.frequencyViewMax, minFrequency, topFrequency) * overviewHeight;
+        const viewBottom = overviewY + this._frequencyRatio(this.frequencyViewMin, minFrequency, topFrequency) * overviewHeight;
+        const viewHeight = Math.max(2, viewBottom - viewTop);
         const maxVisibleSpan = Math.min(this.historySeconds, this.visibleSeconds);
         const maxViewWidth = maxVisibleSpan / this.historySeconds * overviewWidth;
         const maxViewLeft = Math.max(

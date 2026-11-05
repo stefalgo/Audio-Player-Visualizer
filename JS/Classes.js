@@ -1686,6 +1686,45 @@ class Metronome {
     }
 
     metronomeClick(time, accent) {
+        if (this.volume <= 0) return;
+        const gain = this.audio.createGain();
+        gain.gain.setValueAtTime(0.001, time);
+        gain.gain.exponentialRampToValueAtTime(this.volume, time + 0.002);
+        gain.gain.exponentialRampToValueAtTime(
+            0.001,
+            time + 0.04
+        );
+        gain.connect(this.audio.destination);
+        const frequency = accent ? 1800 : 1400;
+        const osc = this.audio.createOscillator();
+        const fundamentalGain = this.audio.createGain();
+        osc.type = "square";
+        osc.frequency.setValueAtTime(frequency, time);
+        fundamentalGain.gain.setValueAtTime(0.75, time);
+        osc.connect(fundamentalGain);
+        fundamentalGain.connect(gain);
+        osc.start(time);
+        osc.stop(time + 0.045);
+        const offsets = [-200, -150, -100, -50, 0, 50, 100, 150, 200];
+        const weights = offsets.map(offset => Math.pow(10, -Math.abs(offset) / 200));
+        const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+        offsets.forEach((offset, index) => {
+            const partial = this.audio.createOscillator();
+            const partialGain = this.audio.createGain();
+            partial.type = "sine";
+            partial.frequency.setValueAtTime(frequency + offset, time);
+            partialGain.gain.setValueAtTime(
+                0.25 * weights[index] / totalWeight,
+                time
+            );
+            partial.connect(partialGain);
+            partialGain.connect(gain);
+            partial.start(time);
+            partial.stop(time + 0.045);
+        });
+    }
+
+    /* metronomeClick(time, accent) {
         const osc = this.audio.createOscillator();
         const gain = this.audio.createGain();
         osc.type = "square";
@@ -1705,7 +1744,7 @@ class Metronome {
         gain.connect(this.audio.destination);
         osc.start(time);
         osc.stop(time + 0.035);
-    }
+    } */
 
     getBeat() {
         if (this.media.currentTime < this.firstBeat) return -1;

@@ -103,6 +103,7 @@ const vizWaterfallPanLock = $id("vizWaterfallPanLock");
 const vizWaterfallClear = $id("vizWaterfallClear");
 const vizWaterfallResetView = $id("vizWaterfallResetView");
 const vizWaterfallMap = $id("vizWaterfallMap");
+const vizWaterfallLogScale = $id("vizWaterfallLogScale");
 const showMenuBtn = $id("showMenuBtn");
 const microphoneBtn = $id("microphoneBtn");
 const shufflePlaylist = $id("shufflePlaylist");
@@ -205,6 +206,7 @@ let PLAYERCONFIG = {
     renderer: { // initial config
         sensitivity: 1,
         maxFrequency: 16000,
+        logRender: true,
         analyserSmoothing: analyserSmoothing,
         retroCenterFreqs: RETRO_CENTER_FREQS
     },
@@ -312,13 +314,11 @@ mediaSource.connect(gainNode);
 //------------------------------------------------------------------------------------------------
 
 const randomSongs = new HumanRandom()
-
 const renderHandler = new RenderHandler(canvas, ctx, audioCtx, { ...PLAYERCONFIG.renderer });
 
 renderHandler.renderers.video.setConfig("ForegroundVideo", PLAYERCONFIG.ForegroundVideoRender);
 
 const equalizer = new CanvasEQ($id('eq'), EQ_BANDS, 12);
-
 const languageNames = new Intl.DisplayNames(["en"], {
     type: "language",
 });
@@ -2230,6 +2230,10 @@ vizWaterfallEdgeSpectrum.addEventListener("change", () => {
 
 vizWaterfallMap.addEventListener("change", () => {
     renderHandler.renderers.waterfall.showMap = Number(vizWaterfallMap.value);
+});
+
+vizWaterfallLogScale.addEventListener("change", () => {
+    renderHandler.renderers.waterfall.setLogRender(vizWaterfallLogScale.checked);
 });
 
 vizWaterfallPanLock.addEventListener("change", () => {
