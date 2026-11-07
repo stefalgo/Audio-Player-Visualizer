@@ -129,7 +129,7 @@ The playlist is shuffled And then playback returns to the first track.
 
 # License
 
-The [MIT License](./LICENSE) applies to this project's original code.
+The [CC BY-NC-ND 4.0](./LICENSE) applies to this project's original code.
 
 # Third-party licenses
 
