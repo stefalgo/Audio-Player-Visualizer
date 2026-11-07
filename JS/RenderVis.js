@@ -291,6 +291,7 @@ class WaterfallRenderer extends Renderer {
         this.peakLevels = null;
         this.peakPositions = null;
         this.logRender = config.logRender ?? false;
+        // this.spectrumPreviewMode = config.spectrumPreviewMode ?? 1;
         this.logScaleOffsetHz = Number.isFinite(config.logScaleOffsetHz) && config.logScaleOffsetHz >= 0
             ? config.logScaleOffsetHz
             : 500;
@@ -1084,7 +1085,20 @@ class WaterfallRenderer extends Renderer {
         ctx.restore();
     }
 
-    _drawOverview({ ctx, historyCanvas, plotStart, headerHeight, plotWidth, plotHeight, minFrequency, topFrequency, nyquist, visibleSpan, sourceLeft, playbackRate }) {
+    _drawOverview({
+        ctx,
+        historyCanvas,
+        plotStart,
+        headerHeight,
+        plotWidth,
+        plotHeight,
+        minFrequency,
+        topFrequency,
+        nyquist,
+        visibleSpan,
+        sourceLeft,
+        playbackRate
+    }) {
         const overviewCtx = this.overviewCtx;
         const overviewWidth = this.overviewCanvas.width;
         const overviewHeight = this.overviewCanvas.height;
