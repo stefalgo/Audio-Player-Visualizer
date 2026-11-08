@@ -260,7 +260,6 @@ let selectedSubtitle = ''; // _fingerprint
 let lastSubtitleFingerprint = '';
 let currentSelectedFile = ''; // _fingerprint
 let freqData, freqDataFloat, timeData;
-let lastStereoWaveformUpdate = 0;
 let currentLoadToken = 0; // e
 
 let playbackHPFilter = null;
@@ -271,7 +270,8 @@ let subtitleLastIndex = 0;
 let fftChangeTimeout = null; // debounce when changing the fftsize
 let resizeTimeout = null; // debounce thing for updateing the canvas on window resize or something like that
 let lastProgress = -1;
-let lastRenderTimestamp = 0;
+let nextRenderTimestamp = null;
+let lastRenderInterval = null;
 
 gainNode = audioCtx.createGain();
 gainNode.gain.value = PLAYERCONFIG.playback.volume;
@@ -1914,16 +1914,32 @@ function handlePlaybackEnded() {
 }
 
 // Render stuff loop
-function renderLoop() {
+function renderLoop(frameTimestamp) {
     requestAnimationFrame(renderLoop);
     if (PLAYERCONFIG.visualizer.current !== "video") {
         renderHandler.renderers.video.hideASSOverlay();
     }
-    const now = performance.now();
-    const minFrameTime = 1000 / PLAYERCONFIG.maxRenderFps;
-    if (now - lastRenderTimestamp < minFrameTime) return;
-    lastRenderTimestamp = now;
+    const now = Number.isFinite(frameTimestamp) ? frameTimestamp : performance.now();
+    const maxFps = Number(PLAYERCONFIG.maxRenderFps);
+    const renderInterval = Number.isFinite(maxFps) && maxFps > 0 ? 1000 / maxFps : 0;
+    if (renderInterval !== lastRenderInterval) {
+        lastRenderInterval = renderInterval;
+        nextRenderTimestamp = null;
+    }
+    if (renderInterval > 0) {
+        if (nextRenderTimestamp === null) {
+            nextRenderTimestamp = now;
+        } else if (now + 1 < nextRenderTimestamp) {
+            return;
+        }
+        const intervalsToAdvance = Math.max(
+            1,
+            Math.floor((now - nextRenderTimestamp) / renderInterval) + 1
+        );
+        nextRenderTimestamp += intervalsToAdvance * renderInterval;
+    }
     if (!analyser || !audioCtx) return;
+    const visualizerMode = PLAYERCONFIG.visualizer.current;
     const elapsed = getElapsedTime(true);
 
     if (!window._lastSubtitleCheck) window._lastSubtitleCheck = 0;
@@ -1962,27 +1978,27 @@ function renderLoop() {
         lastProgress = progress;
     }
 
-    const isStereoWaveformActive = !PLAYERCONFIG.visualizer.paused && PLAYERCONFIG.visualizer.current === "waveform";
-    const updateStereoWaveform = !isStereoWaveformActive || now - lastStereoWaveformUpdate >= 1000 / 30;
+    const visualizerRunning = !PLAYERCONFIG.visualizer.paused;
+    const isEqualizerVisible = eqSlidersContainer.style.display !== "none";
+    const needsByteFrequencyData = visualizerRunning && (visualizerMode === "bar" || visualizerMode === "waterfall");
+    const needsFloatFrequencyData = isEqualizerVisible || (visualizerRunning && visualizerMode === "retro");
     if (!videoEl.paused || micSource) {
-        analyser.getByteFrequencyData(freqData);
-        analyser.getFloatFrequencyData(freqDataFloat);
-        if (!PLAYERCONFIG.visualizer.paused &&
-            (PLAYERCONFIG.visualizer.current === "soundTrace" || (isStereoWaveformActive && updateStereoWaveform))) {
+        if (needsByteFrequencyData) analyser.getByteFrequencyData(freqData);
+        if (needsFloatFrequencyData) analyser.getFloatFrequencyData(freqDataFloat);
+        if (visualizerRunning && visualizerMode === "soundTrace") {
             analyserL.getFloatTimeDomainData(dataL);
             analyserR.getFloatTimeDomainData(dataR);
-            if (isStereoWaveformActive) lastStereoWaveformUpdate = now;
         }
     } /* else {
         freqDataFloat.fill(analyser.minDecibels - 50);
         freqData.fill(0);
     } */
 
-    equalizer.visualize(freqDataFloat, analyser);
+    if (isEqualizerVisible) equalizer.visualize(freqDataFloat, analyser);
     metro.render();
 
     if (!PLAYERCONFIG.visualizer.paused) {
-        switch (PLAYERCONFIG.visualizer.current) {
+        switch (visualizerMode) {
             case 'bar':
                 renderHandler.renderers.waterfall.setActive(false);
                 renderHandler.renderers.bar.render(freqData, analyser, null, visualizerMF.value, analyserSmoothing);
@@ -1999,13 +2015,6 @@ function renderLoop() {
                     micSource ? performance.now() / 1000 : videoEl.currentTime,
                     videoEl.playbackRate
                 );
-                break;
-
-            case 'waveform':
-                renderHandler.renderers.waterfall.setActive(false);
-                if (updateStereoWaveform) {
-                    renderHandler.renderers.wave.render(dataL);
-                }
                 break;
 
             case 'soundTrace':

@@ -640,6 +640,87 @@ class SpaceController {
     }
 }
 
+class RenderDiagnostics {
+    constructor(intervalMs = 1000, logger = message => console.log(message)) {
+        this.intervalMs = Math.max(1, intervalMs);
+        this.logger = logger;
+        this.mode = null;
+        this.reset();
+    }
+
+    reset() {
+        this.mode = null;
+        this.windowStart = null;
+        this.lastFrameTime = null;
+        this.frames = 0;
+        this.frameIntervals = [];
+        this.timings = {
+            ui: { total: 0, max: 0 },
+            fft: { total: 0, max: 0 },
+            meters: { total: 0, max: 0 },
+            renderer: { total: 0, max: 0 },
+            frame: { total: 0, max: 0 }
+        };
+    }
+
+    record(mode, timings = {}, now = performance.now()) {
+        if (mode !== this.mode) {
+            this.reset();
+            this.mode = mode;
+            this.windowStart = now;
+        }
+
+        if (this.lastFrameTime !== null) {
+            this.frameIntervals.push(now - this.lastFrameTime);
+        }
+        this.lastFrameTime = now;
+        this.frames++;
+
+        for (const [name, metric] of Object.entries(this.timings)) {
+            const duration = Number.isFinite(timings[name]) ? timings[name] : 0;
+            metric.total += duration;
+            metric.max = Math.max(metric.max, duration);
+        }
+
+        const elapsed = now - this.windowStart;
+        if (elapsed < this.intervalMs) return null;
+
+        const sortedIntervals = this.frameIntervals.slice().sort((a, b) => a - b);
+        const p99FrameInterval = sortedIntervals[Math.min(
+            sortedIntervals.length - 1,
+            Math.floor(sortedIntervals.length * 0.99)
+        )] || 0;
+        const summary = {
+            mode,
+            fps: this.frames * 1000 / elapsed,
+            onePercentLow: p99FrameInterval ? 1000 / p99FrameInterval : 0,
+            timings: Object.fromEntries(
+                Object.entries(this.timings).map(([name, metric]) => [
+                    name,
+                    { average: metric.total / this.frames, max: metric.max }
+                ])
+            )
+        };
+        const averageAndMax = ({ average, max }) =>
+            `${average.toFixed(2)}/${max.toFixed(2)} ms`;
+        this.logger(
+            `[Render debug] ${mode}: ${summary.fps.toFixed(1)} FPS, ` +
+            `1% low ${summary.onePercentLow.toFixed(1)} FPS | ` +
+            `avg/max UI ${averageAndMax(summary.timings.ui)}, ` +
+            `FFT ${averageAndMax(summary.timings.fft)}, ` +
+            `meters ${averageAndMax(summary.timings.meters)}, ` +
+            `renderer ${averageAndMax(summary.timings.renderer)}, ` +
+            `whole frame ${averageAndMax(summary.timings.frame)}`
+        );
+
+        this.reset();
+        this.mode = mode;
+        this.windowStart = now;
+        this.lastFrameTime = now;
+        return summary;
+    }
+}
+
 class CanvasEQ {
     constructor(canvas, freqs, range = 12) {
         this.canvas = canvas;
