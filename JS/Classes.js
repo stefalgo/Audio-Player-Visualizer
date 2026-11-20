@@ -154,6 +154,8 @@ class MovableWindow {
         this.dragging = false;
         this.offsetX = 0;
         this.offsetY = 0;
+        this.dragStart = null;
+        this.dragPosition = null;
         this.minimized = false;
         this.win.style.position = "absolute";
         this.bar.style.cursor = "grab";
@@ -403,6 +405,19 @@ class MovableWindow {
         this.dragging = true;
         this.offsetX = e.clientX - rect.left;
         this.offsetY = e.clientY - rect.top;
+        this.dragStart = {
+            left: rect.left,
+            top: rect.top,
+            width: rect.width,
+            height: rect.height
+        };
+        this.dragPosition = {
+            left: rect.left,
+            top: rect.top
+        };
+        this.win.style.translate = "0px 0px";
+        this.win.style.willChange = "transform";
+        this.win.classList.add("is-moving");
         this.bar.style.cursor = "grabbing";
         this.bar.setPointerCapture(e.pointerId);
         this.onFocus();
@@ -411,25 +426,36 @@ class MovableWindow {
 
     onPointerMove = (e) => {
         if (this.resizing) return;
-        if (!this.dragging) return;
+        if (!this.dragging || !this.dragStart) return;
         let x = e.clientX - this.offsetX;
         let y = e.clientY - this.offsetY;
-        const maxX = window.innerWidth - this.win.offsetWidth;
-        const maxY = window.innerHeight - this.win.offsetHeight;
+        const maxX = window.innerWidth - this.dragStart.width;
+        const maxY = window.innerHeight - this.dragStart.height;
         x = Math.max(0, Math.min(maxX, x));
         y = Math.max(0, Math.min(maxY, y));
-        this.win.style.left = `${x}px`;
-        this.win.style.top = `${y}px`;
+        this.dragPosition.left = x;
+        this.dragPosition.top = y;
+        this.win.style.translate = `${x - this.dragStart.left}px ${y - this.dragStart.top}px`;
     };
 
     onPointerUp = () => {
         if (!this.dragging) return;
+        if (this.dragPosition) {
+            this.win.style.left = `${this.dragPosition.left}px`;
+            this.win.style.top = `${this.dragPosition.top}px`;
+        }
+        this.win.style.translate = "";
+        this.win.style.willChange = "";
+        this.win.classList.remove("is-moving");
         this.dragging = false;
+        this.dragStart = null;
+        this.dragPosition = null;
         this.bar.style.cursor = "grab";
         document.body.style.userSelect = "";
     };
 
     destroy() {
+        if (this.dragging) this.onPointerUp();
         this.win.removeEventListener("pointerdown", this.onFocus);
         this.bar.removeEventListener("pointerdown", this.onPointerDown);
         window.removeEventListener("pointermove", this.onPointerMove);
